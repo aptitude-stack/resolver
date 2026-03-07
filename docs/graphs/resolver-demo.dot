@@ -1,0 +1,13 @@
+digraph aptitude_dependencies {
+  rankdir=TB;
+  node [shape=box, style="rounded"];
+  "assistant_suite_1_0_0" [label="assistant-suite\n1.0.0 [root]", color="blue", penwidth="2"];
+  "core_agent_1_0_0" [label="core-agent\n1.0.0"];
+  "prompt_pack_1_0_0" [label="prompt-pack\n1.0.0"];
+  "telemetry_1_0_0" [label="telemetry\n1.0.0"];
+  "template_lib" [label="template-lib [missing]", color="red", style="rounded,dashed"];
+  "core_agent_1_0_0" -> "assistant_suite_1_0_0" [label=">=1.0.0"];
+  "prompt_pack_1_0_0" -> "assistant_suite_1_0_0" [label=">=1.0.0"];
+  "telemetry_1_0_0" -> "core_agent_1_0_0" [label=">=1.0.0"];
+  "template_lib" -> "prompt_pack_1_0_0" [label=">=1.0.0"];
+}
