@@ -1,4 +1,4 @@
-# Aptitude Client (`aptitude-client`)
+# Aptitude Client
 
 `aptitude-client` is the runtime-facing client/orchestration layer for the Aptitude skill ecosystem.
 
