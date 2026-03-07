@@ -1,4 +1,4 @@
-# aptitude-client Repository
+# aptitude-client
 
 ![Python Version](https://img.shields.io/badge/python-3.9+-3776AB?logo=python)
 ![License](https://img.shields.io/github/license/y0ncha/aptitude-client)
