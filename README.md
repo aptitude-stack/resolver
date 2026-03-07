@@ -1,75 +1,72 @@
-# Aptitude Client
+# aptitude-client Repository
 
-`aptitude-client` is the runtime-facing client/orchestration layer for the Aptitude skill ecosystem.
+![Python Version](https://img.shields.io/badge/python-3.9+-3776AB?logo=python)
+![License](https://img.shields.io/github/license/y0ncha/aptitude-client)
+![Last Commit](https://img.shields.io/github/last-commit/y0ncha/aptitude-client)
+![Issues](https://img.shields.io/github/issues/y0ncha/aptitude-client)
+![Status](https://img.shields.io/badge/status-active--development-blue)
 
-It sits in front of `aptitude-repository` and is responsible for turning runtime requests (prompt/tool calls) into executable plans, while preserving deterministic repository contracts.
+Aptitude Client is the runtime-facing client/orchestration service for the Aptitude ecosystem.  
+It translates runtime requests (prompt/tool calls) into execution plans while preserving deterministic repository contracts.
 
-This project follows:
-- Product/system overview: [`docs/overview.md`](docs/overview.md)
-- Resolver responsibilities: [`docs/resolver-prd.md`](docs/resolver-prd.md)
-- Repository/resolver boundary: [`docs/scope.md`](docs/scope.md)
+The repository provides:
+
+- Runtime request normalization
+- Deterministic resolve integration via repository APIs
+- Plugin-driven security/policy/overlap checks
+- Execution plan assembly with trace metadata
+- Client-local cache and observability surfaces
+
+---
+
+## Design Principles
+
+- Repository contracts are authoritative and versioned
+- Runtime orchestration stays deterministic and auditable
+- Client and repository responsibilities stay strictly separated
+- Plugin outcomes are explicit and traceable
+- Interfaces remain transport-agnostic (MCP/CLI, optional HTTP adapters)
+
+---
+
+## Architecture (High-Level)
+
+Runtime Clients (MCP / CLI / HTTP Adapter)  
+→ Request Normalization  
+→ Repository Resolve API (contract-only)  
+→ Plugin Chain (Security + Policy + Overlap)  
+→ Execution Plan + Trace Output  
+→ Cache + Observability
+
+---
 
 ## Current Status
 
-This repository currently contains a minimal FastAPI service scaffold (`main.py`) and is the starting point for the resolver/client implementation described in the PRD.
+The project is under active development and currently at foundation scaffold stage (`main.py`) with client implementation planned from PRD.
 
-## Responsibilities (Resolver Side)
+Roadmap and implementation references:
 
-Per [`docs/resolver-prd.md`](docs/resolver-prd.md), this service is responsible for:
-- Exposing runtime-facing interfaces (MCP + CLI, and optionally HTTP adapters).
-- Normalizing incoming tool-call/prompt requests.
-- Calling `aptitude-repository` APIs (resolve/fetch/report) via API contracts only.
-- Running pluggable hooks:
-  - Security scanners
-  - Policy extensions
-  - Overlap scoring against active runtime skills
-- Building and returning an execution plan with trace metadata.
-- Maintaining resolver-local cache and observability/diagnostics.
+- [Overview](docs/overview.md)
+- [Client PRD](docs/client-prd.md)
+- [Scope and Boundary](docs/scope.md)
 
-## Out of Scope (Owned by Repository)
+---
 
-Per [`docs/scope.md`](docs/scope.md), this service must not:
-- Publish or mutate skill artifacts.
-- Own canonical dependency graph or metadata authority.
-- Write directly to repository persistence layers.
-- Replace repository governance/versioning rules.
+## Planned Stack
 
-All authoritative artifact/graph/versioning operations stay in `aptitude-repository`.
+- API: FastAPI
+- Runtime: Python 3.9+
+- Server: Uvicorn
+- Package/deps: `uv` (recommended) or `pip`
+- Testing/quality (planned): pytest, ruff, mypy
 
-## Target Request Flow
+---
 
-1. Client sends tool call/prompt to resolver (MCP/CLI).
-2. Resolver normalizes request.
-3. Resolver calls repository deterministic resolve API.
-4. Repository returns `ResolvedBundle` + `ResolutionReport`.
-5. Resolver executes plugin chain (security/policy/overlap).
-6. Resolver returns execution plan + plugin decisions + trace ID.
+## Getting Started
 
-## Planned Public Interfaces (from PRD)
+### Requirements
 
-- MCP tool: `resolve_and_plan`
-- CLI command: `aptitude resolve "<prompt>"`
-- Structured output includes:
-  - `bundle_hash`
-  - selected skills
-  - plugin decisions
-  - execution plan
-  - trace ID
-
-## Repository Dependency Contract
-
-Resolver consumes repository via versioned APIs only. Expected repository APIs include:
-- `POST /skills/publish` (repository-owned; resolver does not call for writes in normal runtime flow)
-- `GET /skills/{id}/{version}`
-- `POST /resolve`
-- `GET /bundles/{bundle_id}`
-- `GET /reports/{resolution_id}`
-
-## Local Development
-
-### Prerequisites
-
-- Python `>=3.9`
+- Python 3.9+
 - `uv` (recommended) or `pip`
 
 ### Install
@@ -88,36 +85,17 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-### Run
+### Run locally
 
 ```bash
 uvicorn main:app --reload
 ```
 
-Server default URL: `http://127.0.0.1:8000`
+Server URL: `http://127.0.0.1:8000`
 
-### Smoke Test
-
-Use [`test_main.http`](test_main.http) or:
+### Smoke test
 
 ```bash
 curl http://127.0.0.1:8000/
 curl http://127.0.0.1:8000/hello/User
 ```
-
-## MVP Roadmap (from PRD)
-
-1. Implement request normalization + repository resolve integration.
-2. Add plugin runtime (pre/post resolve + pre-execution hooks).
-3. Build execution-plan assembler and trace output.
-4. Add cache controls and observability.
-5. Enforce architecture guardrails (no repository persistence coupling).
-
-## Related Documents
-
-- [Overview](docs/overview.md)
-- [Resolver PRD](docs/resolver-prd.md)
-- [Repository PRD](docs/repository-prd.md)
-- [Scope and Boundary](docs/scope.md)
-- [Changelog: Foundation Skeleton](docs/changelog/01-foundation-service-skeleton-changelog.md)
-- [Changelog: Immutable Registry](docs/changelog/02-immutable-skill-registry-changelog.md)

@@ -150,7 +150,7 @@ Rules to preserve:
 
 ## 6) Tradeoffs and known limitations
 
-- No domain resolver/registry logic yet by design (scope control).
+- No domain resolution/registry logic yet by design (scope control).
 - Integration tests currently depend on an external running Postgres instance.
 - Readiness probe currently checks connectivity only (`SELECT 1`) via a persistence adapter, not migration drift or deeper invariants.
 - Logging uses stdlib baseline; structured correlation fields can be added in later operability milestone.

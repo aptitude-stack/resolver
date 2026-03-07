@@ -1,16 +1,16 @@
-# Aptitude Resolver PRD
+# Aptitude Client PRD
 
 ## 1. Executive Summary
 
 - **Problem Statement**: Agent runtimes need a dedicated runtime-facing service that converts prompt/tool requests into executable skill bundles with deterministic planning and policy checks.
-- **Proposed Solution**: Define `aptitude-resolver` as the MCP/CLI orchestration layer that normalizes requests, calls `aptitude-repository` APIs, applies pluggable policy/scanner/selection components, and returns execution plans.
+- **Proposed Solution**: Define `aptitude-client` as the MCP/CLI orchestration layer that normalizes requests, calls `aptitude-repository` APIs, applies pluggable policy/scanner/selection components, and returns execution plans.
 - **Success Criteria**:
   - End-to-end `tool_call -> execution_plan` p95 <= 800 ms with warm cache and bundles <= 100 skills.
   - CLI and MCP produce identical selected bundle hash for equivalent input >= 99.9% of runs.
-  - Plugin chain failure isolation: >= 99% of plugin failures do not crash resolver process.
-  - 0 direct writes from resolver to repository persistence layers (API-only interaction).
+  - Plugin chain failure isolation: >= 99% of plugin failures do not crash client process.
+  - 0 direct writes from client to repository persistence layers (API-only interaction).
   - Security scanner plugin blocks 100% of known-deny signatures in validation test set.
-- **In Scope**: Runtime request normalization, repository API consumption, plugin orchestration, execution-plan assembly, and resolver-local caching/observability.
+- **In Scope**: Runtime request normalization, repository API consumption, plugin orchestration, execution-plan assembly, and client-local caching/observability.
 - **Out of Scope**: Artifact publication/storage, canonical dependency graph persistence, and repository governance policy authoring.
 - **Related PRD**: Repository ownership and API contracts are defined in [`repository-prd.md`](./repository-prd.md).
 
@@ -19,7 +19,7 @@
 - **User Personas**:
   - Agent/application developer invoking skill resolution through CLI or MCP.
   - Security engineer enforcing pre-execution checks.
-  - Platform engineer extending resolver behavior with plugins.
+  - Platform engineer extending client behavior with plugins.
 
 - **User Stories**:
   - As an agent developer, I want to send a prompt/tool call and receive the best executable skill bundle so that I can run tasks without manual dependency assembly.
@@ -28,12 +28,12 @@
   - As an operator, I want full trace output from request to selected bundle so that failures are diagnosable.
 
 - **Acceptance Criteria**:
-  - Resolver exposes both MCP tool and CLI command with consistent request/response schema.
-  - Resolver calls repository resolve endpoints and never bypasses repository policy gates.
+  - Client exposes both MCP tool and CLI command with consistent request/response schema.
+  - Client calls repository resolve endpoints and never bypasses repository policy gates.
   - Plugin interface supports pre-resolve, post-resolve, and pre-execution hooks.
   - Overlap scorer plugin can compare candidate bundles with active runtime skill set and return deterministic exclusion recommendations.
-  - On plugin failure, resolver returns structured degradation/failure reason without corrupting state.
-  - Resolver output includes `ResolvedBundle`, plugin decisions, and execution plan trace ID.
+  - On plugin failure, client returns structured degradation/failure reason without corrupting state.
+  - Client output includes `ResolvedBundle`, plugin decisions, and execution plan trace ID.
 
 - **Non-Goals**:
   - Acting as authoritative skill artifact source of truth.
@@ -59,19 +59,19 @@
 
 - **Architecture Overview**:
   - `MCP/CLI Interface` -> `Request Normalizer` -> `Repository Client` -> `Plugin Orchestrator` -> `Execution Planner` -> `Runtime Adapter`.
-  - Resolver is a coordination layer and plugin machine that consumes repository contracts and does not persist authoritative artifact metadata.
+  - Client is a coordination layer and plugin machine that consumes repository contracts and does not persist authoritative artifact metadata.
 
 ```mermaid
 flowchart LR
-  Client["MCP Host / CLI Caller"] --> Resolver["aptitude-resolver"]
-  Resolver --> Repo["aptitude-repository API"]
-  Resolver --> Plugins["Policy + Scanner + Overlap Plugins"]
-  Resolver --> Runtime["Execution Adapter"]
+  Caller["MCP Host / CLI Caller"] --> Client["aptitude-client"]
+  Client --> Repo["aptitude-repository API"]
+  Client --> Plugins["Policy + Scanner + Overlap Plugins"]
+  Client --> Runtime["Execution Adapter"]
 ```
 
 - **Integration Points**:
   - Repository APIs: resolve, fetch bundle/artifacts, metadata/report retrieval.
-  - Authentication: service token for resolver-to-repository calls; optional user identity passthrough for audit context.
+  - Authentication: service token for client-to-repository calls; optional user identity passthrough for audit context.
   - Plugin integrations: local process plugins in MVP; remote plugin transport optional in later versions.
   - Runtime integrations: MCP host applications, CI pipelines, local developer terminals.
 
@@ -90,21 +90,21 @@ flowchart LR
 
 - **Technical Risks**:
   - Plugin-chain latency can dominate end-to-end SLA without strict hook budgets.
-  - Resolver/repository schema drift can break deterministic behavior across versions.
+  - Client/repository schema drift can break deterministic behavior across versions.
   - Overlap-scoring heuristics may suppress needed capabilities if benchmark coverage is weak.
   - Excessive local caching can serve stale decisions without robust invalidation.
 
 ## 6. Boundary Contract & Exit Criteria
 
-- **Repository Dependency Contract (Input to Resolver)**:
-  - Resolver integrates through repository versioned APIs/SDK contracts only, as defined in [`repository-prd.md`](./repository-prd.md).
-  - Resolver treats `ResolvedBundle`, `ResolutionReport`, error taxonomy, and `repo_state_id` as source-of-truth inputs.
-  - Resolver must not read or write repository DB tables, artifact storage, or internal services directly.
+- **Repository Dependency Contract (Input to Client)**:
+  - Client integrates through repository versioned APIs/SDK contracts only, as defined in [`repository-prd.md`](./repository-prd.md).
+  - Client treats `ResolvedBundle`, `ResolutionReport`, error taxonomy, and `repo_state_id` as source-of-truth inputs.
+  - Client must not read or write repository DB tables, artifact storage, or internal services directly.
 
-- **Resolver Exit Criteria (After Repository Gate)**:
-  - Repository exit criteria from [`repository-prd.md`](./repository-prd.md) are fully met before resolver MVP build starts.
+- **Client Exit Criteria (After Repository Gate)**:
+  - Repository exit criteria from [`repository-prd.md`](./repository-prd.md) are fully met before client MVP build starts.
   - Contract compatibility tests pass against repository `v1` fixtures in CI.
-  - Resolver failure handling is proven: repository/API/plugin errors return structured degradation output with trace IDs.
+  - Client failure handling is proven: repository/API/plugin errors return structured degradation output with trace IDs.
   - End-to-end SLA is met (`tool_call -> execution_plan` p95 <= 800 ms under target bundle size).
   - Architecture guardrails are enforced (lint/tests preventing repository persistence-layer coupling).
 
@@ -112,14 +112,14 @@ flowchart LR
 sequenceDiagram
   participant Team as Platform Team
   participant Repo as aptitude-repository
-  participant Resolver as aptitude-resolver
+  participant Client as aptitude-client
   Team->>Repo: Implement and validate contract v1
   Repo-->>Team: Repository exit criteria passed
-  Team->>Resolver: Start resolver MVP implementation
-  Resolver->>Repo: Resolve/fetch via repository APIs only
+  Team->>Client: Start client MVP implementation
+  Client->>Repo: Resolve/fetch via repository APIs only
 ```
 
 ## Assumptions to Confirm
 
-- Resolver is stateless by default except for bounded local cache.
+- Client is stateless by default except for bounded local cache.
 - Initial plugin model is in-process/subprocess Python interface before remote plugin protocol.

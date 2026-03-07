@@ -331,7 +331,7 @@ Goal: each step ends with a **complete, testable product** (a â€œvertical sliceâ
 
 **Architecture concepts**
 
-- Resolver lives in repository service (authoritative)
+- Resolution engine lives in repository service (authoritative)
 - Deterministic ordering rule (e.g., topo sort + stable tie-break by id)
 
 **Tests**

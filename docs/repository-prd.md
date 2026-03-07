@@ -12,7 +12,7 @@
   - 100% of publish/deprecate/archive/resolve actions emit auditable events.
 - **In Scope**: Artifact publish/download APIs, immutable versioning, dependency + relationship graph intelligence, deterministic bundle resolution/reporting, and governance/audit controls.
 - **Out of Scope**: Runtime prompt/tool execution, plugin orchestration, and MCP/CLI-facing user interaction surfaces.
-- **Related PRD**: Runtime orchestration responsibilities are defined in [`resolver-prd.md`](./resolver-prd.md).
+- **Related PRD**: Runtime orchestration responsibilities are defined in [`client-prd.md`](./client-prd.md).
 
 ## 2. User Experience & Functionality
 
@@ -29,7 +29,7 @@
 
 - **Acceptance Criteria**:
   - Upload API rejects mutable overwrite attempts for existing `(skill_id, version)`.
-  - Resolver query returns `ResolvedBundle` and `ResolutionReport` with explicit inclusion/exclusion reasons.
+  - Client query returns `ResolvedBundle` and `ResolutionReport` with explicit inclusion/exclusion reasons.
   - Relationship graph supports typed edges: `depends_on`, `conflicts_with`, `overlaps_with`, `extends`.
   - Metadata updates (including evaluation scores) do not modify immutable artifact content.
   - Download endpoint supports both single artifact retrieval and fully resolved bundle retrieval.
@@ -57,14 +57,14 @@
 ## 4. Technical Specifications
 
 - **Architecture Overview**:
-  - `Repository API Boundary` -> `Core Domain (Registry + Resolver + Policy)` -> `Intelligence Layer (Graph + Metadata + optional RAG)` -> `Persistence (Artifacts + Postgres indexes + audit log)`.
+  - `Repository API Boundary` -> `Core Domain (Registry + Resolution + Policy)` -> `Intelligence Layer (Graph + Metadata + optional RAG)` -> `Persistence (Artifacts + Postgres indexes + audit log)`.
   - Repository is authoritative and execution-agnostic; it returns capabilities, not runtime outcomes.
 
 ```mermaid
 flowchart LR
   Author["Skill Author / CI"] --> API["Repository API Boundary"]
-  Resolver["aptitude-resolver"] --> API
-  API --> Domain["Core Domain (Registry + Resolver + Policy)"]
+  Client["aptitude-client"] --> API
+  API --> Domain["Core Domain (Registry + Resolution + Policy)"]
   Domain --> Intelligence["Intelligence Layer (Graph + Metadata + optional RAG)"]
   Domain --> Artifacts["Artifact Storage"]
   Domain --> DB["PostgreSQL Indexes"]
@@ -74,7 +74,7 @@ flowchart LR
 - **Integration Points**:
   - Primary DB: PostgreSQL for versions, metadata, relationships, evaluations, `repo_state_id`.
   - Artifact storage: local filesystem in MVP, object storage (S3/GCS) later.
-  - Client integrations: resolver service, admin tools, CI pipelines.
+  - Client integrations: aptitude-client service, admin tools, CI pipelines.
   - Auth: token-based service-to-service authentication with scoped permissions (`publish`, `resolve`, `admin`).
 
 - **Technology Stack (Current and Planned)**:
@@ -116,14 +116,14 @@ flowchart LR
 
 ## 6. Boundary Contract & Exit Criteria
 
-- **Contract Boundary (Repository -> Resolver)**:
+- **Contract Boundary (Repository -> Client)**:
   - Repository exposes versioned APIs only (`resolve`, `fetch`, `download`, reporting); consumers must not couple to repository internals.
   - `ResolvedBundle`, `ResolutionReport`, error taxonomy, and `repo_state_id` are canonical contract objects.
   - Deterministic output is guaranteed for identical request + `repo_state_id` input.
 
-- **Repository Exit Criteria (Gate Before Resolver MVP)**:
+- **Repository Exit Criteria (Gate Before Client MVP)**:
   - Contract `v1` is frozen with documented backward-compatibility policy.
-  - Provider/consumer contract tests pass in CI for repository and resolver fixtures.
+  - Provider/consumer contract tests pass in CI for repository and client fixtures.
   - SLO and determinism targets are verified (`GET /resolve` p95 <= 250 ms, reproducibility >= 99.99%).
   - Governance controls are enforced: immutable artifact versions, audit events, and RBAC for `publish`, `resolve`, `admin`.
   - Operational readiness is complete: dashboards, alerts, and incident runbooks for publish/resolve paths.
