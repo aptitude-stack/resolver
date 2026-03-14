@@ -1,8 +1,29 @@
 # Repo Meta Memory
 
-- Product: Aptitude skill repository.
-- Runtime: Go service (primary).
-- Core principles: immutability, determinism, explicit relationships, governance, auditability.
-- Architecture source of truth: `docs/overview.md`.
-- Planning location: `.agents/plans/`.
-- Layering rule: `interface -> core` and persistence access only via core ports, wired in `app/main.py`.
+- Product: `aptitude-client`, a Python client for Aptitude skill discovery, deterministic dependency resolution, lock generation, and execution planning.
+- Runtime: Python `>=3.9`.
+- Current repository state: early-stage skeleton with package boundaries under `src/aptitude_client/` and little to no implementation code yet.
+- Current package structure:
+  - `src/aptitude_client/application/`
+  - `src/aptitude_client/discovery/`
+  - `src/aptitude_client/domain/`
+  - `src/aptitude_client/interfaces/`
+  - `src/aptitude_client/resolver/`
+  - `src/aptitude_client/shared/`
+- Primary architecture sources of truth:
+  - `docs/scope.md`
+  - `docs/Aptitude Client Architecture.md`
+  - `docs/Module-Responsibilities.md`
+  - `docs/Coding-Standards.md`
+  - `.agents/rules/repo.md`
+- Core principles: deterministic behavior, strict layering, explainable decisions, thin interfaces, and clear client/server responsibility boundaries.
+- Layering rule:
+  - `interfaces -> application`
+  - `application -> domain | discovery | resolver | shared`
+  - `discovery -> domain | shared`
+  - `resolver -> domain | shared`
+  - `shared` must not own feature workflows
+- Important reality checks:
+  - The docs describe a target architecture; not every described module exists yet as implemented code.
+  - There is currently no meaningful implementation in `tests/`.
+  - `pyproject.toml` is minimal and should be treated as current reality over architectural recommendations.
