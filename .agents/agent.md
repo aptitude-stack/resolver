@@ -21,11 +21,13 @@ client-side policies, and producing stable execution-oriented outputs.
    - [`skills/apptitude-codegen-skill`](skills/apptitude-codegen-skill) - implementation workflow guidance aligned to current client structure
    - [`skills/python-patterns`](skills/python-patterns) - python design and implementation best practices
    - [`skills/python-testing`](skills/python-testing) - python testing and TDD best practices
-   - [`skills/superpowers/using-superpowers`](skills/superpowers/using-superpowers) - startup skill invocation discipline
-   - [`skills/superpowers/writing-plans`](skills/superpowers/writing-plans) - planning workflow before multi-step implementation
-   - [`skills/superpowers/executing-plans`](skills/superpowers/executing-plans) - execution workflow for written plans
-   - [`skills/superpowers/systematic-debugging`](skills/superpowers/systematic-debugging) - mandatory debugging workflow for bugs and failures
-   - [`skills/superpowers/verification-before-completion`](skills/superpowers/verification-before-completion) - verify before claiming completion
+   - [`skills/using-superpowers`](skills/using-superpowers) - startup skill invocation discipline
+   - [`skills/writing-plans`](skills/writing-plans) - planning workflow before multi-step implementation
+   - [`skills/executing-plans`](skills/executing-plans) - execution workflow for written plans
+   - [`skills/systematic-debugging`](skills/systematic-debugging) - mandatory debugging workflow for bugs and failures
+   - [`skills/verification-before-completion`](skills/verification-before-completion) - verify before claiming completion
+   - [`skills/mcp-builder`](skills/mcp-builder) - how to build a MCP
+
 
 If rules conflict, follow the highest item unless the client includes a newer explicit architecture decision.
 
