@@ -28,10 +28,11 @@ Current main packages under `src/aptitude_client/`:
 - `discovery/`
 - `domain/`
 - `interfaces/`
+- `registry/`
 - `resolver/`
 - `shared/`
 
-If a future module is needed, add it only when the use case clearly justifies it.
+Add new packages only when they represent a real, stable responsibility.
 
 ## Core Engineering Rules
 
@@ -55,9 +56,10 @@ When ordering is ambiguous, define a tie-break explicitly.
 Allowed dependency direction:
 
 - `interfaces -> application`
-- `application -> domain`, `discovery`, `resolver`, `shared`
-- `discovery -> domain`, `shared`
-- `resolver -> domain`, `shared`
+- `application -> domain | discovery | registry | resolver | shared`
+- `discovery -> registry | domain | shared`
+- `registry -> domain | shared`
+- `resolver -> domain | shared`
 - `domain ->` no interface or transport layer
 - `shared ->` no feature-specific modules
 
@@ -103,15 +105,14 @@ Use the domain layer for core concepts and invariants.
 
 Examples:
 
-- `SkillId`
-- `SkillVersion`
-- `Dependency`
+- `SkillCoordinate`
+- `SkillMetadata`
+- `DependencySpec`
 - `VersionConstraint`
 - `ResolutionResult`
 
 Domain models should not know about:
 
-- FastAPI
 - CLI formatting
 - HTTP response objects
 - raw registry transport payloads
@@ -130,8 +131,7 @@ Examples:
 
 ### Pydantic usage
 
-The repository already uses `pydantic` and `fastapi` in the lockfile. Use
-Pydantic where validation and clear serialization boundaries matter,
+Use Pydantic where validation and clear serialization boundaries matter,
 especially for DTOs and external payloads.
 
 Use Pydantic for:
@@ -166,8 +166,8 @@ A use case may:
 
 - validate the request shape
 - call discovery components
+- call registry components
 - call resolver components
-- call policy checks
 - assemble the final result DTO
 
 A use case should not:
@@ -181,15 +181,34 @@ A use case should not:
 The discovery layer owns:
 
 - user-intent normalization
-- registry query construction
-- registry API calls
-- local reranking of candidates
+- discovery request construction
+- candidate shaping and reranking
+- discovery-specific orchestration
 
 The discovery layer must not:
 
+- own generic Aptitude Server transport
+- own exact metadata reads unrelated to discovery behavior
 - own final dependency solving
 - generate locks
 - create execution plans
+
+## Registry Rules
+
+The registry layer owns:
+
+- Aptitude Server HTTP transport
+- auth header injection
+- endpoint knowledge
+- request and response parsing
+- error-envelope parsing
+- mapping transport payloads into client-owned models
+
+The registry layer must not:
+
+- own discovery policy or reranking
+- own resolver logic
+- own CLI formatting
 
 ## Resolver Rules
 
@@ -276,12 +295,23 @@ Minimum expectations:
 - query building
 - reranking rules
 
+`registry/`
+- live contract behavior against a running server when practical
+- transport-to-domain mapping
+- error translation at the server boundary
+
 `resolver/`
 - version selection
 - backtracking
 - conflicts
 - validation
 - replay behavior
+
+### Registry testing preference in this repo
+
+- prefer opt-in live integration tests against the running server for the registry boundary
+- do not treat mocked-HTTP contract tests as the primary proof of server behavior
+- use small in-process fakes at higher layers when you need isolated application or CLI tests
 
 ## Do / Don't
 

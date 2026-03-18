@@ -6,297 +6,213 @@ origin: Aptitude
 
 # Aptitude Client Code Generation Skill
 
-This skill defines how code must be generated inside the **Aptitude Client repository**.
+This skill defines how code must be generated inside the Aptitude Client repository.
 
-It ensures that all generated code respects the project's architecture, module boundaries, and development standards.
+Use it whenever code, tests, or architecture-facing docs are changed in this repo.
 
-This skill should be activated automatically whenever an agent writes, modifies, or reviews code in this repository.
+## Core Architecture Principles
 
----
-
-# When to Activate
-
-Activate this skill when:
-
-- Writing new Python modules
-- Implementing a new feature
-- Creating application use cases
-- Adding DTO models
-- Implementing discovery logic
-- Implementing resolver logic
-- Writing CLI commands
-- Writing tests
-- Refactoring existing modules
-
----
-
-# Core Architecture Principles
-
-The Aptitude Client follows a **layered architecture**.
-
-Each layer has strict responsibilities and dependency rules.
+The Aptitude Client follows a layered architecture with one explicit server boundary.
 
 Allowed dependency direction:
 
 - interfaces -> application
-- application -> domain
-- application -> discovery
-- application -> resolver
-- application -> shared
-- discovery -> domain
-- discovery -> shared
-- resolver -> domain
-- resolver -> shared
+- application -> domain | discovery | registry | resolver | shared
+- discovery -> registry | domain | shared
+- registry -> domain | shared
+- resolver -> domain | shared
 
 Forbidden dependency direction:
 
-domain -> application
-domain -> interfaces
-resolver -> interfaces
-discovery -> interfaces
-shared -> application
-shared -> discovery
-shared -> resolver
+- domain -> application | discovery | registry | resolver | interfaces
+- interfaces -> discovery for business-logic bypass
+- interfaces -> registry for business-logic bypass
+- resolver -> interfaces
+- discovery -> interfaces
+- registry -> interfaces
+- shared -> application | discovery | registry | resolver
 
 Never introduce circular dependencies.
 
----
+## Module Responsibilities
 
-# Module Responsibilities
+### domain
 
-## domain
-
-The **domain layer** contains the core business logic.
+The domain layer contains core business concepts, invariants, and client-owned errors.
 
 Allowed content:
-
-- Entities
-- Value objects
-- Domain policies
-- Domain validation
-- Domain errors
+- entities
+- value objects
+- domain validation
+- deterministic rules
+- domain errors
 
 Forbidden content:
-
 - HTTP calls
 - CLI logic
-- Registry communication
-- Filesystem access
-- Logging configuration
+- registry transport payloads
+- filesystem orchestration
+- logging bootstrap
 
-The domain must remain pure and infrastructure-independent.
+### application
 
----
-
-## application
-
-The **application layer** orchestrates use cases.
+The application layer orchestrates use cases.
 
 Responsibilities:
+- use case implementations
+- workflow coordination
+- mapping between DTOs and domain objects
+- calling discovery, registry, and resolver services
+- shaping user-facing outcomes for interfaces
 
-- Use case implementations
-- Workflow coordination
-- Mapping between DTOs and domain objects
-- Calling discovery and resolver services
+Application code must not contain raw transport details or CLI formatting.
 
-Application code should contain **no infrastructure logic**.
+### interfaces
 
----
-
-## interfaces
-
-The **interfaces layer** exposes the system to the outside world.
+The interfaces layer exposes the system to the outside world.
 
 Examples:
-
 - CLI commands
-- MCP interface
+- MCP entrypoints
 - SDK entrypoints
 
 Responsibilities:
-
-- Input parsing
-- Input validation
-- Calling application use cases
-- Formatting output
+- input parsing
+- input validation
+- calling application use cases
+- formatting output
+- setting process exit codes
 
 Interfaces must not contain business logic.
 
----
+### discovery
 
-## discovery
-
-The **discovery module** is responsible for identifying potential skills.
+The discovery module owns discovery-specific client logic.
 
 Responsibilities:
+- interpreting user intent
+- building discovery queries
+- shaping or reranking candidates
+- orchestrating discovery-specific flows through registry clients
 
-- Searching the registry
-- Interpreting user intent
-- Ranking candidate skills
-- Returning possible matches
+Discovery does not own generic server transport, exact metadata fetches, or dependency solving.
 
-Discovery **does not perform dependency solving**.
+### registry
 
----
-
-## resolver
-
-The **resolver module** is responsible for dependency solving.
+The registry module is the anti-corruption layer to Aptitude Server.
 
 Responsibilities:
+- HTTP transport
+- auth header injection
+- endpoint path knowledge
+- request and response parsing
+- transport error translation
+- mapping server payloads into client-owned models
 
-- Dependency resolution
-- Version solving
-- Conflict detection
-- Lockfile generation
-- Validation of dependency graphs
+All Aptitude Server communication belongs here.
+
+### resolver
+
+The resolver module owns deterministic dependency and selection logic.
+
+Responsibilities:
+- dependency normalization
+- version solving
+- dependency graph shaping
+- conflict detection
+- validation of resolved outcomes
+- lock-oriented result shaping over time
 
 Resolver logic must be deterministic.
 
----
+### shared
 
-## shared
-
-The **shared module** contains reusable utilities.
+The shared module contains cross-cutting support code.
 
 Examples:
+- logging configuration
+- configuration loading
+- shared constants
+- generic helpers with low business meaning
 
-- Logging configuration
-- Configuration loading
-- Common helpers
-- Shared constants
+Shared code must not depend on feature layers or hide feature-owned logic.
 
-Shared code must remain lightweight, dependency-safe, and infrastructure-like.
-Other layers may depend on `shared`, but `shared` must not depend on feature
-layers or contain feature-owned business logic.
+## Code Generation Rules
 
----
+When implementing new functionality, follow this order where it fits the task:
 
-# Code Generation Rules
+1. Define or refine domain models if needed
+2. Implement or refine the application use case
+3. Add registry or discovery support
+4. Add resolver behavior if needed
+5. Expose functionality through interfaces
+6. Add or update tests
 
-When implementing new functionality, follow this order:
+Prefer small, explicit modules over broad abstractions.
 
-1. Define domain models if needed
-2. Implement application use case
-3. Connect discovery or resolver logic
-4. Expose functionality through interfaces
-5. Write tests
+## DTO Rules
 
-Always keep modules small and focused.
-
-Prefer composition over inheritance.
-
----
-
-# DTO Rules
-
-Use **Pydantic models** for external data structures.
+Use Pydantic models for external and application-boundary structures.
 
 Use Pydantic for:
+- application DTOs
+- registry transport models
+- CLI-facing output models when serialization clarity matters
+- configuration objects
 
-- API responses
-- CLI inputs
-- Registry responses
-- Manifest structures
+Keep domain models independent of Pydantic where possible.
 
-Example:
-
-from pydantic import BaseModel
-
-class SkillInfo(BaseModel):
-    name: str
-    version: str
-    description: str
-
-Domain models should remain independent of Pydantic where possible.
-
----
-
-# Logging Rules
+## Logging Rules
 
 Use the shared logging system.
 
 Never use `print()` for logging.
 
-Example:
-
-logger.info("Resolving skill dependencies")
-
-Log important events such as:
-
-- skill discovery
-- dependency resolution
-- installation planning
+Log important workflow events such as:
+- registry reads
+- discovery requests
+- dependency resolution steps
 - validation failures
 
----
+Never log tokens or other secrets.
 
-# Testing Rules
+## Testing Rules
 
 All new functionality must include tests.
 
-Test location:
+Test locations:
+- tests/unit
+- tests/integration
 
-tests/unit
-tests/integration
+Testing expectations:
+- use pytest
+- follow TDD where the change is non-trivial
+- add happy-path and failure-path coverage
+- keep deterministic behavior under test where ordering matters
+- verify the registry boundary with live integration tests against a running server when practical
+- do not treat mocked-HTTP contract tests as the primary proof of registry behavior in this repo
 
-Testing requirements:
+## Error Handling
 
-- Use pytest
-- Follow TDD (Red → Green → Refactor)
-- Target coverage: 80% or higher
-- Critical paths must have 100% coverage
-
----
-
-# Error Handling
-
-Use explicit domain errors.
+Use explicit client-owned errors.
 
 Examples:
-
 - SkillNotFoundError
-- VersionConflictError
+- InvalidCoordinateError
 - RegistryUnavailableError
-- InvalidManifestError
+- RegistryAccessError
+- VersionConflictError
 
-Do not return raw exceptions to interfaces.
+Do not leak raw library exceptions to interfaces.
 
-Errors should be structured and explainable.
-
----
-
-# Performance Guidelines
-
-Prefer deterministic algorithms.
-
-Avoid unnecessary network calls.
-
-Cache registry responses when appropriate.
-
-Dependency resolution must remain predictable.
-
----
-
-# What NOT to Do
+## What Not To Do
 
 Do not:
+- create circular dependencies
+- put business logic in CLI modules
+- let domain import registry transport code
+- move all server communication into discovery
+- introduce speculative top-level packages without a real responsibility
+- use print statements instead of logging
 
-- Introduce new architectural layers
-- Add modules not defined in the architecture
-- Create circular dependencies
-- Put business logic in CLI modules
-- Access the registry directly from domain
-- Use print statements instead of logging
-
----
-
-# Goal of This Skill
-
-This skill ensures that all generated code:
-
-- respects the Aptitude architecture
-- remains maintainable
-- stays deterministic
-- follows consistent design patterns
-- integrates cleanly with discovery and resolver systems
+The dedicated registry boundary is approved and should be used for Aptitude Server communication.

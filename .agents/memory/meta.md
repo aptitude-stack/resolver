@@ -2,12 +2,13 @@
 
 - Product: `aptitude-client`, a Python client for Aptitude skill discovery, deterministic dependency resolution, lock generation, and execution planning.
 - Runtime: Python `>=3.9`.
-- Current repository state: early-stage skeleton with package boundaries under `src/aptitude_client/` and little to no implementation code yet.
+- Current repository state: early-stage but now contains a real foundation layer, a real registry adapter, an exact-coordinate CLI, and discovery-backed name queries when `--version` is supplied.
 - Current package structure:
   - `src/aptitude_client/application/`
   - `src/aptitude_client/discovery/`
   - `src/aptitude_client/domain/`
   - `src/aptitude_client/interfaces/`
+  - `src/aptitude_client/registry/`
   - `src/aptitude_client/resolver/`
   - `src/aptitude_client/shared/`
 - Primary architecture sources of truth:
@@ -16,14 +17,16 @@
   - `docs/Module-Responsibilities.md`
   - `docs/Coding-Standards.md`
   - `.agents/rules/repo.md`
-- Core principles: deterministic behavior, strict layering, explainable decisions, thin interfaces, and clear client/server responsibility boundaries.
+- Core principles: deterministic behavior, strict layering, explainable decisions, thin interfaces, and a dedicated registry boundary between client logic and Aptitude Server.
 - Layering rule:
   - `interfaces -> application`
-  - `application -> domain | discovery | resolver | shared`
-  - `discovery -> domain | shared`
+  - `application -> domain | discovery | registry | resolver | shared`
+  - `discovery -> registry | domain | shared`
+  - `registry -> domain | shared`
   - `resolver -> domain | shared`
   - `shared` must not own feature workflows
 - Important reality checks:
-  - The docs describe a target architecture; not every described module exists yet as implemented code.
-  - There is currently no meaningful implementation in `tests/`.
-  - `pyproject.toml` is minimal and should be treated as current reality over architectural recommendations.
+  - The docs describe both the current executable slice and the longer-term product direction. Keep them separate.
+  - The current implemented server contract includes exact reads plus `POST /discovery`, but the live server still exposes no version-lookup route for discovery.
+  - Live registry integration tests exist under `tests/integration/registry/` and are the preferred proof for the server contract in this repo.
+  - `pyproject.toml` reflects the active dependency set and pytest markers.

@@ -31,12 +31,12 @@ src/aptitude_client/
     use_cases/
   discovery/
     intent/
-    registry_api/
   domain/
     errors/
     models/
   interfaces/
     cli/
+  registry/
   resolver/
     solver/
   shared/
@@ -49,22 +49,18 @@ src/aptitude_client/
 Allowed:
 
 - `interfaces -> application`
-- `application -> domain`
-- `application -> discovery`
-- `application -> resolver`
-- `application -> shared`
-- `discovery -> domain`
-- `discovery -> shared`
-- `resolver -> domain`
-- `resolver -> shared`
+- `application -> domain | discovery | registry | resolver | shared`
+- `discovery -> registry | domain | shared`
+- `registry -> domain | shared`
+- `resolver -> domain | shared`
 
 Forbidden:
 
 - `domain -> interfaces`
-- `domain -> discovery.registry_api`
-- `interfaces -> resolver` for business-logic bypass
+- `domain -> registry`
+- `interfaces -> registry` for business-logic bypass
 - `interfaces -> discovery` for business-logic bypass
-- `shared -> application`, `shared -> discovery`, `shared -> resolver`
+- `shared -> application | discovery | registry | resolver`
 
 ## interfaces/
 
@@ -90,7 +86,7 @@ Forbidden:
 - use-case entrypoints
 - workflow sequencing
 - DTO definitions for use-case boundaries
-- coordination across discovery, resolver, policy, lock, and planning components
+- coordination across discovery, registry, resolver, policy, lock, and planning components
 - translation of lower-level errors into application-level outcomes
 
 ### Must not own
@@ -114,24 +110,39 @@ Use Pydantic for DTOs and external-boundary validation where it improves clarity
 ### Owns
 
 - intent interpretation
-- search request construction
-- registry API communication
-- candidate mapping
-- local reranking before final solving
+- discovery request construction
+- candidate shaping and reranking
+- discovery-specific orchestration over registry clients
 
 ### Must not own
 
+- generic server transport
+- exact metadata reads unrelated to discovery behavior
 - final dependency graph solving
 - lock generation
 - execution-plan generation
 
 ### discovery/intent/
 
-Owns prompt or input interpretation into structured search intent.
+Owns prompt or input interpretation into structured discovery intent.
 
-### discovery/registry_api/
+## registry/
 
-Owns the client for server discovery endpoints and exact metadata fetches.
+### Owns
+
+- all Aptitude Server HTTP communication
+- auth header injection
+- endpoint path knowledge
+- request and response parsing
+- transport error-envelope parsing
+- transport-to-domain mapping
+
+### Must not own
+
+- user-intent interpretation
+- candidate reranking policy
+- dependency solving
+- CLI formatting
 
 No other business layer should need to know raw transport details.
 
@@ -167,7 +178,7 @@ No other business layer should need to know raw transport details.
 ### Must not own
 
 - terminal formatting
-- FastAPI or HTTP client objects
+- HTTP client objects
 - registry transport payload schemas
 
 ## shared/
@@ -193,16 +204,17 @@ When adding new code, ask:
 
 1. Is this user-entrypoint parsing or output formatting? -> `interfaces/`
 2. Is this workflow orchestration? -> `application/`
-3. Is this about interpreting a request and retrieving/reranking candidates? -> `discovery/`
-4. Is this about solving dependencies or validating a resolved graph? -> `resolver/`
-5. Is this a core business concept or invariant? -> `domain/`
-6. Is this generic support code with no feature ownership? -> `shared/`
+3. Is this about interpreting a request or reranking discovery candidates? -> `discovery/`
+4. Is this about talking to Aptitude Server? -> `registry/`
+5. Is this about solving dependencies or validating a resolved graph? -> `resolver/`
+6. Is this a core business concept or invariant? -> `domain/`
+7. Is this generic support code with no feature ownership? -> `shared/`
 
 ## Common Misplacements to Avoid
 
 ### Anti-pattern: fat CLI
 
-CLI parses input, calls registry, reranks, solves, and prints everything.
+CLI parses input, calls the registry, resolves dependencies, and prints everything.
 
 Fix:
 - keep the CLI thin
@@ -211,25 +223,10 @@ Fix:
 ### Anti-pattern: transport leakage into domain
 
 Fix:
-- map transport models in discovery or application boundaries
+- map transport models in `registry/` before values reach domain or application
 
-### Anti-pattern: feature logic in shared
+### Anti-pattern: all server calls under discovery
 
 Fix:
-- move feature-owned code into its real module
-
-## Suggested Near-Term Additions
-
-Based on the architecture docs and current repo shape, these future packages are
-reasonable when the implementation grows:
-
-- `application/commands/`
-- `application/queries/`
-- `discovery/query_builder/`
-- `discovery/reranking/`
-- `resolver/graph/`
-- `resolver/conflict/`
-- `resolver/validation/`
-- `resolver/replay/`
-
-Do not create them empty just to match the diagram.
+- keep `discovery/` focused on discovery behavior
+- keep raw server communication in `registry/`

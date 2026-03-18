@@ -1,138 +1,134 @@
-# MVP.md
+# MVP
 
-This document defines the **initial MVP scope** for the Aptitude Client.
+This document defines the initial MVP scope for the Aptitude Client.
 
-It is intentionally narrow.
+It is intentionally narrow in capability, but it should still be built on the
+real product architecture rather than on a temporary boundary we expect to undo.
 
-The goal of this MVP is **not** to implement the full target architecture described in the repository documents.
-The goal is to deliver the **first working vertical slice** using only the modules that already exist under `src/aptitude_client/`.
+This document is a product and implementation scope definition, not an execution plan.
 
-This document is a **product and implementation scope definition**, not an execution plan.
+Detailed step-by-step execution should still be written under `.agents/plans/`
+when implementation work begins.
 
-Detailed step-by-step execution should still be written under `.agents/plans/` when implementation work begins.
-
----
-
-# 1. MVP Goal
+## 1. MVP Goal
 
 Build the first end-to-end client flow that can:
 
 1. accept a skill request from the CLI
-2. query the repository API for matching skill candidates
-3. map the response into internal DTO/domain models
-4. run a minimal deterministic resolution flow
-5. produce a simple execution-oriented result
-6. print the result to the CLI
+2. fetch exact immutable metadata from the server
+3. fetch direct immutable dependencies from the server
+4. shape a minimal deterministic resolution result
+5. print the result to the CLI as stable JSON
 
-This MVP should prove the basic client pipeline:
+This MVP should prove the first executable client pipeline:
 
-`CLI -> discovery -> registry_api -> domain/application mapping -> resolver -> output`
+`CLI -> application -> registry -> resolver -> output`
 
----
+## 2. Architectural Rule For The MVP
 
-# 2. In Scope
+The MVP is small in features, not small in architecture.
+
+That means:
+
+- all Aptitude Server communication belongs in `registry/`
+- `discovery/` is reserved for discovery-specific logic only
+- the CLI still goes through the application layer
+- the resolver remains the owner of deterministic result shaping
+
+## 3. In Scope
 
 The MVP includes only the following responsibilities.
 
-## CLI Input
+### CLI Input
 
-Use the existing `interfaces/cli` module to accept a simple user request such as:
+Use `interfaces/cli` to accept this first hard-cut command shape:
 
-- skill name
-- optional version constraint
+`aptitude resolve <slug> --version <version>`
 
-Example:
+The client now also supports a narrow discovery-backed query shape:
 
-`aptitude install pdf.extract`
+`aptitude resolve "<name query>" --version <version>`
 
-or
+The broader name-only UX without `--version` remains a later milestone until
+the server exposes version lookup for discovery.
 
-`aptitude resolve pdf.extract`
+### Registry Reads
 
-The exact command naming may still be refined, but the MVP should remain CLI-first.
+Use `registry/` to call the runtime-tested repository API and fetch:
 
----
+- exact immutable metadata
+- direct immutable dependencies
 
-## Discovery
+For the initial hard cut, discovery was excluded. The current implementation
+now allows `POST /discovery` only for query-to-slug selection when the user
+still supplies `--version`.
 
-Use the existing `discovery/registry_api` module to call the repository API and fetch candidate skills.
-
-Use the existing `discovery/intent` module only for a **minimal interpretation step** if needed.
-For the MVP, direct skill-name lookup is enough.
-
-No advanced ranking is required in the first slice.
-
----
-
-## Domain Modeling
+### Domain Modeling
 
 Define only the minimum domain models needed for the first slice.
 
 Initial recommended domain objects:
 
-- `SkillManifest`
+- `SkillCoordinate`
+- `SkillMetadata`
 - `DependencySpec`
-- `ResolutionResult`
-- `ExecutionPlan`
-- `Lockfile` (optional in MVP Step 2, not mandatory in Step 1)
+- `ResolutionResult` or equivalent result shape
 
-Use `docs/DOMAIN_SCHEMAS.md` as the schema source of truth.
-
----
-
-## Application Layer
+### Application Layer
 
 Use `application/use_cases` to orchestrate the flow.
 
 The MVP should contain one main use case such as:
 
-- `resolve_skill_request`
-- or `plan_skill_installation`
+- `resolve_exact_skill`
+- or `plan_exact_skill_read`
 
 This use case should coordinate:
 
 - input handling
-- discovery
-- mapping
-- resolution
-- output shaping
+- exact metadata fetch
+- direct dependency fetch
+- result shaping
 
----
+### Resolver
 
-## Resolver
+Use `resolver/solver` to implement a minimal deterministic resolver.
 
-Use the existing `resolver/solver` module to implement a **minimal deterministic resolver**.
+For the first MVP slice, the resolver should support only:
 
-For the first MVP slice, the resolver may support only:
-
-- exact version selection when one candidate exists
-- deterministic selection of one candidate when multiple results are returned
-- minimal dependency expansion for direct dependencies only
+- exact coordinate shaping
+- dependency order preservation
+- deterministic output assembly
 
 No full graph solving is required in the first version.
 
----
-
-## Output
+### Output
 
 The MVP should produce a stable output that can later evolve into a lockfile or execution plan.
 
 Initial output may be:
 
-- selected skill
-- selected version
+- requested coordinate
+- selected coordinate
+- minimal skill metadata summary
 - direct dependencies
-- simple explanation of the resolution result
+- status
 
 Example:
 
 ```json
 {
-  "requested_skill": "pdf.extract",
-  "selected_version": "1.2.0",
+  "requested_coordinate": {
+    "slug": "pdf.extract",
+    "version": "1.2.0"
+  },
+  "selected_coordinate": {
+    "slug": "pdf.extract",
+    "version": "1.2.0"
+  },
   "dependencies": [
     {
-      "skill": "filesystem.read",
+      "slug": "filesystem.read",
       "version": "1.3.1"
     }
   ],
@@ -140,15 +136,14 @@ Example:
 }
 ```
 
----
+## 4. Explicitly Out of Scope
 
-# 3. Explicitly Out of Scope
+The following are not part of the initial MVP.
 
-The following are **not** part of the initial MVP.
-
-- MCP-first workflow
-- plugin system
-- advanced ranking or semantic intent interpretation
+- name-only discovery without `--version`
+- semantic intent interpretation
+- candidate ranking across multiple matches
+- version choice across multiple candidate versions
 - policy engine
 - conflict governance
 - deep dependency graph solving
@@ -162,45 +157,37 @@ The following are **not** part of the initial MVP.
 
 These may be added later, but they should not block the first vertical slice.
 
----
-
-# 4. Modules Allowed in This MVP
-
-Implementation must stay within the modules that already exist in `src/aptitude_client/`.
+## 5. Modules Allowed in This MVP
 
 Allowed modules:
 
 - `application/dto`
 - `application/use_cases`
 - `discovery/intent`
-- `discovery/registry_api`
 - `domain/errors`
 - `domain/models`
 - `interfaces/cli`
+- `registry`
 - `resolver/solver`
 - `shared/config`
 - `shared/logging`
 
-Do **not** introduce new top-level packages for the MVP.
+Do not introduce speculative packages unrelated to the current executable slice.
 
-Do **not** implement future architecture modules that do not yet exist in the repository.
+## 6. MVP Decisions
 
----
+### Interface Style
 
-# 5. MVP Decisions
-
-## Interface Style
-
-The MVP is **CLI-first**.
+The MVP is CLI-first.
 
 Rationale:
 - the CLI module already exists
 - it provides the fastest way to validate the end-to-end flow
 - it avoids premature expansion into MCP or SDK interfaces
 
-## Execution Style
+### Execution Style
 
-The MVP is **sync-first** unless a specific API client constraint requires async.
+The MVP is sync-first unless a specific API client constraint requires async.
 
 Rationale:
 - simpler implementation
@@ -208,122 +195,91 @@ Rationale:
 - easier deterministic testing
 - better fit for the first slice
 
-## Discovery Style
+### Server Boundary Style
 
-The MVP uses **direct repository API lookup** rather than advanced intent ranking.
+The MVP uses a dedicated registry adapter.
 
 Rationale:
-- simpler
-- sufficient for the first vertical slice
-- easier to test
+- exact metadata and dependency reads are not discovery logic
+- the same boundary will later host discovery, publish, and lifecycle clients
+- this preserves the real product architecture from the start
 
-## Resolver Style
+### Resolver Style
 
-The MVP resolver is **minimal and deterministic**.
+The MVP resolver is minimal and deterministic.
 
 Rationale:
 - prove the pipeline first
 - avoid full dependency solver complexity too early
 
----
-
-# 6. Suggested First Vertical Slice
-
-The recommended first implemented flow is:
-
-## `resolve skill by exact name`
+## 7. Suggested First Vertical Slice
 
 Input:
 
-`aptitude resolve pdf.extract`
+`aptitude resolve <slug> --version <version>`
 
 Flow:
 
 1. CLI parses the request
 2. application use case is invoked
-3. registry API returns candidate manifests
-4. domain models are created
-5. resolver selects one deterministic result
+3. registry returns exact metadata
+4. registry returns direct dependencies
+5. resolver shapes one deterministic result
 6. CLI prints the result
 
 Success criteria:
 
-- one command works end-to-end
+- one command works end to end
 - result is deterministic
 - basic tests exist
 - logging exists
 - architecture boundaries are respected
 
----
-
-# 7. Suggested MVP Phases
-
-## Phase 1
-
-- implement repository API client shape
-- implement basic DTOs
-- implement minimal domain models
-- implement CLI command
-- return one resolved result
-
-## Phase 2
-
-- add direct dependency expansion
-- add `ResolutionResult`
-- add simple explanation output
-
-## Phase 3
-
-- add minimal `ExecutionPlan` output
-- optionally introduce initial lockfile shaping
-
----
-
-# 8. Validation Criteria
+## 8. Validation Criteria
 
 The MVP is complete when all of the following are true:
 
-- a CLI command can request a skill by name
-- the client can call the repository API
+- a CLI command can request a skill by exact coordinate
+- the client can call the repository API through `registry/`
 - the response is mapped into internal models
 - the resolver produces a deterministic output
 - the CLI prints a stable result
 - unit tests exist for core logic
-- integration tests exist for the API flow or mocked equivalent
-- implementation stays inside existing modules only
+- integration tests exist for the API flow
+- implementation respects the real product boundary between discovery and registry
 
----
+## 9. Relationship to Planning
 
-# 9. Relationship to Planning
+This file defines what the MVP is.
 
-This file defines **what the MVP is**.
+It does not replace planning.
 
-It does **not** replace planning.
-
-When actual implementation starts, the agent must still create a plan file under:
-
-`.agents/plans/`
-
-Example:
-
-`01-cli-first-mvp-resolve-flow.md`
-
-Use the plan file to define:
-
-- implementation steps
-- milestones
-- risks
-- progress
+When actual implementation starts, the agent must still create or update plan
+files under `.agents/plans/`.
 
 So there is no contradiction:
 
 - `docs/MVP.md` = scope and product boundary
 - `.agents/plans/*.md` = execution plan for implementing that scope
 
----
+## 10. Discovery Follow-Up
 
-# 10. Current Recommendation
+The broader product target still includes a name-driven flow such as:
 
-Use this MVP as the source of truth for the first Aptitude Client implementation slice.
+`aptitude resolve pdf.extract`
 
-Do not expand beyond this scope until the first vertical flow works end-to-end.
+The client now supports a narrower intermediate step:
+
+`aptitude resolve "pdf extract" --version 1.2.0`
+
+However, the full name-only flow is still deferred until the server discovery
+contract is aligned with a version lookup route.
+
+Before that expansion happens, the project must resolve:
+
+- whether discovery remains body-based or query-based
+- whether discovery returns slug strings only or richer candidate objects
+- how the client derives an exact version after discovery
+- what deterministic tie-break rule applies when multiple candidates or versions exist
+
+Until then, exact coordinates remain the source of truth for the first executable slice.
