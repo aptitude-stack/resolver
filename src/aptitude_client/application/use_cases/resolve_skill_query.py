@@ -4,57 +4,79 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from aptitude_client.application.dto import ResolveQueryRequestDto, ResolveRequestDto, ResolveResultDto
-from aptitude_client.domain.errors import SkillNotFoundError, VersionSelectionUnavailableError
-from aptitude_client.application.use_cases.resolve_exact_skill import ResolveExactSkillUseCase, RegistryReadPort
-from aptitude_client.resolver.solver import select_discovery_candidate
+from aptitude_client.application.dto import (
+    ResolveCoordinateDto,
+    ResolveQueryRequestDto,
+    ResolveQueryResultDto,
+)
+from aptitude_client.application.queries import (
+    PlanSkillResolutionQuery,
+    SelectionRequiredResult,
+)
+from aptitude_client.application.use_cases.resolution_mapping import (
+    candidate_to_dto,
+    execution_plan_to_dto,
+    graph_to_dto,
+    lockfile_to_dto,
+    policy_to_dto,
+    selected_skill_to_dto,
+    trace_to_dto,
+)
+from aptitude_client.domain.policy import PolicyContext
 
 
-class DiscoveryRegistryPort(RegistryReadPort, Protocol):
-    """Registry operations needed for query-based resolution."""
+class ResolveRegistryPort(Protocol):
+    """Registry operations required for discovery and recursive resolution."""
 
-    def discover_candidates(self, query: str) -> list[str]: ...
+    def discover_candidate_slugs(self, query): ...
+
+    def fetch_skill_identity(self, slug: str): ...
+
+    def list_skill_versions(self, slug: str): ...
+
+    def fetch_skill_metadata(self, slug: str, version: str): ...
+
+    def fetch_direct_dependencies(self, slug: str, version: str): ...
 
 
 class ResolveSkillQueryUseCase:
-    """Resolve either exact slugs or discovery-backed user queries."""
+    """Resolve user queries into deterministic recursive graphs."""
 
-    def __init__(self, registry_client: DiscoveryRegistryPort) -> None:
-        self._registry_client = registry_client
-        self._exact_use_case = ResolveExactSkillUseCase(registry_client)
+    def __init__(
+        self,
+        registry_client: ResolveRegistryPort,
+        *,
+        policy_context: PolicyContext | None = None,
+    ) -> None:
+        self._planner = PlanSkillResolutionQuery(
+            registry_client,
+            policy_context=policy_context or PolicyContext(),
+        )
 
-    def execute(self, request: ResolveQueryRequestDto) -> ResolveResultDto:
-        if request.version is None:
-            raise VersionSelectionUnavailableError(request.query)
-
-        if self._should_discover_first(request.query):
-            return self._resolve_via_discovery(request)
-
-        try:
-            result = self._exact_use_case.execute(
-                ResolveRequestDto(slug=request.query, version=request.version)
+    def execute(self, request: ResolveQueryRequestDto) -> ResolveQueryResultDto:
+        plan = self._planner.execute(request)
+        if isinstance(plan, SelectionRequiredResult):
+            return ResolveQueryResultDto(
+                requested_query=plan.requested_query,
+                requested_version=plan.requested_version,
+                status="selection_required",
+                candidates=[candidate_to_dto(item) for item in plan.candidates],
+                trace=[trace_to_dto(item) for item in plan.trace],
             )
-        except SkillNotFoundError:
-            return self._resolve_via_discovery(request)
-
-        return result
-
-    def _resolve_via_discovery(self, request: ResolveQueryRequestDto) -> ResolveResultDto:
-        assert request.version is not None
-
-        candidates = self._registry_client.discover_candidates(request.query)
-        selected_slug = select_discovery_candidate(request.query, candidates)
-
-        result = self._exact_use_case.execute(
-            ResolveRequestDto(slug=selected_slug, version=request.version)
+        return ResolveQueryResultDto(
+            requested_query=plan.requested_query,
+            requested_version=plan.requested_version,
+            status="resolved",
+            selection_mode=plan.selection_mode,
+            candidates=[candidate_to_dto(item) for item in plan.candidates],
+            selected_coordinate=ResolveCoordinateDto(
+                slug=plan.graph.root.slug,
+                version=plan.graph.root.version,
+            ),
+            selected_skill=selected_skill_to_dto(plan),
+            graph=graph_to_dto(plan.graph),
+            lockfile=lockfile_to_dto(plan.lockfile),
+            execution_plan=execution_plan_to_dto(plan.execution_plan),
+            trace=[trace_to_dto(item) for item in plan.trace],
+            policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
         )
-        return result.model_copy(
-            update={
-                "requested_query": request.query,
-                "resolution_strategy": "discovery",
-            }
-        )
-
-    @staticmethod
-    def _should_discover_first(query: str) -> bool:
-        return any(character.isspace() for character in query)

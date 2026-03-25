@@ -1,6 +1,19 @@
 """Resolver solver package."""
 
-from aptitude_client.resolver.solver.discovery_selection import select_discovery_candidate
-from aptitude_client.resolver.solver.exact_resolve import shape_exact_resolve_result
+from aptitude_client.resolver.solver.candidate_version_resolution import (
+    RegistryCandidateVersionPort,
+    resolve_candidate_versions,
+)
+from aptitude_client.resolver.solver.candidate_selection import (
+    FinalCandidateSelection,
+    select_final_candidate,
+)
+from aptitude_client.resolver.solver.version_selection import select_preferred_version
 
-__all__ = ["select_discovery_candidate", "shape_exact_resolve_result"]
+__all__ = [
+    "FinalCandidateSelection",
+    "RegistryCandidateVersionPort",
+    "select_final_candidate",
+    "resolve_candidate_versions",
+    "select_preferred_version",
+]

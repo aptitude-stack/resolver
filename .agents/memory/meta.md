@@ -1,32 +1,41 @@
 # Repo Meta Memory
 
-- Product: `aptitude-client`, a Python client for Aptitude skill discovery, deterministic dependency resolution, lock generation, and execution planning.
+- Product: `aptitude-client`, a Python client for discovery-backed skill resolution, deterministic dependency solving, governance, lock generation, and lock-driven execution planning.
 - Runtime: Python `>=3.9`.
-- Current repository state: early-stage but now contains a real foundation layer, a real registry adapter, an exact-coordinate CLI, and discovery-backed name queries when `--version` is supplied.
+- Current public CLI: `install`, `sync`.
+- Current hidden internal CLI: `resolve`.
 - Current package structure:
   - `src/aptitude_client/application/`
   - `src/aptitude_client/discovery/`
   - `src/aptitude_client/domain/`
+  - `src/aptitude_client/execution/`
+  - `src/aptitude_client/governance/`
   - `src/aptitude_client/interfaces/`
+  - `src/aptitude_client/lockfile/`
   - `src/aptitude_client/registry/`
   - `src/aptitude_client/resolver/`
   - `src/aptitude_client/shared/`
-- Primary architecture sources of truth:
-  - `docs/scope.md`
-  - `docs/Aptitude Client Architecture.md`
-  - `docs/Module-Responsibilities.md`
-  - `docs/Coding-Standards.md`
+- Reserved but not yet implemented as top-level packages:
+  - `plugins/`
+  - `cache/`
+  - `telemetry/`
+- Canonical docs:
+  - `docs/ARCHITECTURE.md`
+  - `docs/RULES.md`
+- Supporting docs:
+  - `README.md`
+  - `docs/Aptitude-Recommended-Libraries.md`
   - `.agents/rules/repo.md`
-- Core principles: deterministic behavior, strict layering, explainable decisions, thin interfaces, and a dedicated registry boundary between client logic and Aptitude Server.
-- Layering rule:
-  - `interfaces -> application`
-  - `application -> domain | discovery | registry | resolver | shared`
-  - `discovery -> registry | domain | shared`
-  - `registry -> domain | shared`
-  - `resolver -> domain | shared`
-  - `shared` must not own feature workflows
+- Core principles:
+  - deterministic behavior
+  - strict layering
+  - client-owned decisions
+  - lock as the execution source of truth
+  - traceable decision-making
 - Important reality checks:
-  - The docs describe both the current executable slice and the longer-term product direction. Keep them separate.
-  - The current implemented server contract includes exact reads plus `POST /discovery`, but the live server still exposes no version-lookup route for discovery.
-  - Live registry integration tests exist under `tests/integration/registry/` and are the preferred proof for the server contract in this repo.
-  - `pyproject.toml` reflects the active dependency set and pytest markers.
+  - `install` plans and materializes from a newly generated lock
+  - `sync --lock` replays an existing lock without discovery or resolution
+  - governance currently enforces lifecycle only
+  - `docs/openapi/` is reference material, not the sole runtime truth
+  - historical milestone plans under `.agents/plans/` are not the architecture source of truth
+  - future non-trivial implementation work must read `docs/ARCHITECTURE.md` and `docs/RULES.md` first

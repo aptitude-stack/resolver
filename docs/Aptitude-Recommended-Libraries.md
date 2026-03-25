@@ -1,216 +1,132 @@
-# Aptitude Client - Recommended Python Libraries
+# Aptitude Client Recommended Libraries
 
 ## Purpose
 
-This document lists the Python libraries that fit the current Aptitude Client
-architecture and the near-term implementation path.
+This document lists the Python libraries that fit the current Aptitude Client architecture.
 
-The first client slice is:
+The current client is:
 
 - CLI-first
 - sync-first
-- exact-coordinate read-only
-- built on a dedicated `registry/` boundary
+- lock-driven for execution
+- built around a dedicated `registry/` boundary
 
-## Must-Have Libraries Now
+## Current Active Stack
+
+These libraries are already aligned with the repository and current implementation.
 
 ### Pydantic
 
-Why:
-- typed DTOs
-- validated transport models
-- clear serialization boundaries
+Use for:
 
-Fits:
-- `application/dto/`
-- `registry/transport_models.py`
-- output models when useful
+- application DTOs
+- registry transport models
+- other explicit serialization boundaries
 
 ### pydantic-settings
 
-Why:
-- typed environment-driven config
-- central settings management
+Use for:
 
-Fits:
-- `shared/config/`
+- typed environment-backed configuration in `shared/config/`
 
 ### Typer
 
-Why:
-- clear CLI ergonomics
-- good fit for thin interface handlers
+Use for:
 
-Fits:
-- `interfaces/cli/`
+- CLI entrypoints in `interfaces/cli/`
 
 ### httpx
 
-Why:
-- modern sync and async HTTP client
-- clean API for a dedicated registry boundary
+Use for:
 
-Fits:
-- `registry/`
-
-### pytest
-
-Why:
-- strong default test framework for Python
-
-Fits:
-- `tests/unit/`
-- `tests/integration/`
-
-## Libraries To Add As Soon As The Capability Is Real
+- registry HTTP transport in `registry/`
 
 ### packaging
 
-Why:
-- reliable version parsing and comparison
+Use for:
 
-Fits:
-- `domain/`
-- `resolver/`
+- semantic version parsing and comparison in deterministic resolver logic
 
-### resolvelib
+### pytest
 
-Why:
-- real dependency-solving primitives
-- strong match for package-manager-style behavior
+Use for:
 
-Fits:
-- `resolver/solver/`
+- unit tests
+- opt-in live integration tests
 
-### networkx
+## Good Future Additions
 
-Why:
-- graph operations
-- cycle detection
-- dependency explanation support
-
-Fits:
-- `resolver/` once graph solving becomes real
-
-### tenacity
-
-Why:
-- retries for transient server failures
-
-Fits:
-- `registry/`
-
-Only add it when retry policy is a real requirement, not by default.
-
-## Optional Later Libraries
+Add these only when the corresponding capability becomes real.
 
 ### Pluggy
 
-Why:
-- strong plugin system once extension points are real
+Good fit for:
+
+- a future `plugins/` package
 
 ### structlog
 
-Why:
-- structured logging once workflow volume and observability needs grow
+Good fit for:
+
+- richer structured logging and observability
 
 ### diskcache
 
-Why:
-- practical local cache when caching becomes a real product need
+Good fit for:
 
-### FastAPI and Uvicorn
+- a future local cache that does not affect correctness
 
-Why:
-- useful only if the client later exposes a local HTTP facade or debug service
+### tenacity
 
-They are not the center of the current client design.
+Good fit for:
+
+- retries around transient registry failures, if retry policy becomes a real requirement
+
+## Libraries To Add Only If Complexity Justifies Them
+
+### resolvelib
+
+Potential fit for:
+
+- more advanced dependency solving
+
+Do not add it just because it is available. The current resolver is custom and deterministic.
+
+### networkx
+
+Potential fit for:
+
+- richer graph analysis
+- debugging or visualization
+
+Do not add it unless graph operations clearly outgrow the current explicit implementation.
+
+## Libraries That Are Not Required Today
+
+### FastAPI / Uvicorn
+
+Only add these if Aptitude Client grows a local HTTP facade or service surface.
+
+They are not part of the current CLI-first architecture.
 
 ## Testing Guidance
 
-### Preferred testing shape for the current repo
+Preferred testing style in this repo:
 
 - use `pytest`
-- keep unit tests for pure domain, application, resolver, and interface behavior
-- prefer opt-in live integration tests for the `registry/` boundary against a running server
-- do not treat mocked-HTTP contract tests as the primary proof of server behavior in this repo
+- keep unit tests around deterministic layer behavior
+- use opt-in live integration tests for the real registry boundary when practical
+- use small in-process fakes for application, CLI, lockfile, and execution tests
 
-### When simple fakes are still fine
+## Practical Recommendation
 
-Small in-process fakes are still useful for:
+Right now the best-fit foundation is:
 
-- application use case tests
-- CLI tests
-- resolver tests
-
-The key distinction is:
-
-- server contract proof should come from the real server when practical
-- higher-layer isolation can still use small fakes
-
-## Practical Recommendation For The Current Implementation
-
-Start with this stack:
-
-### Must-have now
 - `pydantic`
 - `pydantic-settings`
 - `typer`
 - `httpx`
-- `pytest`
-
-### Add when resolver capability becomes real
 - `packaging`
-- `resolvelib`
-- `networkx`
-
-### Add when transport or ops needs justify them
-- `tenacity`
-- `structlog`
-- `diskcache`
-
-### Add only when the relevant feature exists
-- `pluggy`
-- `fastapi`
-- `uvicorn`
-
-## Layer-to-Library Map
-
-### `interfaces/`
-- `typer`
-- `pydantic`
-
-### `application/`
-- `pydantic`
-
-### `discovery/`
-- no special library required yet beyond what registry and domain already expose
-
-### `registry/`
-- `httpx`
-- `pydantic`
-- later `tenacity` if needed
-
-### `resolver/`
-- later `resolvelib`
-- later `packaging`
-- later `networkx`
-
-### `shared/`
-- `pydantic-settings`
-- standard library logging
-
-### `tests/`
 - `pytest`
 
-## Final Recommendation
-
-For Aptitude Client, the strongest foundation right now is:
-
-- Pydantic for structured models
-- pydantic-settings for config
-- Typer for the CLI
-- httpx for the registry boundary
-- pytest for testing
-
-Then add resolver and plugin libraries only when those capabilities are actually being implemented.
+Add plugin, cache, retry, or observability libraries only when those capabilities are real implemented responsibilities.
