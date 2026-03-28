@@ -169,3 +169,30 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(tmp_path)
     assert (resolution_dir / "policy.json").exists()
     graph_payload = json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))
     assert graph_payload["root"] == {"slug": "python.lint", "version": "1.2.3"}
+
+
+def test_install_use_case_returns_selection_required_before_dependency_resolution_or_materialization(
+    tmp_path,
+) -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["lint"] = ["python.lint", "js.lint"]
+    registry_client.versions_by_slug["python.lint"] = [
+        _version_summary("python.lint", "1.2.3", name="Python Lint", content="# Python Lint\n")
+    ]
+    registry_client.versions_by_slug["js.lint"] = [
+        _version_summary("js.lint", "2.1.0", name="JavaScript Lint", content="# JavaScript Lint\n")
+    ]
+
+    result = InstallSkillUseCase(registry_client).execute(
+        InstallRequestDto(
+            query="lint",
+            target=tmp_path / "skill_demo",
+            interaction_mode="always",
+            prompt_capable=True,
+        )
+    )
+
+    assert result.status == "selection_required"
+    assert [item.slug for item in result.candidates] == ["python.lint", "js.lint"]
+    assert registry_client.dependency_calls == []
+    assert registry_client.content_calls == []

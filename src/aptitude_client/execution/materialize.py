@@ -50,14 +50,17 @@ def materialize_lockfile(
     target: Path,
     lockfile: Lockfile,
     registry_client: RegistryContentPort,
+    execution_plan: ExecutionPlan | None = None,
 ) -> MaterializationResult:
     """Materialize a local workspace from lock data only."""
 
     replayed = replay_lockfile(lockfile)
-    execution_plan = build_execution_plan(lockfile)
+    execution_plan = execution_plan or build_execution_plan(lockfile)
     target = target.resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
 
+    # Keep the staging directory under target.parent so promotion to target stays
+    # on the same volume, which keeps the final replace safe on Windows.
     with tempfile.TemporaryDirectory(prefix=f".{target.name}-", dir=target.parent) as temp_dir:
         staging_root = Path(temp_dir)
         installed_skills: list[MaterializedSkill] = []
@@ -117,15 +120,17 @@ def materialize_lockfile(
 
 
 def _verify_checksum(node: LockedSkill, content: str) -> None:
-    digest = hashlib.new(
+    actual_digest = hashlib.new(
         node.content_checksum_algorithm,
         content.encode("utf-8"),
     ).hexdigest()
-    if digest != node.content_checksum_digest:
+    if actual_digest != node.content_checksum_digest:
         raise ContentChecksumMismatchError(
             node.slug,
             node.version,
             node.content_checksum_algorithm,
+            node.content_checksum_digest,
+            actual_digest,
         )
 
 

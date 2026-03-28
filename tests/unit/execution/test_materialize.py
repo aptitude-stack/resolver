@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 
 import pytest
+import aptitude_client.execution.materialize as materialize_module
 
 from aptitude_client.domain.errors import ContentChecksumMismatchError
 from aptitude_client.domain.models import (
@@ -19,7 +21,7 @@ from aptitude_client.execution import (
     materialize_lockfile,
     write_install_debug_artifacts,
 )
-from aptitude_client.lockfile import build_lockfile, load_lockfile
+from aptitude_client.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
 
 
 class FakeRegistryClient:
@@ -125,12 +127,73 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
         }
     )
 
-    with pytest.raises(ContentChecksumMismatchError):
+    with pytest.raises(ContentChecksumMismatchError) as exc_info:
         materialize_lockfile(
             target=tmp_path / "skill_demo",
             lockfile=lockfile,
             registry_client=registry_client,
         )
+
+    payload = exc_info.value.to_payload()
+    expected_node = next(node for node in lockfile.nodes if node.slug == "python.lint")
+    assert payload["slug"] == "python.lint"
+    assert payload["version"] == "1.2.3"
+    assert payload["algorithm"] == "sha256"
+    assert payload["expected_digest"] == expected_node.content_checksum_digest
+    assert payload["actual_digest"] == hashlib.sha256(b"tampered").hexdigest()
+
+
+def test_materialize_lockfile_reuses_precomputed_execution_plan(tmp_path, monkeypatch) -> None:
+    content_by_coordinate = {
+        ("python.base", "1.0.0"): "# Python Base\n",
+        ("python.lint", "1.2.3"): "# Python Lint\n",
+    }
+    lockfile = _lockfile(content_by_coordinate)
+    precomputed_plan = build_execution_plan(lockfile)
+    registry_client = FakeRegistryClient(content_by_coordinate)
+
+    def _unexpected_rebuild(_lockfile_arg) -> None:
+        raise AssertionError("materialize_lockfile should reuse the precomputed execution plan")
+
+    monkeypatch.setattr(materialize_module, "build_execution_plan", _unexpected_rebuild)
+
+    result = materialize_module.materialize_lockfile(
+        target=tmp_path / "skill_demo",
+        lockfile=lockfile,
+        registry_client=registry_client,
+        execution_plan=precomputed_plan,
+    )
+
+    assert result.execution_plan == precomputed_plan
+
+
+def test_build_execution_plan_ignores_selection_explainability_metadata() -> None:
+    base_lockfile = _lockfile(
+        {
+            ("python.base", "1.0.0"): "# Python Base\n",
+            ("python.lint", "1.2.3"): "# Python Lint\n",
+        }
+    )
+    low_cost_lock = replace(
+        base_lockfile,
+        selection=SelectionSnapshot(
+            profile="low-cost",
+            interaction_mode="never",
+            profile_source="cli_override",
+            interaction_mode_source="env_override",
+        ),
+    )
+    high_trust_lock = replace(
+        base_lockfile,
+        selection=SelectionSnapshot(
+            profile="high-trust",
+            interaction_mode="always",
+            profile_source="workspace_config",
+            interaction_mode_source="cli_override",
+        ),
+    )
+
+    assert build_execution_plan(low_cost_lock) == build_execution_plan(high_trust_lock)
 
 
 def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(tmp_path) -> None:

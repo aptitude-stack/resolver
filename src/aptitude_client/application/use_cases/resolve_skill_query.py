@@ -22,7 +22,7 @@ from aptitude_client.application.use_cases.resolution_mapping import (
     selected_skill_to_dto,
     trace_to_dto,
 )
-from aptitude_client.domain.policy import PolicyContext
+from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
 
 
 class ResolveRegistryPort(Protocol):
@@ -47,10 +47,12 @@ class ResolveSkillQueryUseCase:
         registry_client: ResolveRegistryPort,
         *,
         policy_context: PolicyContext | None = None,
+        selection_preferences: SelectionPreferences | None = None,
     ) -> None:
         self._planner = PlanSkillResolutionQuery(
             registry_client,
             policy_context=policy_context or PolicyContext(),
+            selection_preferences=selection_preferences or SelectionPreferences(),
         )
 
     def execute(self, request: ResolveQueryRequestDto) -> ResolveQueryResultDto:

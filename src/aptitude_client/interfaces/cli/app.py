@@ -161,13 +161,14 @@ def _resolve_query_result(
 ) -> ResolveQueryResultDto:
     """Execute resolve and, if needed, complete interactive candidate selection."""
 
-    interactive = _is_interactive() and select_slug is None
+    prompt_capable = _is_interactive()
     result = use_case.execute(
         ResolveQueryRequestDto(
             query=query,
             version=version,
             select_slug=select_slug,
-            interactive=interactive,
+            interaction_mode=None,
+            prompt_capable=prompt_capable,
         )
     )
     if result.status != "selection_required":
@@ -179,7 +180,8 @@ def _resolve_query_result(
             query=query,
             version=version,
             select_slug=chosen_slug,
-            interactive=False,
+            interaction_mode="never",
+            prompt_capable=False,
             selection_source="interactive",
         )
     )
@@ -195,14 +197,15 @@ def _install_result(
 ) -> InstallResultDto:
     """Execute install and, if needed, complete interactive candidate selection."""
 
-    interactive = _is_interactive() and select_slug is None
+    prompt_capable = _is_interactive()
     result = use_case.execute(
         InstallRequestDto(
             query=query,
             version=version,
             select_slug=select_slug,
             target=target,
-            interactive=interactive,
+            interaction_mode=None,
+            prompt_capable=prompt_capable,
         )
     )
     if result.status != "selection_required":
@@ -215,7 +218,8 @@ def _install_result(
             version=version,
             select_slug=chosen_slug,
             target=target,
-            interactive=False,
+            interaction_mode="never",
+            prompt_capable=False,
             selection_source="interactive",
         )
     )
@@ -250,10 +254,26 @@ def resolve(
         "--select-slug",
         help="Explicitly pick one discovered slug without prompting.",
     ),
+    prefer: str | None = typer.Option(
+        None,
+        "--prefer",
+        help="Selection profile for choosing among legal candidates: balanced, low-cost, or high-trust.",
+    ),
+    interaction_mode: str | None = typer.Option(
+        None,
+        "--interaction-mode",
+        help="How root ambiguity should be handled: auto, always, or never.",
+    ),
 ) -> None:
     """Resolve a skill query and print a stable JSON result."""
 
-    use_case, close = build_resolve_use_case()
+    build_kwargs: dict[str, str] = {}
+    if prefer is not None:
+        build_kwargs["selection_profile_override"] = prefer
+    if interaction_mode is not None:
+        build_kwargs["interaction_mode_override"] = interaction_mode
+
+    use_case, close = build_resolve_use_case(**build_kwargs)
 
     try:
         result = _resolve_query_result(
@@ -284,6 +304,16 @@ def install(
         "--select-slug",
         help="Explicitly pick one discovered slug without prompting.",
     ),
+    prefer: str | None = typer.Option(
+        None,
+        "--prefer",
+        help="Selection profile for choosing among legal candidates: balanced, low-cost, or high-trust.",
+    ),
+    interaction_mode: str | None = typer.Option(
+        None,
+        "--interaction-mode",
+        help="How root ambiguity should be handled: auto, always, or never.",
+    ),
     target: Path = typer.Option(
         Path("skill_demo"),
         "--target",
@@ -297,7 +327,13 @@ def install(
 ) -> None:
     """Install a skill query into a local demo workspace."""
 
-    use_case, close = build_install_use_case()
+    build_kwargs: dict[str, str] = {}
+    if prefer is not None:
+        build_kwargs["selection_profile_override"] = prefer
+    if interaction_mode is not None:
+        build_kwargs["interaction_mode_override"] = interaction_mode
+
+    use_case, close = build_install_use_case(**build_kwargs)
 
     try:
         result = _install_result(

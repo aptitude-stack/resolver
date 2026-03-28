@@ -91,6 +91,328 @@ This is the architecture behind:
 
 This is not a pipeline violation. It is the correct replay path once a lock already exists.
 
+## Selection, Governance, And Integrity Contract
+
+This section is the source of truth for how fresh planning chooses and validates a system.
+
+If implementation differs from this contract, implementation must be updated. Do not "infer" this behavior from scattered code paths.
+
+### Server-Owned Metadata
+
+The server owns immutable facts attached to skills and versions.
+
+For selection and governance, the client may rely on server-provided:
+
+- `lifecycle_status`
+- `trust_tier`
+- `token_estimate`
+- `content_size_bytes`
+- checksum metadata for immutable content
+- publisher or provenance metadata when the registry exposes it
+
+The client may apply documented fallbacks for missing metadata, but it must not silently invent new trust or cost facts from heuristics.
+
+### Client-Owned Policy
+
+Policy is client-owned even when policy decisions use server-provided metadata.
+
+Required policy source precedence:
+
+1. per-request override
+2. workspace or organization policy
+3. client default policy
+
+Current implementation status:
+
+- client defaults exist
+- programmatic override exists through `PolicyContext`
+- workspace or organization policy is not implemented yet
+
+Phase 1 default client policy:
+
+- `profile = "default"`
+- `source = "client_default"`
+- `allowed_lifecycle_statuses = ["published", "deprecated", "archived"]`
+- `allowed_trust_tiers = ["verified", "internal", "untrusted"]`
+- `max_token_estimate = null`
+- `max_content_size_bytes = null`
+
+These defaults are part of the contract. They must not be left implicit in code.
+
+### Client-Owned Selection Preferences
+
+Selection preferences are separate from hard policy.
+
+Policy decides what is legal.
+Selection preferences decide what is preferred among the remaining legal candidates.
+
+Phase 1 `SelectionPreferences` defaults:
+
+- `profile = "balanced"`
+- `interaction_mode = "auto"`
+
+Selection-preference source precedence:
+
+1. CLI override
+2. environment override
+3. workspace config
+4. user config
+5. client default
+
+Currently implemented selection-preference sources:
+
+- CLI flags:
+  - `--prefer`
+  - `--interaction-mode`
+- environment variables:
+  - `APTITUDE_PREFER`
+  - `APTITUDE_INTERACTION_MODE`
+- workspace `aptitude.toml`
+- user `aptitude.toml`
+
+Supported phase 1 selection profiles:
+
+- `balanced`
+- `low-cost`
+- `high-trust`
+
+Explicitly deferred:
+
+- `latest`
+- hard policy CLI overrides such as token or trust ceilings
+
+Supported phase 1 interaction modes:
+
+- `auto`
+- `always`
+- `never`
+
+Interaction rules:
+
+- prompting is allowed only for root candidate ambiguity
+- recursive dependency resolution must never prompt
+- preference metadata may explain fresh planning decisions, but it must not become an execution dependency
+- selection-preference source metadata may be stored for explainability, but execution must ignore it
+
+### Missing Metadata Fallbacks
+
+Missing selection metadata must be handled deterministically.
+
+Phase 1 fallback rules:
+
+- missing `trust_tier` is normalized to `untrusted` at the registry mapping boundary
+- missing `token_estimate` is treated as `unknown`
+- missing `content_size_bytes` is treated as `unknown`
+
+Policy behavior for unknown resource values:
+
+- if no ceiling is configured, unknown resource values do not cause policy failure
+- if a ceiling is configured, unknown resource values fail closed during candidate policy and graph governance
+
+Ranking behavior for unknown resource values:
+
+- ranking may compare `token_estimate` or `content_size_bytes` only when both candidates define the value
+- otherwise that ranking criterion is skipped and later tiebreakers apply
+
+### Governance Runs In Two Phases
+
+Fresh planning requires two distinct governance phases.
+
+#### 1. Candidate Policy Phase
+
+This phase runs after discovery has produced enriched candidates with selected versions, but before final ranking and final root selection.
+
+This phase may only use rules that can be evaluated without graph expansion.
+
+Phase 1 candidate-policy rules:
+
+- allowed lifecycle states
+- allowed trust tiers
+- maximum `token_estimate`
+- maximum `content_size_bytes`
+
+Phase 1 outcome:
+
+- candidates that fail are filtered out before ranking
+- filtered candidates remain traceable
+
+Phase 1 module handoff:
+
+1. discovery returns candidate identities and intent
+2. resolver chooses one concrete version per candidate
+3. governance filters candidate-level policy compliance
+4. discovery reranks only the surviving legal candidates
+5. resolver selects the final root from that ranked legal set
+
+#### 2. Graph Governance Phase
+
+This phase runs after recursive dependency resolution and before lock generation.
+
+This phase validates the full resolved graph and may block the entire result.
+
+Phase 2 graph-governance responsibilities:
+
+- enforce lifecycle and trust rules across all resolved nodes
+- enforce resource ceilings across all resolved nodes
+- enforce future organization-specific rules
+- enforce future cost constraints that depend on the graph, not just the root candidate
+
+Current implementation status:
+
+- candidate pre-filter governance exists today
+- graph governance exists today
+- lifecycle, trust, and resource-ceiling rules are implemented today
+
+### Ranking Happens Only Among Policy-Compliant Candidates
+
+Policy filters illegal candidates.
+Ranking chooses the best candidate among the remaining legal candidates.
+
+Deterministic ranking is profile-aware.
+
+Shared relevance floor for all phase 1 profiles:
+
+1. exact name match
+2. exact slug match
+3. runtime or language fit
+4. stronger label, tag, and text relevance to the request
+
+`balanced` profile:
+
+1. shared relevance floor
+2. higher trust tier
+3. lower `token_estimate` when known
+4. lower `content_size_bytes` when known
+5. current-default preference and deterministic version quality
+6. newer semantic version
+7. newer publication timestamp
+8. slug as the final stable tiebreak
+
+`low-cost` profile:
+
+1. shared relevance floor
+2. lower `token_estimate` when known
+3. lower `content_size_bytes` when known
+4. higher trust tier
+5. lifecycle quality
+6. current-default preference and deterministic version quality
+7. newer semantic version
+8. newer publication timestamp
+9. slug as the final stable tiebreak
+
+`high-trust` profile:
+
+1. shared relevance floor
+2. higher trust tier
+3. lifecycle quality
+4. lower `token_estimate` when known
+5. lower `content_size_bytes` when known
+6. current-default preference and deterministic version quality
+7. newer semantic version
+8. newer publication timestamp
+9. slug as the final stable tiebreak
+
+Selection behavior:
+
+- `auto` prompts only when the session can prompt and ambiguity remains; otherwise it selects the top-ranked legal candidate deterministically
+- `always` prompts whenever ambiguity remains; if prompting is impossible, the client fails clearly instead of silently auto-picking
+- `never` never prompts and always selects the top-ranked legal candidate deterministically
+- interactive prompting shows only policy-compliant candidates, already ranked
+- graph governance does not silently "fallback" to another candidate unless the architecture is updated to say so explicitly
+
+Current implementation status:
+
+- deterministic profile-aware reranking exists today
+- ranking pre-filters by candidate policy today
+- explicit interaction modes are carried through the request and use-case flow today
+- selection-preference precedence is merged in application composition today
+- effective selection preferences are emitted in trace today
+- final-selection explainability trace is emitted today
+- automatic fallback to "next candidate if governance fails" is not part of the design
+
+### Lock Must Explain Both Policy Inputs And Policy Outcomes
+
+The lockfile must explain not only what was selected, but also which policy context governed that selection.
+
+Required lock governance information:
+
+- governance outcome entries for each rule evaluation
+- a minimal policy snapshot describing the client policy used for the decision
+- optional selection explainability metadata describing the chosen selection profile and interaction mode
+
+Phase 1 minimal policy snapshot:
+
+- policy version or profile identifier
+- allowed lifecycle states
+- allowed trust tiers
+- maximum `token_estimate`
+- maximum `content_size_bytes`
+
+Current implementation status:
+
+- governance outcomes are stored today
+- minimal policy snapshot is stored today
+- minimal selection explainability metadata is stored today
+
+Phase 1 minimal selection explainability snapshot:
+
+- selected selection profile
+- effective interaction mode
+- profile source
+- interaction-mode source
+
+Phase 1 policy snapshot JSON shape:
+
+```json
+{
+  "policy": {
+    "profile": "default",
+    "source": "client_default",
+    "allowed_lifecycle_statuses": ["published", "deprecated", "archived"],
+    "allowed_trust_tiers": ["verified", "internal", "untrusted"],
+    "max_token_estimate": null,
+    "max_content_size_bytes": null
+  }
+}
+```
+
+`null` is explicit and means "no ceiling".
+
+### Checksum Contract
+
+Checksum semantics are explicit, not implicit.
+
+Phase 1 checksum contract:
+
+- the server publishes immutable content checksum metadata
+- the client stores that checksum in domain models and in the lockfile
+- the client recomputes and verifies the checksum during materialization
+- checksum mismatch fails fast and stops materialization
+
+Phase 1 canonical checksum fields:
+
+- `content_checksum.algorithm`
+- `content_checksum.digest`
+- optional `content_checksum.size_bytes`
+
+Phase 1 canonical algorithm:
+
+- `sha256`
+
+Phase 1 canonical typed error:
+
+- `ContentChecksumMismatchError`
+
+Phase 1 required error payload fields:
+
+- `slug`
+- `version`
+- `algorithm`
+- `expected_digest`
+- `actual_digest`
+
+Future algorithms may be added later, but not by silently changing the meaning of phase 1 data.
+
 ## Hard Constraints
 
 Every implementation must preserve:
@@ -108,7 +430,6 @@ If a proposed change violates one of these, the design is wrong until proven oth
 ```text
 src/aptitude_client/
   application/
-    commands/
     dto/
     queries/
     use_cases/
@@ -267,17 +588,19 @@ Resolver behavior must be deterministic and explainable.
 Owns:
 
 - policy evaluation before lock generation
+- candidate-policy filtering before final ranking
 - blocking invalid resolved systems
 
 Current implementation:
 
-- lifecycle policy checks
+- candidate-policy filtering before final ranking
+- graph governance before lock generation
+- lifecycle, trust, and resource-ceiling rules
 
 Planned expansion:
 
-- trust validation
 - organization-specific rules
-- cost constraints
+- additional cost constraints that depend on graph-level context
 
 ### lockfile/
 
@@ -287,6 +610,7 @@ Owns:
 - deterministic serialization
 - parsing
 - replay validation
+- policy snapshot and governance result durability
 
 The lockfile is the execution source of truth.
 
@@ -302,6 +626,7 @@ Owns:
 - execution-owned debug artifacts
 
 Execution must not depend on `ResolutionGraph`.
+Execution must fail fast on checksum mismatch.
 
 ### domain/
 

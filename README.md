@@ -35,10 +35,25 @@ Internal preview command:
 
 ## What Is Still Incomplete
 
-- governance currently enforces lifecycle policy only
-- trust validation, organization rules, and cost constraints are not implemented yet
+- workspace/org policy loading is not implemented yet
+- broader organization-specific rules and graph-level cost constraints are not implemented yet
+- winner-vs-runner-up explanation still derives from parallel explanation logic instead of directly from reranker output
 - `plugins/`, `cache/`, and `telemetry/` are planned responsibilities, not current packages
 - MCP and SDK interfaces are not implemented yet
+
+## Selection, Governance, And Integrity Direction
+
+The canonical architecture now defines these required semantics:
+
+- server provides immutable metadata such as lifecycle, trust, token, size, and checksum facts
+- client owns policy and candidate selection
+- governance is split into:
+  - candidate-policy filtering before final ranking and final root selection
+  - full graph governance after resolution and before lock generation
+- ranking compares only policy-compliant candidates
+- phase 1 checksum verification uses server-published `sha256` checksum metadata and fails fast on mismatch
+
+Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current User Flows
 
@@ -95,7 +110,6 @@ py -3 -m aptitude_client.interfaces.cli.main resolve "Postman Primary Skill"
 ```text
 src/aptitude_client/
   application/
-    commands/
     dto/
     queries/
     use_cases/

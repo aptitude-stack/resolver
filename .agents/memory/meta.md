@@ -35,7 +35,13 @@
 - Important reality checks:
   - `install` plans and materializes from a newly generated lock
   - `sync --lock` replays an existing lock without discovery or resolution
-  - governance currently enforces lifecycle only
+  - Governance Phase 1 is implemented: candidate pre-filtering and graph governance cover lifecycle, trust, and optional resource ceilings
+  - the canonical architecture now requires two governance phases:
+    - candidate-policy filtering before final ranking and root selection
+    - graph governance after resolution and before lock generation
+  - policy is client-owned; trust, lifecycle, token, size, and checksum metadata are server-owned facts
+  - phase 1 checksum contract is explicit: server publishes `sha256`, client verifies it during materialization, lock records it
+  - the lock stores governance outcomes, the minimal policy snapshot, and optional selection explainability metadata
   - `docs/openapi/` is reference material, not the sole runtime truth
   - historical milestone plans under `.agents/plans/` are not the architecture source of truth
   - future non-trivial implementation work must read `docs/ARCHITECTURE.md` and `docs/RULES.md` first

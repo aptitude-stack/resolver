@@ -11,7 +11,7 @@ from aptitude_client.domain.models import (
     SkillMetadata,
     SkillCoordinate,
 )
-from aptitude_client.domain.policy import PolicyEvaluation
+from aptitude_client.domain.policy import PolicyEvaluation, SelectionPreferences
 from aptitude_client.lockfile import build_lockfile, parse_lockfile, replay_lockfile, serialize_lockfile
 from aptitude_client.resolver.graph import resolve_recursive_graph
 
@@ -97,6 +97,12 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
                 coordinate=root,
             )
         ],
+        selection_preferences=SelectionPreferences(
+            profile="high-trust",
+            interaction_mode="always",
+            profile_source="workspace_config",
+            interaction_mode_source="cli_override",
+        ),
     )
 
     assert lockfile.generated_at == "2026-03-18T00:00:00Z"
@@ -108,6 +114,17 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
     assert lockfile.nodes[0].headers == {"entrypoint": "main", "runtime": "python"}
     assert lockfile.install_order == ["python.base@1.0.0", "python.lint@1.2.3"]
     assert lockfile.governance[0].node_id == "python.lint@1.2.3"
+    assert lockfile.policy is not None
+    assert lockfile.policy.profile == "default"
+    assert lockfile.policy.source == "client_default"
+    assert lockfile.policy.allowed_trust_tiers == ["verified", "internal", "untrusted"]
+    assert lockfile.policy.max_token_estimate is None
+    assert lockfile.policy.max_content_size_bytes is None
+    assert lockfile.selection is not None
+    assert lockfile.selection.profile == "high-trust"
+    assert lockfile.selection.interaction_mode == "always"
+    assert lockfile.selection.profile_source == "workspace_config"
+    assert lockfile.selection.interaction_mode_source == "cli_override"
 
     parsed = parse_lockfile(serialize_lockfile(lockfile))
 

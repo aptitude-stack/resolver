@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import SelectionSlugNotFoundError, SkillNotFoundError
+from aptitude_client.domain.errors import (
+    InteractiveSelectionUnavailableError,
+    SelectionSlugNotFoundError,
+    SkillNotFoundError,
+)
 from aptitude_client.domain.models import (
     DiscoveredSkill,
     DiscoveryCandidate,
@@ -255,7 +259,8 @@ def test_select_final_candidate_respects_explicit_slug() -> None:
         query="lint",
         candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
         select_slug="js.lint",
-        interactive=False,
+        interaction_mode="never",
+        prompt_capable=False,
     )
 
     assert result.selected_candidate is not None
@@ -265,12 +270,13 @@ def test_select_final_candidate_respects_explicit_slug() -> None:
 
 
 
-def test_select_final_candidate_returns_selection_required_for_interactive_ambiguity() -> None:
+def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_when_prompt_capable() -> None:
     result = select_final_candidate(
         query="lint",
         candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
         select_slug=None,
-        interactive=True,
+        interaction_mode="auto",
+        prompt_capable=True,
     )
 
     assert result.selected_candidate is None
@@ -279,12 +285,53 @@ def test_select_final_candidate_returns_selection_required_for_interactive_ambig
 
 
 
-def test_select_final_candidate_auto_selects_top_ranked_non_interactive_candidate() -> None:
+def test_select_final_candidate_returns_selection_required_for_always_mode() -> None:
     result = select_final_candidate(
         query="lint",
         candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
         select_slug=None,
-        interactive=False,
+        interaction_mode="always",
+        prompt_capable=True,
+    )
+
+    assert result.selected_candidate is None
+    assert result.selection_mode is None
+    assert result.trace == []
+
+
+def test_select_final_candidate_raises_when_always_mode_cannot_prompt() -> None:
+    with pytest.raises(InteractiveSelectionUnavailableError):
+        select_final_candidate(
+            query="lint",
+            candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+            select_slug=None,
+            interaction_mode="always",
+            prompt_capable=False,
+        )
+
+
+def test_select_final_candidate_auto_selects_top_ranked_candidate_when_prompt_unavailable() -> None:
+    result = select_final_candidate(
+        query="lint",
+        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        select_slug=None,
+        interaction_mode="auto",
+        prompt_capable=False,
+    )
+
+    assert result.selected_candidate is not None
+    assert result.selected_candidate.slug == "python.lint"
+    assert result.selection_mode == "non_interactive_top_ranked"
+    assert [item.action for item in result.trace] == ["auto_select_top_ranked"]
+
+
+def test_select_final_candidate_never_mode_auto_selects_top_ranked_candidate() -> None:
+    result = select_final_candidate(
+        query="lint",
+        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        select_slug=None,
+        interaction_mode="never",
+        prompt_capable=True,
     )
 
     assert result.selected_candidate is not None
@@ -300,5 +347,6 @@ def test_select_final_candidate_raises_when_selected_slug_is_missing() -> None:
             query="lint",
             candidates=[_candidate("python.lint", "1.2.3")],
             select_slug="js.lint",
-            interactive=False,
+            interaction_mode="never",
+            prompt_capable=False,
         )

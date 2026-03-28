@@ -6,6 +6,8 @@ from aptitude_client.lockfile.model import (
     Lockfile,
     LockedEdge,
     LockedSkill,
+    PolicySnapshot,
+    SelectionSnapshot,
 )
 from aptitude_client.lockfile.parser import load_lockfile, parse_lockfile
 from aptitude_client.lockfile.replay import ReplayedLock, replay_lockfile
@@ -17,6 +19,8 @@ __all__ = [
     "Lockfile",
     "LockedEdge",
     "LockedSkill",
+    "PolicySnapshot",
+    "SelectionSnapshot",
     "ReplayedLock",
     "build_lockfile",
     "load_lockfile",

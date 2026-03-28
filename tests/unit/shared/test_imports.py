@@ -9,7 +9,6 @@ import pytest
     "module_name",
     [
         "aptitude_client",
-        "aptitude_client.application.commands",
         "aptitude_client.application.dto",
         "aptitude_client.application.queries",
         "aptitude_client.application.use_cases",
@@ -19,6 +18,7 @@ import pytest
         "aptitude_client.discovery.reranking",
         "aptitude_client.domain.errors",
         "aptitude_client.domain.policy",
+        "aptitude_client.domain.policy.ranking",
         "aptitude_client.domain.tracing",
         "aptitude_client.execution",
         "aptitude_client.governance",

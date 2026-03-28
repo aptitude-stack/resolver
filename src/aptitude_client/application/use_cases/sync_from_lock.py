@@ -18,7 +18,7 @@ from aptitude_client.application.use_cases.resolution_mapping import (
 )
 from aptitude_client.domain.errors import InvalidLockfileError
 from aptitude_client.domain.tracing import TraceEntry
-from aptitude_client.execution import materialize_lockfile
+from aptitude_client.execution import build_execution_plan, materialize_lockfile
 from aptitude_client.lockfile import load_lockfile
 
 
@@ -50,10 +50,12 @@ class SyncFromLockUseCase:
                 data={"path": str(lock_path)},
             )
         ]
+        execution_plan = build_execution_plan(lockfile)
         materialization = materialize_lockfile(
             target=request.target,
             lockfile=lockfile,
             registry_client=self._registry_client,
+            execution_plan=execution_plan,
         )
         trace.extend(materialization.trace)
 

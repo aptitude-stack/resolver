@@ -425,19 +425,22 @@ def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo
 def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
     use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
     close_calls: list[str] = []
+    builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
-    monkeypatch.setattr(
-        app_module,
-        "build_resolve_use_case",
-        lambda: (use_case, lambda: close_calls.append("closed")),
-    )
+    def build_resolve_use_case(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    monkeypatch.setattr(app_module, "build_resolve_use_case", build_resolve_use_case)
 
     result = runner.invoke(app_module.app, ["resolve", "python lint"])
 
     assert result.exit_code == 0
+    assert builder_kwargs == {}
     assert len(use_case.requests) == 1
-    assert use_case.requests[0].interactive is False
+    assert use_case.requests[0].interaction_mode is None
+    assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].select_slug is None
     assert close_calls == ["closed"]
     assert result.stdout == (_resolved_result(selection_mode="non_interactive_top_ranked").model_dump_json(indent=2, exclude_none=True) + "\n")
@@ -466,9 +469,11 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
     assert result.exit_code == 0
     assert "Multiple matching skills were found:" in result.stdout
     assert len(use_case.requests) == 2
-    assert use_case.requests[0].interactive is True
+    assert use_case.requests[0].interaction_mode is None
+    assert use_case.requests[0].prompt_capable is True
     assert use_case.requests[0].select_slug is None
-    assert use_case.requests[1].interactive is False
+    assert use_case.requests[1].interaction_mode == "never"
+    assert use_case.requests[1].prompt_capable is False
     assert use_case.requests[1].select_slug == "js.lint"
     assert use_case.requests[1].selection_source == "interactive"
     assert close_calls == ["closed"]
@@ -490,7 +495,8 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert len(use_case.requests) == 1
-    assert use_case.requests[0].interactive is False
+    assert use_case.requests[0].interaction_mode is None
+    assert use_case.requests[0].prompt_capable is True
     assert use_case.requests[0].select_slug == "js.lint"
     assert close_calls == ["closed"]
 
@@ -500,19 +506,22 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     target = tmp_path / "skill_demo"
     use_case = QueueUseCase(responses=[_installed_result(str(target))])
     close_calls: list[str] = []
+    builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
-    monkeypatch.setattr(
-        app_module,
-        "build_install_use_case",
-        lambda: (use_case, lambda: close_calls.append("closed")),
-    )
+    def build_install_use_case(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    monkeypatch.setattr(app_module, "build_install_use_case", build_install_use_case)
 
     result = runner.invoke(app_module.app, ["install", "python lint", "--target", str(target)])
 
     assert result.exit_code == 0
+    assert builder_kwargs == {}
     assert len(use_case.requests) == 1
-    assert use_case.requests[0].interactive is False
+    assert use_case.requests[0].interaction_mode is None
+    assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
     assert "Collecting python lint" in result.stdout
@@ -545,6 +554,43 @@ def test_cli_install_json_flag_preserves_structured_output(monkeypatch, tmp_path
     assert result.exit_code == 0
     assert close_calls == ["closed"]
     assert result.stdout == (installed_result.model_dump_json(indent=2, exclude_none=True) + "\n")
+
+
+def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp_path) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    builder_kwargs: dict[str, object] = {}
+
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+
+    def build_install_use_case(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    monkeypatch.setattr(app_module, "build_install_use_case", build_install_use_case)
+
+    result = runner.invoke(
+        app_module.app,
+        [
+            "install",
+            "python lint",
+            "--target",
+            str(target),
+            "--prefer",
+            "low-cost",
+            "--interaction-mode",
+            "never",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert builder_kwargs == {
+        "selection_profile_override": "low-cost",
+        "interaction_mode_override": "never",
+    }
+    assert use_case.requests[0].interaction_mode is None
+    assert close_calls == ["closed"]
 
 
 def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:

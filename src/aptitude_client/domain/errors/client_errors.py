@@ -31,6 +31,21 @@ class InvalidLockfileError(AptitudeClientError):
     """Raised when a lockfile payload cannot be parsed or replayed safely."""
 
 
+class InvalidClientConfigurationError(AptitudeClientError):
+    """Raised when client-side configuration cannot be parsed or validated safely."""
+
+    def __init__(self, source: str, details: str) -> None:
+        self.source = source
+        self.details = details
+        super().__init__(f"Invalid client configuration from {source}: {details}")
+
+    def to_payload(self) -> dict[str, object]:
+        payload = super().to_payload()
+        payload["source"] = self.source
+        payload["details"] = self.details
+        return payload
+
+
 class RegistryUnavailableError(AptitudeClientError):
     """Raised when the registry cannot be reached."""
 
@@ -75,6 +90,21 @@ class SelectionSlugNotFoundError(SkillSelectionError):
         return payload
 
 
+class InteractiveSelectionUnavailableError(SkillSelectionError):
+    """Raised when prompting is required but the current session cannot prompt."""
+
+    def __init__(self, query: str) -> None:
+        self.query = query
+        super().__init__(
+            f"Interactive selection was requested for query '{query}', but prompting is not available in this session."
+        )
+
+    def to_payload(self) -> dict[str, object]:
+        payload = super().to_payload()
+        payload["query"] = self.query
+        return payload
+
+
 class DependencyCycleError(AptitudeClientError):
     """Raised when recursive dependency expansion detects a cycle."""
 
@@ -112,10 +142,19 @@ class PolicyViolationError(AptitudeClientError):
 class ContentChecksumMismatchError(AptitudeClientError):
     """Raised when downloaded content does not match immutable metadata."""
 
-    def __init__(self, slug: str, version: str, algorithm: str) -> None:
+    def __init__(
+        self,
+        slug: str,
+        version: str,
+        algorithm: str,
+        expected_digest: str,
+        actual_digest: str,
+    ) -> None:
         self.slug = slug
         self.version = version
         self.algorithm = algorithm
+        self.expected_digest = expected_digest
+        self.actual_digest = actual_digest
         super().__init__(
             f"Downloaded content checksum did not match metadata for {slug}@{version}."
         )
@@ -125,6 +164,8 @@ class ContentChecksumMismatchError(AptitudeClientError):
         payload["slug"] = self.slug
         payload["version"] = self.version
         payload["algorithm"] = self.algorithm
+        payload["expected_digest"] = self.expected_digest
+        payload["actual_digest"] = self.actual_digest
         return payload
 
 

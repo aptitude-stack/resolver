@@ -20,7 +20,7 @@ from aptitude_client.application.use_cases.resolution_mapping import (
     policy_to_dto,
     trace_to_dto,
 )
-from aptitude_client.domain.policy import PolicyContext
+from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
 from aptitude_client.execution import materialize_lockfile, write_install_debug_artifacts
 
 
@@ -48,11 +48,13 @@ class InstallSkillUseCase:
         registry_client: InstallRegistryPort,
         *,
         policy_context: PolicyContext | None = None,
+        selection_preferences: SelectionPreferences | None = None,
     ) -> None:
         self._registry_client = registry_client
         self._planner = PlanSkillResolutionQuery(
             registry_client,
             policy_context=policy_context or PolicyContext(),
+            selection_preferences=selection_preferences or SelectionPreferences(),
         )
 
     def execute(self, request: InstallRequestDto) -> InstallResultDto:
@@ -61,7 +63,8 @@ class InstallSkillUseCase:
                 query=request.query,
                 version=request.version,
                 select_slug=request.select_slug,
-                interactive=request.interactive,
+                interaction_mode=request.interaction_mode,
+                prompt_capable=request.prompt_capable,
                 selection_source=request.selection_source,
             )
         )
@@ -78,6 +81,7 @@ class InstallSkillUseCase:
             target=request.target,
             lockfile=plan.lockfile,
             registry_client=self._registry_client,
+            execution_plan=plan.execution_plan,
         )
         trace = list(plan.trace)
         trace.extend(materialization.trace)
