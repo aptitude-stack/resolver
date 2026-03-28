@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-import httpx
+import tempfile
+from pathlib import Path
 
+import httpx
+import pytest
+
+from aptitude_client.cache import CacheStore
+from aptitude_client.domain.errors import RegistryUnavailableError, SkillNotFoundError
 from aptitude_client.registry.client import RegistryClient
 from aptitude_client.shared.config import Settings
 
@@ -12,6 +18,16 @@ def _settings() -> Settings:
         read_token="reader-token",
         server_timeout_seconds=5.0,
         _env_file=None,
+    )
+
+
+def _client(handler, *, cache_dir=None) -> RegistryClient:
+    return RegistryClient(
+        _settings(),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        cache_store=CacheStore(
+            cache_dir or Path(tempfile.mkdtemp(prefix="aptitude-cache-test-"))
+        ),
     )
 
 
@@ -42,10 +58,7 @@ def test_list_skill_versions_reads_live_contract_from_skills_slug_endpoint() -> 
             },
         )
 
-    client = RegistryClient(
-        _settings(),
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
+    client = _client(handler)
 
     versions = client.list_skill_versions("postman.primary.1774130709214-55706")
 
@@ -74,10 +87,7 @@ def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -
             },
         )
 
-    client = RegistryClient(
-        _settings(),
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
+    client = _client(handler)
 
     identity = client.fetch_skill_identity("postman.primary.1774130709214-55706")
 
@@ -125,10 +135,7 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
             },
         )
 
-    client = RegistryClient(
-        _settings(),
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
+    client = _client(handler)
 
     metadata = client.fetch_skill_metadata("postman.primary.1774130709214-55706", "1.0.0")
 
@@ -144,11 +151,138 @@ def test_fetch_skill_content_uses_live_content_path() -> None:
         assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
         return httpx.Response(200, text="# Postman Primary Skill v1\n")
 
-    client = RegistryClient(
-        _settings(),
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
+    client = _client(handler)
 
     content = client.fetch_skill_content("postman.primary.1774130709214-55706", "1.0.0")
 
     assert content == "# Postman Primary Skill v1\n"
+
+
+def test_list_skill_versions_uses_advisory_cache_for_repeat_reads(tmp_path) -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(
+            200,
+            json={
+                "slug": "python.lint",
+                "versions": [
+                    {
+                        "version": "1.2.3",
+                        "lifecycle_status": "published",
+                        "trust_tier": "internal",
+                        "published_at": "2026-03-28T00:00:00Z",
+                        "is_current_default": True,
+                    }
+                ],
+            },
+        )
+
+    client = _client(handler, cache_dir=tmp_path / "cache")
+
+    first = client.list_skill_versions("python.lint")
+    second = client.list_skill_versions("python.lint")
+
+    assert [item.coordinate.version for item in first] == ["1.2.3"]
+    assert [item.coordinate.version for item in second] == ["1.2.3"]
+    assert request_count == 1
+
+
+def test_fetch_skill_content_uses_checksum_cache_key_when_available(tmp_path) -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(200, text="# Cached content\n")
+
+    client = _client(handler, cache_dir=tmp_path / "cache")
+
+    first = client.fetch_skill_content(
+        "python.lint",
+        "1.2.3",
+        checksum_algorithm="sha256",
+        checksum_digest="digest-123",
+    )
+    second = client.fetch_skill_content(
+        "python.lint",
+        "1.2.3",
+        checksum_algorithm="sha256",
+        checksum_digest="digest-123",
+    )
+
+    assert first == "# Cached content\n"
+    assert second == "# Cached content\n"
+    assert request_count == 1
+
+
+def test_registry_client_retries_transient_server_failures_then_succeeds() -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        if request_count < 3:
+            return httpx.Response(503, json={"error": {"code": "TEMPORARY", "message": "retry"}})
+        return httpx.Response(
+            200,
+            json={
+                "slug": "python.lint",
+                "versions": [
+                    {
+                        "version": "1.2.3",
+                        "lifecycle_status": "published",
+                        "trust_tier": "internal",
+                        "published_at": "2026-03-28T00:00:00Z",
+                        "is_current_default": True,
+                    }
+                ],
+            },
+        )
+
+    client = _client(handler)
+
+    versions = client.list_skill_versions("python.lint")
+
+    assert [item.coordinate.version for item in versions] == ["1.2.3"]
+    assert request_count == 3
+
+
+def test_registry_client_does_not_retry_non_transient_not_found_errors() -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(
+            404,
+            json={"error": {"code": "SKILL_NOT_FOUND", "message": "missing"}},
+        )
+
+    client = _client(handler)
+
+    with pytest.raises(SkillNotFoundError, match="missing"):
+        client.list_skill_versions("missing.skill")
+
+    assert request_count == 1
+
+
+def test_registry_client_raises_unavailable_after_exhausting_transient_retries() -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(
+            503,
+            json={"error": {"code": "TEMPORARY", "message": "retry"}},
+        )
+
+    client = _client(handler)
+
+    with pytest.raises(RegistryUnavailableError, match="Registry is unavailable"):
+        client.list_skill_versions("python.lint")
+
+    assert request_count == 3

@@ -27,7 +27,8 @@ class InstallRequestDto(BaseModel):
     target: Path
     version: str | None = None
     select_slug: str | None = None
-    interactive: bool = False
+    interaction_mode: Literal["auto", "always", "never"] | None = None
+    prompt_capable: bool = False
     selection_source: str | None = None
 
 

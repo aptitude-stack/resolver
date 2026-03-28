@@ -13,6 +13,8 @@ from aptitude_client.lockfile.model import (
     Lockfile,
     LockedEdge,
     LockedSkill,
+    PolicySnapshot,
+    SelectionSnapshot,
 )
 
 
@@ -30,6 +32,8 @@ def parse_lockfile(payload: str) -> Lockfile:
     root_data = _expect_dict(data, "root")
     nodes_data = _expect_list(data, "nodes")
     edges_data = _expect_list(data, "edges")
+    selection_data = _expect_optional_dict(data, "selection")
+    policy_data = _expect_optional_dict(data, "policy")
     governance_data = _expect_list(data, "governance")
 
     return Lockfile(
@@ -82,6 +86,42 @@ def parse_lockfile(payload: str) -> Lockfile:
             for edge_data in (_expect_mapping(item, "edges item") for item in edges_data)
         ],
         install_order=_expect_str_list(data, "install_order"),
+        selection=(
+            SelectionSnapshot(
+                profile=_expect_str(selection_data, "profile"),
+                interaction_mode=_expect_str(selection_data, "interaction_mode"),
+                profile_source=_expect_str(selection_data, "profile_source"),
+                interaction_mode_source=_expect_str(selection_data, "interaction_mode_source"),
+            )
+            if selection_data is not None
+            else None
+        ),
+        policy=(
+            PolicySnapshot(
+                profile=_expect_str(policy_data, "profile"),
+                source=_expect_str(policy_data, "source"),
+                allowed_lifecycle_statuses=_expect_str_list(
+                    policy_data,
+                    "allowed_lifecycle_statuses",
+                ),
+                allowed_trust_tiers=_expect_str_list(policy_data, "allowed_trust_tiers"),
+                max_token_estimate=_expect_optional_int(policy_data, "max_token_estimate"),
+                max_content_size_bytes=_expect_optional_int(
+                    policy_data,
+                    "max_content_size_bytes",
+                ),
+                max_total_token_estimate=_expect_optional_int(
+                    policy_data,
+                    "max_total_token_estimate",
+                ),
+                max_total_content_size_bytes=_expect_optional_int(
+                    policy_data,
+                    "max_total_content_size_bytes",
+                ),
+            )
+            if policy_data is not None
+            else None
+        ),
         governance=[
             GovernanceSnapshotEntry(
                 rule=_expect_str(item_data, "rule"),
@@ -117,6 +157,15 @@ def _expect_list(data: dict[str, Any], field_name: str) -> list[Any]:
     value = data.get(field_name)
     if not isinstance(value, list):
         raise InvalidLockfileError(f"Lockfile field '{field_name}' must be a list.")
+    return value
+
+
+def _expect_optional_dict(data: dict[str, Any], field_name: str) -> dict[str, Any] | None:
+    value = data.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise InvalidLockfileError(f"Lockfile field '{field_name}' must be an object or null.")
     return value
 
 

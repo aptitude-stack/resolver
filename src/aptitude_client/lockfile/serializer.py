@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 
 from aptitude_client.domain.models import ResolutionGraph
-from aptitude_client.domain.policy import PolicyEvaluation
+from aptitude_client.domain.policy import PolicyContext, PolicyEvaluation, SelectionPreferences
 from aptitude_client.lockfile.model import (
     GovernanceSnapshotEntry,
     LockRoot,
     Lockfile,
     LockedEdge,
     LockedSkill,
+    PolicySnapshot,
+    SelectionSnapshot,
 )
 
 
@@ -22,6 +24,8 @@ def build_lockfile(
     requested_version: str | None,
     selection_mode: str,
     policy_evaluations: list[PolicyEvaluation],
+    policy_context: PolicyContext | None = None,
+    selection_preferences: SelectionPreferences | None = None,
     client_version: str | None = None,
 ) -> Lockfile:
     """Build a deterministic lock artifact from one resolved graph."""
@@ -96,6 +100,7 @@ def build_lockfile(
 
     published_timestamps = sorted(node.published_at for node in nodes if node.published_at)
     generated_at = published_timestamps[-1] if published_timestamps else None
+    effective_policy = policy_context or PolicyContext()
 
     return Lockfile(
         version=1,
@@ -110,6 +115,26 @@ def build_lockfile(
         nodes=nodes,
         edges=edges,
         install_order=install_order,
+        selection=(
+            SelectionSnapshot(
+                profile=selection_preferences.profile,
+                interaction_mode=selection_preferences.interaction_mode,
+                profile_source=selection_preferences.profile_source,
+                interaction_mode_source=selection_preferences.interaction_mode_source,
+            )
+            if selection_preferences is not None
+            else None
+        ),
+        policy=PolicySnapshot(
+            profile=effective_policy.profile,
+            source=effective_policy.source,
+            allowed_lifecycle_statuses=list(effective_policy.allowed_lifecycle_statuses),
+            allowed_trust_tiers=list(effective_policy.allowed_trust_tiers),
+            max_token_estimate=effective_policy.max_token_estimate,
+            max_content_size_bytes=effective_policy.max_content_size_bytes,
+            max_total_token_estimate=effective_policy.max_total_token_estimate,
+            max_total_content_size_bytes=effective_policy.max_total_content_size_bytes,
+        ),
         governance=governance,
     )
 
@@ -166,6 +191,30 @@ def lockfile_to_dict(lockfile: Lockfile) -> dict[str, object]:
             for edge in lockfile.edges
         ],
         "install_order": list(lockfile.install_order),
+        "selection": (
+            {
+                "profile": lockfile.selection.profile,
+                "interaction_mode": lockfile.selection.interaction_mode,
+                "profile_source": lockfile.selection.profile_source,
+                "interaction_mode_source": lockfile.selection.interaction_mode_source,
+            }
+            if lockfile.selection is not None
+            else None
+        ),
+        "policy": (
+            {
+                "profile": lockfile.policy.profile,
+                "source": lockfile.policy.source,
+                "allowed_lifecycle_statuses": list(lockfile.policy.allowed_lifecycle_statuses),
+                "allowed_trust_tiers": list(lockfile.policy.allowed_trust_tiers),
+                "max_token_estimate": lockfile.policy.max_token_estimate,
+                "max_content_size_bytes": lockfile.policy.max_content_size_bytes,
+                "max_total_token_estimate": lockfile.policy.max_total_token_estimate,
+                "max_total_content_size_bytes": lockfile.policy.max_total_content_size_bytes,
+            }
+            if lockfile.policy is not None
+            else None
+        ),
         "governance": [
             {
                 "rule": item.rule,

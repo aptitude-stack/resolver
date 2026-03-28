@@ -58,6 +58,30 @@ class GovernanceSnapshotEntry:
 
 
 @dataclass(frozen=True)
+class PolicySnapshot:
+    """Minimal policy snapshot persisted with one lockfile."""
+
+    profile: str
+    source: str
+    allowed_lifecycle_statuses: list[str]
+    allowed_trust_tiers: list[str]
+    max_token_estimate: int | None
+    max_content_size_bytes: int | None
+    max_total_token_estimate: int | None
+    max_total_content_size_bytes: int | None
+
+
+@dataclass(frozen=True)
+class SelectionSnapshot:
+    """Minimal explainability snapshot for chosen selection preferences."""
+
+    profile: str
+    interaction_mode: str
+    profile_source: str
+    interaction_mode_source: str
+
+
+@dataclass(frozen=True)
 class Lockfile:
     """Deterministic lock artifact used as the execution source of truth."""
 
@@ -68,4 +92,6 @@ class Lockfile:
     nodes: list[LockedSkill] = field(default_factory=list)
     edges: list[LockedEdge] = field(default_factory=list)
     install_order: list[str] = field(default_factory=list)
+    selection: SelectionSnapshot | None = None
+    policy: PolicySnapshot | None = None
     governance: list[GovernanceSnapshotEntry] = field(default_factory=list)

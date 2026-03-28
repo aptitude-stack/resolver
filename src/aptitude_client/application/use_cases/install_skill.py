@@ -20,8 +20,9 @@ from aptitude_client.application.use_cases.resolution_mapping import (
     policy_to_dto,
     trace_to_dto,
 )
-from aptitude_client.domain.policy import PolicyContext
+from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
 from aptitude_client.execution import materialize_lockfile, write_install_debug_artifacts
+from aptitude_client.telemetry import TelemetryCollector, emit_stage_timings
 
 
 class InstallRegistryPort(Protocol):
@@ -37,7 +38,14 @@ class InstallRegistryPort(Protocol):
 
     def fetch_direct_dependencies(self, slug: str, version: str): ...
 
-    def fetch_skill_content(self, slug: str, version: str): ...
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ): ...
 
 
 class InstallSkillUseCase:
@@ -48,66 +56,75 @@ class InstallSkillUseCase:
         registry_client: InstallRegistryPort,
         *,
         policy_context: PolicyContext | None = None,
+        selection_preferences: SelectionPreferences | None = None,
     ) -> None:
         self._registry_client = registry_client
         self._planner = PlanSkillResolutionQuery(
             registry_client,
             policy_context=policy_context or PolicyContext(),
+            selection_preferences=selection_preferences or SelectionPreferences(),
         )
 
     def execute(self, request: InstallRequestDto) -> InstallResultDto:
-        plan = self._planner.execute(
-            ResolveQueryRequestDto(
-                query=request.query,
-                version=request.version,
-                select_slug=request.select_slug,
-                interactive=request.interactive,
-                selection_source=request.selection_source,
+        telemetry = TelemetryCollector()
+        try:
+            plan = self._planner.execute(
+                ResolveQueryRequestDto(
+                    query=request.query,
+                    version=request.version,
+                    select_slug=request.select_slug,
+                    interaction_mode=request.interaction_mode,
+                    prompt_capable=request.prompt_capable,
+                    selection_source=request.selection_source,
+                )
             )
-        )
-        if isinstance(plan, SelectionRequiredResult):
+            if isinstance(plan, SelectionRequiredResult):
+                return InstallResultDto(
+                    requested_query=plan.requested_query,
+                    requested_version=plan.requested_version,
+                    status="selection_required",
+                    candidates=[candidate_to_dto(item) for item in plan.candidates],
+                    trace=[trace_to_dto(item) for item in plan.trace],
+                )
+
+            with telemetry.measure("materialization"):
+                materialization = materialize_lockfile(
+                    target=request.target,
+                    lockfile=plan.lockfile,
+                    registry_client=self._registry_client,
+                    execution_plan=plan.execution_plan,
+                )
+                trace = list(plan.trace)
+                trace.extend(materialization.trace)
+                write_install_debug_artifacts(
+                    target=Path(materialization.materialized_root),
+                    graph=plan.graph,
+                    trace=trace,
+                    policy_evaluations=plan.policy_evaluations,
+                )
             return InstallResultDto(
                 requested_query=plan.requested_query,
                 requested_version=plan.requested_version,
-                status="selection_required",
-                candidates=[candidate_to_dto(item) for item in plan.candidates],
-                trace=[trace_to_dto(item) for item in plan.trace],
+                status="installed",
+                selection_mode=plan.selection_mode,
+                selected_coordinate={
+                    "slug": plan.graph.root.slug,
+                    "version": plan.graph.root.version,
+                },
+                graph=graph_to_dto(plan.graph),
+                lockfile=lockfile_to_dto(plan.lockfile),
+                execution_plan=execution_plan_to_dto(materialization.execution_plan),
+                installed_skills=[
+                    InstalledSkillDto(
+                        slug=item.slug,
+                        version=item.version,
+                        install_path=item.install_path,
+                    )
+                    for item in materialization.installed_skills
+                ],
+                materialized_root=materialization.materialized_root,
+                trace=[trace_to_dto(item) for item in trace],
+                policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
             )
-
-        materialization = materialize_lockfile(
-            target=request.target,
-            lockfile=plan.lockfile,
-            registry_client=self._registry_client,
-        )
-        trace = list(plan.trace)
-        trace.extend(materialization.trace)
-        write_install_debug_artifacts(
-            target=Path(materialization.materialized_root),
-            graph=plan.graph,
-            trace=trace,
-            policy_evaluations=plan.policy_evaluations,
-        )
-        return InstallResultDto(
-            requested_query=plan.requested_query,
-            requested_version=plan.requested_version,
-            status="installed",
-            selection_mode=plan.selection_mode,
-            selected_coordinate={
-                "slug": plan.graph.root.slug,
-                "version": plan.graph.root.version,
-            },
-            graph=graph_to_dto(plan.graph),
-            lockfile=lockfile_to_dto(plan.lockfile),
-            execution_plan=execution_plan_to_dto(materialization.execution_plan),
-            installed_skills=[
-                InstalledSkillDto(
-                    slug=item.slug,
-                    version=item.version,
-                    install_path=item.install_path,
-                )
-                for item in materialization.installed_skills
-            ],
-            materialized_root=materialization.materialized_root,
-            trace=[trace_to_dto(item) for item in trace],
-            policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
-        )
+        finally:
+            emit_stage_timings(telemetry)

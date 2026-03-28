@@ -12,12 +12,14 @@ from aptitude_client.application.dto import (
     LockedSkillDto,
     LockfileDto,
     LockRootDto,
+    PolicySnapshotDto,
     PolicyEvaluationDto,
     ResolvedEdgeDto,
     ResolvedGraphDto,
     ResolvedSkillNodeDto,
     ResolveCoordinateDto,
     ResolveSkillSummaryDto,
+    SelectionSnapshotDto,
     TraceEntryDto,
 )
 from aptitude_client.execution import ExecutionPlan
@@ -44,8 +46,12 @@ def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
         runtime=version.headers.get("runtime"),
         lifecycle_status=version.lifecycle_status,
         trust_tier=version.trust_tier,
+        token_estimate=version.token_estimate,
+        content_size_bytes=version.content_size_bytes,
         published_at=version.published_at,
         ranking_position=candidate.ranking_position or 0,
+        selection_details=list(candidate.selection_details),
+        selection_reason=candidate.selection_reason,
     )
 
 
@@ -143,6 +149,30 @@ def lockfile_to_dto(lockfile: Lockfile) -> LockfileDto:
             for edge in lockfile.edges
         ],
         install_order=list(lockfile.install_order),
+        selection=(
+            SelectionSnapshotDto(
+                profile=lockfile.selection.profile,
+                interaction_mode=lockfile.selection.interaction_mode,
+                profile_source=lockfile.selection.profile_source,
+                interaction_mode_source=lockfile.selection.interaction_mode_source,
+            )
+            if lockfile.selection is not None
+            else None
+        ),
+        policy=(
+            PolicySnapshotDto(
+                profile=lockfile.policy.profile,
+                source=lockfile.policy.source,
+                allowed_lifecycle_statuses=list(lockfile.policy.allowed_lifecycle_statuses),
+                allowed_trust_tiers=list(lockfile.policy.allowed_trust_tiers),
+                max_token_estimate=lockfile.policy.max_token_estimate,
+                max_content_size_bytes=lockfile.policy.max_content_size_bytes,
+                max_total_token_estimate=lockfile.policy.max_total_token_estimate,
+                max_total_content_size_bytes=lockfile.policy.max_total_content_size_bytes,
+            )
+            if lockfile.policy is not None
+            else None
+        ),
         governance=[
             GovernanceSnapshotDto(
                 rule=item.rule,

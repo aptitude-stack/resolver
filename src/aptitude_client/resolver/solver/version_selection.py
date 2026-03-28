@@ -5,10 +5,7 @@ from __future__ import annotations
 from packaging.version import Version
 
 from aptitude_client.domain.models import VersionSummary
-
-
-TRUST_RANK = {"verified": 2, "internal": 1, "untrusted": 0}
-LIFECYCLE_RANK = {"published": 2, "deprecated": 1, "archived": 0}
+from aptitude_client.domain.policy import lifecycle_status_rank, trust_tier_rank
 
 
 def select_preferred_version(
@@ -33,8 +30,8 @@ def select_preferred_version(
         filtered,
         key=lambda version: (
             int(version.is_current_default),
-            LIFECYCLE_RANK.get(version.lifecycle_status, -1),
-            TRUST_RANK.get(version.trust_tier, -1),
+            lifecycle_status_rank(version.lifecycle_status),
+            trust_tier_rank(version.trust_tier),
             Version(version.coordinate.version),
             version.published_at,
             version.coordinate.slug,

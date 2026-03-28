@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from aptitude_client.domain.errors import SelectionSlugNotFoundError
+from aptitude_client.domain.errors import (
+    InteractiveSelectionUnavailableError,
+    SelectionSlugNotFoundError,
+)
 from aptitude_client.domain.models import DiscoveryCandidate
 from aptitude_client.domain.tracing import TraceEntry
 
@@ -23,7 +26,8 @@ def select_final_candidate(
     query: str,
     candidates: list[DiscoveryCandidate],
     select_slug: str | None,
-    interactive: bool,
+    interaction_mode: str,
+    prompt_capable: bool,
     selection_source: str | None = None,
 ) -> FinalCandidateSelection:
     """Select the winning candidate from an already-ranked candidate list."""
@@ -52,7 +56,15 @@ def select_final_candidate(
             selection_mode="single_candidate",
         )
 
-    if interactive:
+    if interaction_mode == "always":
+        if not prompt_capable:
+            raise InteractiveSelectionUnavailableError(query)
+        return FinalCandidateSelection(
+            selected_candidate=None,
+            selection_mode=None,
+        )
+
+    if interaction_mode == "auto" and prompt_capable:
         return FinalCandidateSelection(
             selected_candidate=None,
             selection_mode=None,

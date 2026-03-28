@@ -84,6 +84,32 @@ class GovernanceSnapshotDto(BaseModel):
     node_id: str | None = None
 
 
+class PolicySnapshotDto(BaseModel):
+    """Minimal policy snapshot stored in the lock."""
+
+    model_config = ConfigDict(frozen=True)
+
+    profile: str
+    source: str
+    allowed_lifecycle_statuses: list[str] = Field(default_factory=list)
+    allowed_trust_tiers: list[str] = Field(default_factory=list)
+    max_token_estimate: int | None = None
+    max_content_size_bytes: int | None = None
+    max_total_token_estimate: int | None = None
+    max_total_content_size_bytes: int | None = None
+
+
+class SelectionSnapshotDto(BaseModel):
+    """Minimal selection explainability metadata stored in the lock."""
+
+    model_config = ConfigDict(frozen=True)
+
+    profile: str
+    interaction_mode: str
+    profile_source: str
+    interaction_mode_source: str
+
+
 class LockfileDto(BaseModel):
     """Client-facing lock artifact."""
 
@@ -96,6 +122,8 @@ class LockfileDto(BaseModel):
     nodes: list[LockedSkillDto] = Field(default_factory=list)
     edges: list[LockedEdgeDto] = Field(default_factory=list)
     install_order: list[str] = Field(default_factory=list)
+    selection: SelectionSnapshotDto | None = None
+    policy: PolicySnapshotDto | None = None
     governance: list[GovernanceSnapshotDto] = Field(default_factory=list)
 
 
@@ -157,8 +185,12 @@ class DiscoveryCandidateDto(BaseModel):
     runtime: str | None = None
     lifecycle_status: str
     trust_tier: str
+    token_estimate: int | None = None
+    content_size_bytes: int | None = None
     published_at: str
     ranking_position: int
+    selection_details: list[str] = Field(default_factory=list)
+    selection_reason: str | None = None
 
 
 class ResolvedSkillNodeDto(BaseModel):

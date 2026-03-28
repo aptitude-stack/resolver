@@ -18,6 +18,8 @@ class DiscoveryCandidate:
     matched_labels: list[str] = field(default_factory=list)
     match_reasons: list[str] = field(default_factory=list)
     ranking_position: int | None = None
+    selection_details: list[str] = field(default_factory=list)
+    selection_reason: str | None = None
 
     @property
     def selected_coordinate(self) -> SkillCoordinate:

@@ -6,7 +6,16 @@ from typing import Any
 
 import httpx
 from pydantic import ValidationError
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from aptitude_client.cache import (
+    CacheStore,
+    content_key,
+    coordinate_content_key,
+    discovery_key,
+    metadata_key,
+    version_list_key,
+)
 from aptitude_client.domain.errors import (
     InvalidCoordinateError,
     RegistryAccessError,
@@ -36,6 +45,20 @@ from aptitude_client.registry.transport_models import (
 from aptitude_client.shared.config import Settings
 
 
+DISCOVERY_CACHE_TTL_SECONDS = 60
+METADATA_CACHE_TTL_SECONDS = 3600
+VERSION_LIST_CACHE_TTL_SECONDS = 3600
+TRANSIENT_STATUS_CODES = {408, 429, 500, 502, 503, 504}
+
+
+class _TransientRegistryError(Exception):
+    """Internal retry signal for transient transport or server failures."""
+
+    def __init__(self, response: httpx.Response | None = None) -> None:
+        self.response = response
+        super().__init__("Transient registry failure")
+
+
 class RegistryClient:
     """Read-only adapter over the runtime-tested registry contract."""
 
@@ -43,15 +66,22 @@ class RegistryClient:
         self,
         settings: Settings,
         http_client: httpx.Client | None = None,
+        cache_store: CacheStore | None = None,
     ) -> None:
         self._settings = settings
         self._http_client = http_client or httpx.Client()
         self._owns_http_client = http_client is None
+        self._cache_store = cache_store or CacheStore()
+        self._owns_cache_store = cache_store is None
 
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
         """Fetch exact immutable metadata for one skill coordinate."""
 
-        payload = self._get_json(f"/skills/{slug}/{version}")
+        payload = self._get_json_with_cache(
+            metadata_key(slug, version),
+            f"/skills/{slug}/{version}",
+            expire=METADATA_CACHE_TTL_SECONDS,
+        )
         try:
             response_model = MetadataResponse.model_validate(payload)
         except ValidationError as exc:
@@ -63,7 +93,11 @@ class RegistryClient:
     def list_skill_versions(self, slug: str) -> list[VersionSummary]:
         """List immutable versions for one skill identity."""
 
-        payload = self._get_json(f"/skills/{slug}")
+        payload = self._get_json_with_cache(
+            version_list_key(slug),
+            f"/skills/{slug}",
+            expire=VERSION_LIST_CACHE_TTL_SECONDS,
+        )
         try:
             response_model = SkillVersionListResponse.model_validate(payload)
         except ValidationError as exc:
@@ -114,7 +148,12 @@ class RegistryClient:
         if query.tags:
             body["tags"] = list(query.tags)
 
-        payload = self._post_json("/discovery", body)
+        payload = self._post_json_with_cache(
+            discovery_key(query),
+            "/discovery",
+            body,
+            expire=DISCOVERY_CACHE_TTL_SECONDS,
+        )
         try:
             response_model = DiscoveryResponse.model_validate(payload)
         except ValidationError as exc:
@@ -128,22 +167,73 @@ class RegistryClient:
 
         return self.discover_candidate_slugs(DiscoveryQuery(name=query))
 
-    def fetch_skill_content(self, slug: str, version: str) -> str:
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> str:
         """Fetch canonical immutable markdown content for one exact coordinate."""
 
-        return self._get_text(f"/skills/{slug}/{version}/content")
+        cache_key = (
+            content_key(algorithm=checksum_algorithm, digest=checksum_digest)
+            if checksum_algorithm is not None and checksum_digest is not None
+            else coordinate_content_key(slug, version)
+        )
+        cached = self._cache_store.get(cache_key)
+        if isinstance(cached, str):
+            return cached
+
+        content = self._get_text(f"/skills/{slug}/{version}/content")
+        self._cache_store.set(cache_key, content, expire=None)
+        return content
 
     def close(self) -> None:
         """Close the owned HTTP client."""
 
         if self._owns_http_client:
             self._http_client.close()
+        if self._owns_cache_store:
+            self._cache_store.close()
 
     def _get_json(self, path: str) -> dict[str, Any]:
         return self._request_json("GET", path)
 
     def _post_json(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         return self._request_json("POST", path, body)
+
+    def _get_json_with_cache(
+        self,
+        cache_key: str,
+        path: str,
+        *,
+        expire: int | None,
+    ) -> dict[str, Any]:
+        cached = self._cache_store.get(cache_key)
+        if isinstance(cached, dict):
+            return dict(cached)
+
+        payload = self._get_json(path)
+        self._cache_store.set(cache_key, payload, expire=expire)
+        return payload
+
+    def _post_json_with_cache(
+        self,
+        cache_key: str,
+        path: str,
+        body: dict[str, Any],
+        *,
+        expire: int | None,
+    ) -> dict[str, Any]:
+        cached = self._cache_store.get(cache_key)
+        if isinstance(cached, dict):
+            return dict(cached)
+
+        payload = self._post_json(path, body)
+        self._cache_store.set(cache_key, payload, expire=expire)
+        return payload
 
     def _request_json(
         self,
@@ -177,6 +267,28 @@ class RegistryClient:
         body: dict[str, Any] | None = None,
     ) -> httpx.Response:
         try:
+            for attempt in Retrying(
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=0.1, min=0.1, max=1.0),
+                retry=retry_if_exception_type(_TransientRegistryError),
+                reraise=True,
+            ):
+                with attempt:
+                    response = self._request_once(method, path, body)
+        except _TransientRegistryError as exc:
+            raise RegistryUnavailableError("Registry is unavailable.") from exc
+
+        if response.status_code >= 400:
+            self._raise_for_error_response(response)
+        return response
+
+    def _request_once(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        try:
             response = self._http_client.request(
                 method,
                 f"{self._settings.server_base_url}{path}",
@@ -185,10 +297,10 @@ class RegistryClient:
                 json=body,
             )
         except httpx.HTTPError as exc:
-            raise RegistryUnavailableError("Registry is unavailable.") from exc
+            raise _TransientRegistryError() from exc
 
-        if response.status_code >= 400:
-            self._raise_for_error_response(response)
+        if response.status_code in TRANSIENT_STATUS_CODES:
+            raise _TransientRegistryError(response)
         return response
 
     def _raise_for_error_response(self, response: httpx.Response) -> None:
