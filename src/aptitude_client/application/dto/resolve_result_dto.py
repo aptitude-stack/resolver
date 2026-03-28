@@ -95,6 +95,8 @@ class PolicySnapshotDto(BaseModel):
     allowed_trust_tiers: list[str] = Field(default_factory=list)
     max_token_estimate: int | None = None
     max_content_size_bytes: int | None = None
+    max_total_token_estimate: int | None = None
+    max_total_content_size_bytes: int | None = None
 
 
 class SelectionSnapshotDto(BaseModel):
@@ -183,8 +185,12 @@ class DiscoveryCandidateDto(BaseModel):
     runtime: str | None = None
     lifecycle_status: str
     trust_tier: str
+    token_estimate: int | None = None
+    content_size_bytes: int | None = None
     published_at: str
     ranking_position: int
+    selection_details: list[str] = Field(default_factory=list)
+    selection_reason: str | None = None
 
 
 class ResolvedSkillNodeDto(BaseModel):

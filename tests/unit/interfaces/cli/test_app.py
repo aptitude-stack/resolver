@@ -4,6 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from aptitude_client.application import composition
 from aptitude_client.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
@@ -23,7 +24,13 @@ from aptitude_client.application.dto import (
     SyncResultDto,
     TraceEntryDto,
 )
-from aptitude_client.domain.errors import InvalidLockfileError, SelectionSlugNotFoundError
+from aptitude_client.domain.errors import (
+    ContentChecksumMismatchError,
+    InvalidClientConfigurationError,
+    InvalidLockfileError,
+    SelectionSlugNotFoundError,
+)
+from aptitude_client.domain.models import DiscoveryQuery, SkillCoordinate, VersionSummary
 from aptitude_client.interfaces.cli import app as app_module
 
 
@@ -167,8 +174,16 @@ def _selection_required_result() -> ResolveQueryResultDto:
                 runtime="python",
                 lifecycle_status="published",
                 trust_tier="internal",
+                token_estimate=120,
+                content_size_bytes=256,
                 published_at="2026-03-18T00:00:00Z",
                 ranking_position=1,
+                selection_details=[
+                    "tokens=120",
+                    "size=256B",
+                    "published=2026-03-18T00:00:00Z",
+                ],
+                selection_reason="ranked above js.lint@2.1.0: closer exact name match",
             ),
             DiscoveryCandidateDto(
                 slug="js.lint",
@@ -182,8 +197,15 @@ def _selection_required_result() -> ResolveQueryResultDto:
                 runtime="javascript",
                 lifecycle_status="published",
                 trust_tier="internal",
+                token_estimate=250,
+                content_size_bytes=320,
                 published_at="2026-03-17T00:00:00Z",
                 ranking_position=2,
+                selection_details=[
+                    "tokens=250",
+                    "size=320B",
+                    "published=2026-03-17T00:00:00Z",
+                ],
             ),
         ],
         trace=[
@@ -468,6 +490,8 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
 
     assert result.exit_code == 0
     assert "Multiple matching skills were found:" in result.stdout
+    assert "tokens=120 | size=256B | published=2026-03-18T00:00:00Z" in result.stdout
+    assert "why ranked here: ranked above js.lint@2.1.0: closer exact name match" in result.stdout
     assert len(use_case.requests) == 2
     assert use_case.requests[0].interaction_mode is None
     assert use_case.requests[0].prompt_capable is True
@@ -581,6 +605,14 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp
             "low-cost",
             "--interaction-mode",
             "never",
+            "--allow-trust",
+            "verified,internal",
+            "--allow-lifecycle",
+            "published,deprecated",
+            "--max-tokens",
+            "500",
+            "--max-content-size",
+            "2048",
         ],
     )
 
@@ -588,9 +620,134 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp
     assert builder_kwargs == {
         "selection_profile_override": "low-cost",
         "interaction_mode_override": "never",
+        "allowed_trust_tiers_override": ["verified", "internal"],
+        "allowed_lifecycle_statuses_override": ["published", "deprecated"],
+        "max_token_estimate_override": 500,
+        "max_content_size_bytes_override": 2048,
     }
     assert use_case.requests[0].interaction_mode is None
     assert close_calls == ["closed"]
+
+
+def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> None:
+    use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
+    close_calls: list[str] = []
+    builder_kwargs: dict[str, object] = {}
+
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+
+    def build_resolve_use_case(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    monkeypatch.setattr(app_module, "build_resolve_use_case", build_resolve_use_case)
+
+    result = runner.invoke(
+        app_module.app,
+        [
+            "resolve",
+            "python lint",
+            "--allow-trust",
+            "verified",
+            "--allow-lifecycle",
+            "published",
+            "--max-tokens",
+            "250",
+            "--max-content-size",
+            "512",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert builder_kwargs == {
+        "allowed_trust_tiers_override": ["verified"],
+        "allowed_lifecycle_statuses_override": ["published"],
+        "max_token_estimate_override": 250,
+        "max_content_size_bytes_override": 512,
+    }
+    assert close_calls == ["closed"]
+
+
+def test_cli_resolve_prints_structured_error_for_invalid_policy_override(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    close_calls: list[str] = []
+
+    def build_resolve_use_case(**kwargs):
+        raise InvalidClientConfigurationError("CLI override", "allowed_trust_tiers contains unknown values: unknown-tier.")
+
+    monkeypatch.setattr(app_module, "build_resolve_use_case", build_resolve_use_case)
+
+    result = runner.invoke(
+        app_module.app,
+        ["resolve", "python lint", "--allow-trust", "unknown-tier"],
+    )
+
+    assert result.exit_code == 1
+    assert close_calls == []
+    assert '"type": "InvalidClientConfigurationError"' in result.stderr
+    assert '"source": "CLI override"' in result.stderr
+
+
+def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatch) -> None:
+    class FakeSettings:
+        pass
+
+    class FakeRegistryClient:
+        def __init__(self, settings) -> None:
+            self.settings = settings
+
+        def close(self) -> None:
+            pass
+
+        def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
+            return ["python.lint"]
+
+        def fetch_skill_identity(self, slug: str):
+            raise AssertionError("slug identity lookup should not be used for this query")
+
+        def list_skill_versions(self, slug: str) -> list[VersionSummary]:
+            return [
+                VersionSummary(
+                    coordinate=SkillCoordinate(slug="python.lint", version="1.2.3"),
+                    name="Python Lint",
+                    description="Lint Python files.",
+                    tags=["python", "lint"],
+                    headers={"runtime": "python"},
+                    rendered_summary="Lint Python files.",
+                    lifecycle_status="published",
+                    trust_tier="internal",
+                    published_at="2026-03-28T00:00:00Z",
+                    content_checksum_algorithm="sha256",
+                    content_checksum_digest="digest-python.lint-1.2.3",
+                    content_size_bytes=256,
+                    token_estimate=100,
+                    maturity_score=0.9,
+                    security_score=0.95,
+                )
+            ]
+
+        def fetch_skill_metadata(self, slug: str, version: str):
+            raise AssertionError("metadata lookup should not happen after candidate policy rejection")
+
+        def fetch_direct_dependencies(self, slug: str, version: str) -> list[object]:
+            return []
+
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+    monkeypatch.setattr(composition, "load_workspace_aptitude_config", lambda cwd=None: None)
+    monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
+    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "build_resolve_use_case", composition.build_resolve_use_case)
+
+    result = runner.invoke(
+        app_module.app,
+        ["resolve", "python lint", "--allow-trust", "verified"],
+    )
+
+    assert result.exit_code == 1
+    assert '"type": "PolicyViolationError"' in result.stderr
+    assert "All discovered candidates were rejected by policy." in result.stderr
 
 
 def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
@@ -696,3 +853,30 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     assert '"type": "SelectionSlugNotFoundError"' in result.stderr
     assert '"selected_slug": "missing.skill"' in result.stderr
     assert result.stdout == ""
+
+
+def test_format_error_wraps_structured_payload_for_cli_output() -> None:
+    rendered = app_module._format_error(
+        InvalidClientConfigurationError("environment", "unsupported interaction mode")
+    )
+
+    assert '"type": "InvalidClientConfigurationError"' in rendered
+    assert '"source": "environment"' in rendered
+    assert '"details": "unsupported interaction mode"' in rendered
+
+
+def test_format_error_includes_checksum_error_payload_details() -> None:
+    rendered = app_module._format_error(
+        ContentChecksumMismatchError(
+            slug="python.lint",
+            version="1.2.3",
+            algorithm="sha256",
+            expected_digest="expected",
+            actual_digest="actual",
+        )
+    )
+
+    assert '"type": "ContentChecksumMismatchError"' in rendered
+    assert '"slug": "python.lint"' in rendered
+    assert '"expected_digest": "expected"' in rendered
+    assert '"actual_digest": "actual"' in rendered

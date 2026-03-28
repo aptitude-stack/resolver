@@ -132,6 +132,8 @@ def build_lockfile(
             allowed_trust_tiers=list(effective_policy.allowed_trust_tiers),
             max_token_estimate=effective_policy.max_token_estimate,
             max_content_size_bytes=effective_policy.max_content_size_bytes,
+            max_total_token_estimate=effective_policy.max_total_token_estimate,
+            max_total_content_size_bytes=effective_policy.max_total_content_size_bytes,
         ),
         governance=governance,
     )
@@ -207,6 +209,8 @@ def lockfile_to_dict(lockfile: Lockfile) -> dict[str, object]:
                 "allowed_trust_tiers": list(lockfile.policy.allowed_trust_tiers),
                 "max_token_estimate": lockfile.policy.max_token_estimate,
                 "max_content_size_bytes": lockfile.policy.max_content_size_bytes,
+                "max_total_token_estimate": lockfile.policy.max_total_token_estimate,
+                "max_total_content_size_bytes": lockfile.policy.max_total_content_size_bytes,
             }
             if lockfile.policy is not None
             else None

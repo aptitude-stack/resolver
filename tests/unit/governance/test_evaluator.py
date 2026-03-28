@@ -126,6 +126,28 @@ def test_filter_policy_compliant_candidates_rejects_illegal_candidates_and_emits
     assert trace[1].data["failed_rules"] == ["allowed_trust_tiers"]
 
 
+def test_filter_policy_compliant_candidates_rejects_disallowed_lifecycle() -> None:
+    compliant, trace = filter_policy_compliant_candidates(
+        [_candidate("archived.skill", "1.0.0", lifecycle_status="archived")],
+        PolicyContext(allowed_lifecycle_statuses=["published"]),
+    )
+
+    assert compliant == []
+    assert trace[0].action == "candidate_policy_reject"
+    assert trace[0].data["failed_rules"] == ["allowed_lifecycle_status"]
+
+
+def test_filter_policy_compliant_candidates_rejects_candidates_above_token_ceiling() -> None:
+    compliant, trace = filter_policy_compliant_candidates(
+        [_candidate("expensive.skill", "1.0.0", token_estimate=900)],
+        PolicyContext(max_token_estimate=500),
+    )
+
+    assert compliant == []
+    assert trace[0].action == "candidate_policy_reject"
+    assert trace[0].data["failed_rules"] == ["max_token_estimate"]
+
+
 def test_filter_policy_compliant_candidates_fails_closed_for_unknown_resource_values() -> None:
     compliant, trace = filter_policy_compliant_candidates(
         [_candidate("unknown.size", "1.0.0", content_size_bytes=None)],
@@ -171,3 +193,30 @@ def test_evaluate_resolution_graph_checks_lifecycle_trust_and_resource_rules() -
         and not item.passed
         for item in evaluations
     )
+
+
+def test_evaluate_resolution_graph_checks_aggregate_resource_ceilings() -> None:
+    graph = ResolutionGraph(
+        root=SkillCoordinate(slug="root.skill", version="1.0.0"),
+        nodes=[
+            _node("root.skill", "1.0.0", token_estimate=120, content_size_bytes=300),
+            _node("dep.skill", "1.0.0", token_estimate=200, content_size_bytes=400),
+        ],
+        edges=[],
+        install_order=[
+            SkillCoordinate(slug="root.skill", version="1.0.0"),
+            SkillCoordinate(slug="dep.skill", version="1.0.0"),
+        ],
+        conflicts=[],
+    )
+
+    evaluations = evaluate_resolution_graph(
+        graph,
+        PolicyContext(
+            max_total_token_estimate=250,
+            max_total_content_size_bytes=1000,
+        ),
+    )
+
+    assert any(item.rule == "max_total_token_estimate" and not item.passed for item in evaluations)
+    assert any(item.rule == "max_total_content_size_bytes" and item.passed for item in evaluations)

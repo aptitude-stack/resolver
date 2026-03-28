@@ -12,6 +12,7 @@ import pytest
         "aptitude_client.application.dto",
         "aptitude_client.application.queries",
         "aptitude_client.application.use_cases",
+        "aptitude_client.cache",
         "aptitude_client.discovery",
         "aptitude_client.discovery.intent",
         "aptitude_client.discovery.query_builder",
@@ -31,6 +32,7 @@ import pytest
         "aptitude_client.resolver.validation",
         "aptitude_client.shared.config",
         "aptitude_client.shared.logging",
+        "aptitude_client.telemetry",
     ],
 )
 def test_package_modules_import(module_name: str) -> None:

@@ -3,21 +3,25 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+
+import structlog
 
 
-DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
+def configure_logging(level: int | str = logging.INFO) -> structlog.stdlib.BoundLogger:
+    """Configure process-wide structured logging for the client."""
 
-
-def configure_logging(level: Union[int, str] = logging.INFO) -> logging.Logger:
-    """Configure process-wide logging for the client and return its root logger."""
-
-    root_logger = logging.getLogger()
-    if not root_logger.handlers:
-        logging.basicConfig(level=level, format=DEFAULT_LOG_FORMAT)
-    else:
-        root_logger.setLevel(level)
-
-    logger = logging.getLogger("aptitude_client")
-    logger.setLevel(level)
-    return logger
+    logging.basicConfig(level=level, format="%(message)s", force=True)
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+    logging.getLogger("aptitude_client").setLevel(level)
+    return structlog.stdlib.get_logger("aptitude_client")

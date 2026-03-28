@@ -46,8 +46,12 @@ def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
         runtime=version.headers.get("runtime"),
         lifecycle_status=version.lifecycle_status,
         trust_tier=version.trust_tier,
+        token_estimate=version.token_estimate,
+        content_size_bytes=version.content_size_bytes,
         published_at=version.published_at,
         ranking_position=candidate.ranking_position or 0,
+        selection_details=list(candidate.selection_details),
+        selection_reason=candidate.selection_reason,
     )
 
 
@@ -163,6 +167,8 @@ def lockfile_to_dto(lockfile: Lockfile) -> LockfileDto:
                 allowed_trust_tiers=list(lockfile.policy.allowed_trust_tiers),
                 max_token_estimate=lockfile.policy.max_token_estimate,
                 max_content_size_bytes=lockfile.policy.max_content_size_bytes,
+                max_total_token_estimate=lockfile.policy.max_total_token_estimate,
+                max_total_content_size_bytes=lockfile.policy.max_total_content_size_bytes,
             )
             if lockfile.policy is not None
             else None

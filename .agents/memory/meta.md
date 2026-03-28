@@ -6,6 +6,7 @@
 - Current hidden internal CLI: `resolve`.
 - Current package structure:
   - `src/aptitude_client/application/`
+  - `src/aptitude_client/cache/`
   - `src/aptitude_client/discovery/`
   - `src/aptitude_client/domain/`
   - `src/aptitude_client/execution/`
@@ -15,10 +16,9 @@
   - `src/aptitude_client/registry/`
   - `src/aptitude_client/resolver/`
   - `src/aptitude_client/shared/`
+  - `src/aptitude_client/telemetry/`
 - Reserved but not yet implemented as top-level packages:
   - `plugins/`
-  - `cache/`
-  - `telemetry/`
 - Canonical docs:
   - `docs/ARCHITECTURE.md`
   - `docs/RULES.md`
@@ -36,6 +36,9 @@
   - `install` plans and materializes from a newly generated lock
   - `sync --lock` replays an existing lock without discovery or resolution
   - Governance Phase 1 is implemented: candidate pre-filtering and graph governance cover lifecycle, trust, and optional resource ceilings
+  - workspace policy loading from `aptitude.toml` is implemented with stricter-only merge semantics
+  - aggregate graph token and content-size ceilings are implemented
+  - `cache/` and `telemetry/` are implemented top-level packages
   - the canonical architecture now requires two governance phases:
     - candidate-policy filtering before final ranking and root selection
     - graph governance after resolution and before lock generation

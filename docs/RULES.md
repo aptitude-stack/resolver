@@ -4,6 +4,20 @@
 
 This is the canonical implementation rules document for `aptitude-client`.
 
+Current internal hardening wave:
+
+- test hardening
+- hard policy CLI overrides
+- cache and retry
+- observability
+- advanced governance
+
+Keep these out of this wave:
+
+- SDK
+- MCP
+- `latest` selection profile
+
 Before any non-trivial implementation work:
 
 1. read [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -87,6 +101,7 @@ Required behavior:
 - `never` must choose the top-ranked policy-compliant candidate deterministically
 - prompting must stay root-only and must never happen inside dependency resolution
 - interactive mode must present only policy-compliant candidates
+- when interactive ambiguity needs extra context, the core selection flow should prepare additive candidate details and short comparison reasons; the CLI may render them, but must not recompute ranking comparisons itself
 - explainability traces may describe effective selection preferences and winner-vs-runner-up reasoning, but they must stay additive
 - governance failure after graph resolution must not silently fall through to another candidate unless the architecture is updated to require fallback behavior
 
@@ -104,7 +119,27 @@ Required behavior:
   2. workspace or organization policy
   3. client default policy
 
-Until external policy sources exist, document defaults explicitly and test them.
+Current Plan A scope for per-request policy overrides:
+
+- `--allow-trust`
+- `--allow-lifecycle`
+- `--max-tokens`
+- `--max-content-size`
+- these apply only to fresh planning
+- these affect governance legality only
+- `sync --lock` must ignore them entirely
+
+Current policy-source status:
+
+- client defaults exist
+- workspace policy loading from `aptitude.toml` exists
+- organization-managed policy sources remain deferred
+- current merge semantics are stricter-only:
+  - allowed-value lists intersect with the effective base policy
+  - numeric ceilings choose the stricter minimum
+- CLI policy overrides must not loosen the effective base policy
+
+Document defaults explicitly and test them.
 
 Phase 1 defaults and fallback behavior must be explicit in code and tests:
 
@@ -113,6 +148,7 @@ Phase 1 defaults and fallback behavior must be explicit in code and tests:
 - missing `trust_tier` normalizes to `untrusted`
 - missing `token_estimate` and `content_size_bytes` are `unknown`
 - unknown resource values fail closed only when the corresponding ceiling is configured
+- graph-level aggregate ceilings must be explicit when implemented and must fail closed when configured but unknowable
 
 Phase 1 selection-preference defaults must be explicit in code and tests:
 
@@ -129,7 +165,7 @@ Phase 1 selection-preference defaults must be explicit in code and tests:
   - `low-cost`
   - `high-trust`
 - `latest` is explicitly deferred
-- hard policy CLI flags such as `--max-tokens`, `--max-content-size`, and `--allow-trust` remain deferred
+- broader workspace or organization policy merge semantics remain deferred
 
 ### 5. Keep determinism explicit
 
@@ -189,7 +225,30 @@ Required behavior:
 - checksum mismatch must fail fast and surface as `ContentChecksumMismatchError`
 - checksum mismatch payload must include `slug`, `version`, `algorithm`, `expected_digest`, and `actual_digest`
 
-### 8. Keep docs synchronized
+### 8. Keep cache and retry advisory
+
+Caching and retry may improve performance and resilience, but they must not change correctness.
+
+Required behavior:
+
+- cache entries are advisory only
+- immutable content may be cached long-lived by checksum
+- metadata and discovery caches must never become a hidden source of truth
+- retries must live at the registry transport boundary
+- retries may apply only to transient transport or server failures
+- retries must not hide validation, policy, or not-found errors
+
+### 9. Keep observability additive
+
+Telemetry and structured logs may explain performance and execution flow, but they must stay non-invasive.
+
+Required behavior:
+
+- telemetry must not influence ranking, governance, or execution decisions
+- explainability and telemetry metadata may be parsed and preserved
+- execution must not depend on telemetry or explainability metadata
+
+### 10. Keep docs synchronized
 
 When behavior or boundaries change, update the canonical docs in the same change:
 
@@ -291,10 +350,12 @@ Layer emphasis:
 - `application/`: orchestration and DTO shaping
 - `discovery/`: intent and reranking
 - `registry/`: server-boundary behavior
+- `cache/`: advisory cache behavior only
 - `resolver/`: version choice, traversal, validation, conflicts
 - `governance/`: candidate filtering, graph policy, and policy-failure behavior
 - `lockfile/`: serialize/parse/replay correctness
 - `execution/`: lock-driven planning and materialization
+- `telemetry/`: additive timing and logging behavior
 
 Prefer live integration tests for the real registry boundary when practical. Use small in-process fakes for higher layers.
 

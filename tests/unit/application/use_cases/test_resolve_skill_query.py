@@ -204,6 +204,52 @@ def test_query_use_case_returns_selection_required_for_interactive_ambiguity() -
     assert registry_client.metadata_calls == []
 
 
+def test_query_use_case_returns_interactive_candidate_details_from_core_ranking() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["postman"] = ["postman.old", "postman.new"]
+    registry_client.versions_by_slug["postman.old"] = [
+        _version_summary(
+            "postman.old",
+            "1.0.0",
+            name="Postman Primary Skill",
+            tags=["postman", "primary"],
+            token_estimate=200,
+            content_size_bytes=79,
+            published_at="2026-03-21T22:05:11.334228Z",
+        )
+    ]
+    registry_client.versions_by_slug["postman.new"] = [
+        _version_summary(
+            "postman.new",
+            "1.0.0",
+            name="Postman Primary Skill",
+            tags=["postman", "primary"],
+            token_estimate=200,
+            content_size_bytes=79,
+            published_at="2026-03-28T16:55:09.761768Z",
+        )
+    ]
+
+    result = ResolveSkillQueryUseCase(registry_client).execute(
+        ResolveQueryRequestDto(
+            query="postman",
+            interaction_mode="always",
+            prompt_capable=True,
+        )
+    )
+
+    assert result.status == "selection_required"
+    assert [item.slug for item in result.candidates] == ["postman.new", "postman.old"]
+    assert result.candidates[0].token_estimate == 200
+    assert result.candidates[0].content_size_bytes == 79
+    assert "tokens=200" in result.candidates[0].selection_details
+    assert "size=79B" in result.candidates[0].selection_details
+    assert "published=2026-03-28T16:55:09.761768Z" in result.candidates[0].selection_details
+    assert result.candidates[0].selection_reason is not None
+    assert "newer publication date" in result.candidates[0].selection_reason
+    assert result.candidates[1].selection_reason is None
+
+
 
 def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive() -> None:
     registry_client = FakeRegistryClient()
@@ -385,6 +431,44 @@ def test_query_use_case_raises_when_policy_rejects_all_candidates() -> None:
         ResolveSkillQueryUseCase(
             registry_client,
             policy_context=PolicyContext(allowed_trust_tiers=["verified"]),
+        ).execute(ResolveQueryRequestDto(query="lint"))
+
+
+def test_query_use_case_rejects_candidates_by_lifecycle_override() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["lint"] = ["archived.lint"]
+    registry_client.versions_by_slug["archived.lint"] = [
+        _version_summary(
+            "archived.lint",
+            "1.0.0",
+            name="Archived Lint",
+            lifecycle_status="archived",
+        )
+    ]
+
+    with pytest.raises(PolicyViolationError, match="All discovered candidates were rejected by policy"):
+        ResolveSkillQueryUseCase(
+            registry_client,
+            policy_context=PolicyContext(allowed_lifecycle_statuses=["published"]),
+        ).execute(ResolveQueryRequestDto(query="lint"))
+
+
+def test_query_use_case_rejects_candidates_by_content_size_override() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["lint"] = ["large.lint"]
+    registry_client.versions_by_slug["large.lint"] = [
+        _version_summary(
+            "large.lint",
+            "1.0.0",
+            name="Large Lint",
+            content_size_bytes=4096,
+        )
+    ]
+
+    with pytest.raises(PolicyViolationError, match="All discovered candidates were rejected by policy"):
+        ResolveSkillQueryUseCase(
+            registry_client,
+            policy_context=PolicyContext(max_content_size_bytes=1024),
         ).execute(ResolveQueryRequestDto(query="lint"))
 
 

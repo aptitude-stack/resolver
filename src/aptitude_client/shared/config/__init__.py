@@ -2,6 +2,7 @@
 
 from aptitude_client.shared.config.aptitude_config import (
     AptitudeConfig,
+    PolicyConfig,
     SelectionConfig,
     discover_user_config_path,
     discover_workspace_config_path,
@@ -14,6 +15,7 @@ from aptitude_client.shared.config.settings import Settings
 
 __all__ = [
     "AptitudeConfig",
+    "PolicyConfig",
     "SelectionConfig",
     "Settings",
     "discover_user_config_path",

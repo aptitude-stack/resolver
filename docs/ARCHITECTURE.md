@@ -4,6 +4,20 @@
 
 This is the canonical architecture source of truth for `aptitude-client`.
 
+Current internal hardening wave:
+
+- test hardening
+- hard policy CLI overrides
+- cache and retry
+- observability
+- advanced governance
+
+Explicitly out of scope for this wave:
+
+- SDK
+- MCP
+- `latest` selection profile
+
 Before any non-trivial change, feature, refactor, or new module:
 
 1. read this file
@@ -126,7 +140,25 @@ Current implementation status:
 
 - client defaults exist
 - programmatic override exists through `PolicyContext`
-- workspace or organization policy is not implemented yet
+- workspace policy loading from `aptitude.toml` exists today
+- organization-managed policy sources beyond workspace config are not implemented yet
+- CLI per-request overrides exist for fresh planning only:
+  - `--allow-trust`
+  - `--allow-lifecycle`
+  - `--max-tokens`
+  - `--max-content-size`
+
+Phase A per-request policy override semantics:
+
+- these flags apply only to fresh planning commands
+- they affect governance legality only, not selection preferences
+- they do not apply to `sync --lock`
+- workspace policy currently merges from workspace `aptitude.toml`
+- current merge semantics are stricter-only:
+  - allowed-value lists intersect with the effective base policy
+  - numeric ceilings choose the stricter minimum
+- CLI overrides may only make the effective policy stricter than the current base
+- policy snapshot `source` should record `cli_override` when any of these flags are used
 
 Phase 1 default client policy:
 
@@ -179,7 +211,7 @@ Supported phase 1 selection profiles:
 Explicitly deferred:
 
 - `latest`
-- hard policy CLI overrides such as token or trust ceilings
+- broader workspace or organization policy merge semantics beyond the current fresh-planning CLI overrides
 
 Supported phase 1 interaction modes:
 
@@ -254,6 +286,7 @@ Phase 2 graph-governance responsibilities:
 
 - enforce lifecycle and trust rules across all resolved nodes
 - enforce resource ceilings across all resolved nodes
+- enforce aggregate token and content-size ceilings across the resolved graph
 - enforce future organization-specific rules
 - enforce future cost constraints that depend on the graph, not just the root candidate
 
@@ -262,6 +295,7 @@ Current implementation status:
 - candidate pre-filter governance exists today
 - graph governance exists today
 - lifecycle, trust, and resource-ceiling rules are implemented today
+- aggregate graph token and content-size ceilings are implemented today
 
 ### Ranking Happens Only Among Policy-Compliant Candidates
 
@@ -318,6 +352,7 @@ Selection behavior:
 - `always` prompts whenever ambiguity remains; if prompting is impossible, the client fails clearly instead of silently auto-picking
 - `never` never prompts and always selects the top-ranked legal candidate deterministically
 - interactive prompting shows only policy-compliant candidates, already ranked
+- interactive candidate payloads may include additive selection details and short comparison reasons prepared by the core ranking flow; interfaces may render them, but must not recompute them
 - graph governance does not silently "fallback" to another candidate unless the architecture is updated to say so explicitly
 
 Current implementation status:
@@ -347,6 +382,8 @@ Phase 1 minimal policy snapshot:
 - allowed trust tiers
 - maximum `token_estimate`
 - maximum `content_size_bytes`
+- maximum total `token_estimate`
+- maximum total `content_size_bytes`
 
 Current implementation status:
 
@@ -433,6 +470,7 @@ src/aptitude_client/
     dto/
     queries/
     use_cases/
+  cache/
   discovery/
     intent/
     query_builder/
@@ -458,13 +496,12 @@ src/aptitude_client/
   shared/
     config/
     logging/
+  telemetry/
 ```
 
 Reserved but not yet implemented as top-level packages:
 
 - `plugins/`
-- `cache/`
-- `telemetry/`
 - additional interfaces such as `mcp/` and `sdk/`
 
 These should be added only when they become real responsibilities.
@@ -474,13 +511,15 @@ These should be added only when they become real responsibilities.
 Allowed architectural direction:
 
 - `interfaces -> application`
-- `application -> domain | discovery | execution | governance | lockfile | registry | resolver | shared`
+- `application -> domain | discovery | execution | governance | lockfile | registry | resolver | shared | telemetry`
+- `cache -> shared`
 - `discovery -> domain | shared`
 - `governance -> domain`
 - `lockfile -> domain`
 - `execution -> domain | lockfile`
-- `registry -> domain | shared`
+- `registry -> cache | domain | shared`
 - `resolver -> domain | shared`
+- `telemetry -> shared`
 
 Important note:
 
@@ -558,6 +597,8 @@ Owns:
 - all Aptitude Server communication
 - auth headers
 - endpoint knowledge
+- bounded transient retry at the transport boundary
+- advisory caching of discovery results, immutable metadata, version lists, and content
 - transport parsing
 - transport error translation
 - transport-to-domain mapping
@@ -568,6 +609,7 @@ Must not own:
 - client reranking policy
 - dependency solving
 - lock generation
+- correctness-critical behavior that depends on cache state
 
 ### resolver/
 
@@ -596,11 +638,38 @@ Current implementation:
 - candidate-policy filtering before final ranking
 - graph governance before lock generation
 - lifecycle, trust, and resource-ceiling rules
+- aggregate graph token and content-size ceilings
 
 Planned expansion:
 
 - organization-specific rules
 - additional cost constraints that depend on graph-level context
+
+### cache/
+
+Owns:
+
+- advisory disk-backed caches that improve performance without changing correctness
+- cache key strategy for immutable content and transport reads
+
+Must not own:
+
+- policy decisions
+- resolver behavior
+- correctness-critical state
+
+### telemetry/
+
+Owns:
+
+- additive timing collection for pipeline stages
+- structured emission of observability events
+
+Must not own:
+
+- selection logic
+- governance logic
+- execution decisions
 
 ### lockfile/
 

@@ -30,7 +30,14 @@ class FakeRegistryClient:
     def fetch_direct_dependencies(self, slug: str, version: str):
         raise AssertionError("fetch_direct_dependencies should not be called for a missing explicit dotted slug")
 
-    def fetch_skill_content(self, slug: str, version: str) -> str:
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> str:
         raise AssertionError("fetch_skill_content should not be called for a missing explicit dotted slug")
 
 

@@ -29,7 +29,14 @@ class FakeRegistryClient:
         self.content_by_coordinate = content_by_coordinate
         self.calls: list[tuple[str, str]] = []
 
-    def fetch_skill_content(self, slug: str, version: str) -> str:
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> str:
         self.calls.append((slug, version))
         return self.content_by_coordinate[(slug, version)]
 

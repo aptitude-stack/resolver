@@ -17,10 +17,22 @@ class SelectionConfig(BaseModel):
     interaction_mode: str | None = None
 
 
+class PolicyConfig(BaseModel):
+    """Raw policy config values loaded from files."""
+
+    allowed_lifecycle_statuses: list[str] | None = None
+    allowed_trust_tiers: list[str] | None = None
+    max_token_estimate: int | None = None
+    max_content_size_bytes: int | None = None
+    max_total_token_estimate: int | None = None
+    max_total_content_size_bytes: int | None = None
+
+
 class AptitudeConfig(BaseModel):
     """Raw workspace or user config loaded from aptitude.toml."""
 
     selection: SelectionConfig | None = None
+    policy: PolicyConfig | None = None
 
 
 def load_aptitude_config(path: Path) -> AptitudeConfig:

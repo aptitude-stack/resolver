@@ -98,6 +98,8 @@ def evaluate_resolution_graph(
     evaluations: list[PolicyEvaluation] = []
     for node in graph.nodes:
         evaluations.extend(_evaluate_subject(node, policy_context).evaluations)
+    evaluations.extend(_evaluate_aggregate_token_estimate(graph, policy_context))
+    evaluations.extend(_evaluate_aggregate_content_size(graph, policy_context))
     return evaluations
 
 
@@ -203,3 +205,79 @@ def _evaluate_content_size(
         ),
         coordinate=subject.coordinate,
     )
+
+
+def _evaluate_aggregate_token_estimate(
+    graph: ResolutionGraph,
+    policy_context: PolicyContext,
+) -> list[PolicyEvaluation]:
+    if policy_context.max_total_token_estimate is None:
+        return [
+            PolicyEvaluation(
+                rule="max_total_token_estimate",
+                passed=True,
+                message="No aggregate token estimate ceiling is configured.",
+                coordinate=None,
+            )
+        ]
+    if any(node.token_estimate is None for node in graph.nodes):
+        return [
+            PolicyEvaluation(
+                rule="max_total_token_estimate",
+                passed=False,
+                message="Aggregate token estimate is unknown and fails the configured ceiling.",
+                coordinate=None,
+            )
+        ]
+    total = sum(node.token_estimate or 0 for node in graph.nodes)
+    allowed = total <= policy_context.max_total_token_estimate
+    return [
+        PolicyEvaluation(
+            rule="max_total_token_estimate",
+            passed=allowed,
+            message=(
+                f"Aggregate token estimate '{total}' is within policy."
+                if allowed
+                else f"Aggregate token estimate '{total}' exceeds policy."
+            ),
+            coordinate=None,
+        )
+    ]
+
+
+def _evaluate_aggregate_content_size(
+    graph: ResolutionGraph,
+    policy_context: PolicyContext,
+) -> list[PolicyEvaluation]:
+    if policy_context.max_total_content_size_bytes is None:
+        return [
+            PolicyEvaluation(
+                rule="max_total_content_size_bytes",
+                passed=True,
+                message="No aggregate content size ceiling is configured.",
+                coordinate=None,
+            )
+        ]
+    if any(node.content_size_bytes is None for node in graph.nodes):
+        return [
+            PolicyEvaluation(
+                rule="max_total_content_size_bytes",
+                passed=False,
+                message="Aggregate content size is unknown and fails the configured ceiling.",
+                coordinate=None,
+            )
+        ]
+    total = sum(node.content_size_bytes or 0 for node in graph.nodes)
+    allowed = total <= policy_context.max_total_content_size_bytes
+    return [
+        PolicyEvaluation(
+            rule="max_total_content_size_bytes",
+            passed=allowed,
+            message=(
+                f"Aggregate content size '{total}' is within policy."
+                if allowed
+                else f"Aggregate content size '{total}' exceeds policy."
+            ),
+            coordinate=None,
+        )
+    ]

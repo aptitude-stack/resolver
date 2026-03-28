@@ -120,6 +120,8 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
     assert lockfile.policy.allowed_trust_tiers == ["verified", "internal", "untrusted"]
     assert lockfile.policy.max_token_estimate is None
     assert lockfile.policy.max_content_size_bytes is None
+    assert lockfile.policy.max_total_token_estimate is None
+    assert lockfile.policy.max_total_content_size_bytes is None
     assert lockfile.selection is not None
     assert lockfile.selection.profile == "high-trust"
     assert lockfile.selection.interaction_mode == "always"

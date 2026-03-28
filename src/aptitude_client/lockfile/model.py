@@ -67,6 +67,8 @@ class PolicySnapshot:
     allowed_trust_tiers: list[str]
     max_token_estimate: int | None
     max_content_size_bytes: int | None
+    max_total_token_estimate: int | None
+    max_total_content_size_bytes: int | None
 
 
 @dataclass(frozen=True)

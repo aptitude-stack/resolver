@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from aptitude_client.domain.models import ResolutionGraph
+from aptitude_client.domain.models.skill_coordinate import SkillCoordinate
 from aptitude_client.domain.policy import PolicyEvaluation
 from aptitude_client.domain.tracing import TraceEntry
 
@@ -97,7 +98,7 @@ def _policy_to_dict(policy: PolicyEvaluation) -> dict[str, object]:
     }
 
 
-def _coordinate_to_dict(coordinate) -> dict[str, str]:
+def _coordinate_to_dict(coordinate: SkillCoordinate) -> dict[str, str]:
     return {
         "slug": coordinate.slug,
         "version": coordinate.version,

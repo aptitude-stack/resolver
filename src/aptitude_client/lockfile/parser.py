@@ -110,6 +110,14 @@ def parse_lockfile(payload: str) -> Lockfile:
                     policy_data,
                     "max_content_size_bytes",
                 ),
+                max_total_token_estimate=_expect_optional_int(
+                    policy_data,
+                    "max_total_token_estimate",
+                ),
+                max_total_content_size_bytes=_expect_optional_int(
+                    policy_data,
+                    "max_total_content_size_bytes",
+                ),
             )
             if policy_data is not None
             else None

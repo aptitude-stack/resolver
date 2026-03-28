@@ -4,6 +4,7 @@ import pytest
 
 from aptitude_client.shared.config.aptitude_config import (
     AptitudeConfig,
+    PolicyConfig,
     SelectionConfig,
     discover_user_config_path,
     discover_workspace_config_path,
@@ -29,6 +30,35 @@ interaction_mode = "always"
     assert config.selection == SelectionConfig(
         profile="low-cost",
         interaction_mode="always",
+    )
+
+
+def test_load_aptitude_config_reads_policy_section(tmp_path) -> None:
+    config_path = tmp_path / "aptitude.toml"
+    config_path.write_text(
+        """
+[policy]
+allowed_trust_tiers = ["verified", "internal"]
+allowed_lifecycle_statuses = ["published"]
+max_token_estimate = 500
+max_content_size_bytes = 2048
+max_total_token_estimate = 1500
+max_total_content_size_bytes = 4096
+""".strip(),
+        encoding="utf-8",
+    )
+
+    config = load_aptitude_config(config_path)
+
+    assert config == AptitudeConfig(
+        policy=PolicyConfig(
+            allowed_trust_tiers=["verified", "internal"],
+            allowed_lifecycle_statuses=["published"],
+            max_token_estimate=500,
+            max_content_size_bytes=2048,
+            max_total_token_estimate=1500,
+            max_total_content_size_bytes=4096,
+        )
     )
 
 

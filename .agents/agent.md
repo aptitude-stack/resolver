@@ -45,12 +45,12 @@ Current main packages:
 - `registry/`
 - `resolver/`
 - `shared/`
+- `cache/`
+- `telemetry/`
 
 Planned but not yet implemented as packages:
 
 - `plugins/`
-- `cache/`
-- `telemetry/`
 - `interfaces/mcp`
 - `interfaces/sdk`
 

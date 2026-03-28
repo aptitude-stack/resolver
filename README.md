@@ -25,20 +25,24 @@ Internal preview command:
 - discovery-backed query resolution from human-readable input
 - resolver-owned candidate version selection
 - deterministic recursive dependency graph resolution
-- lifecycle governance before lock generation
+- candidate-policy filtering and graph governance before lock generation
+- workspace policy loading from `aptitude.toml`
+- hard policy CLI overrides for fresh planning
 - rich lockfile generation, serialization, parsing, and replay
 - lock-driven execution plan generation
 - local materialization from either a fresh plan or an existing lockfile
 - `sync --lock` as the lock-replay equivalent of `uv sync`
+- registry caching and bounded transient retry
+- additive telemetry for planning and materialization stages
 - deterministic lockfiles for identical logical inputs
 - trace output for discovery, selection, resolver, lock, and execution steps
 
 ## What Is Still Incomplete
 
-- workspace/org policy loading is not implemented yet
-- broader organization-specific rules and graph-level cost constraints are not implemented yet
+- organization-managed policy loading is not implemented yet
+- broader organization-specific rules are not implemented yet
 - winner-vs-runner-up explanation still derives from parallel explanation logic instead of directly from reranker output
-- `plugins/`, `cache/`, and `telemetry/` are planned responsibilities, not current packages
+- `plugins/` extensibility is not implemented yet
 - MCP and SDK interfaces are not implemented yet
 
 ## Selection, Governance, And Integrity Direction
@@ -113,6 +117,7 @@ src/aptitude_client/
     dto/
     queries/
     use_cases/
+  cache/
   discovery/
     intent/
     query_builder/
@@ -138,6 +143,7 @@ src/aptitude_client/
   shared/
     config/
     logging/
+  telemetry/
 ```
 
 ## Current Registry Contract Used By The Client

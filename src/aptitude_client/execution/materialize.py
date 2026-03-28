@@ -23,7 +23,14 @@ from aptitude_client.lockfile import Lockfile, LockedSkill, replay_lockfile, ser
 class RegistryContentPort(Protocol):
     """Artifact content reads required for materialization."""
 
-    def fetch_skill_content(self, slug: str, version: str) -> str: ...
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -67,7 +74,12 @@ def materialize_lockfile(
         trace: list[TraceEntry] = []
 
         for node in replayed.install_order:
-            content = registry_client.fetch_skill_content(node.slug, node.version)
+            content = registry_client.fetch_skill_content(
+                node.slug,
+                node.version,
+                checksum_algorithm=node.content_checksum_algorithm,
+                checksum_digest=node.content_checksum_digest,
+            )
             _verify_checksum(node, content)
 
             skill_dir = staging_root / "skills" / node.slug / node.version
