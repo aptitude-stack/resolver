@@ -1,8 +1,41 @@
 # Repo Meta Memory
 
-- Product: Aptitude skill repository.
-- Runtime: Go service (primary).
-- Core principles: immutability, determinism, explicit relationships, governance, auditability.
-- Architecture source of truth: `docs/overview.md`.
-- Planning location: `.agents/plans/`.
-- Layering rule: `interface -> core` and persistence access only via core ports, wired in `app/main.py`.
+- Product: `aptitude-client`, a Python client for discovery-backed skill resolution, deterministic dependency solving, governance, lock generation, and lock-driven execution planning.
+- Runtime: Python `>=3.9`.
+- Current public CLI: `install`, `sync`.
+- Current hidden internal CLI: `resolve`.
+- Current package structure:
+  - `src/aptitude_client/application/`
+  - `src/aptitude_client/discovery/`
+  - `src/aptitude_client/domain/`
+  - `src/aptitude_client/execution/`
+  - `src/aptitude_client/governance/`
+  - `src/aptitude_client/interfaces/`
+  - `src/aptitude_client/lockfile/`
+  - `src/aptitude_client/registry/`
+  - `src/aptitude_client/resolver/`
+  - `src/aptitude_client/shared/`
+- Reserved but not yet implemented as top-level packages:
+  - `plugins/`
+  - `cache/`
+  - `telemetry/`
+- Canonical docs:
+  - `docs/ARCHITECTURE.md`
+  - `docs/RULES.md`
+- Supporting docs:
+  - `README.md`
+  - `docs/Aptitude-Recommended-Libraries.md`
+  - `.agents/rules/repo.md`
+- Core principles:
+  - deterministic behavior
+  - strict layering
+  - client-owned decisions
+  - lock as the execution source of truth
+  - traceable decision-making
+- Important reality checks:
+  - `install` plans and materializes from a newly generated lock
+  - `sync --lock` replays an existing lock without discovery or resolution
+  - governance currently enforces lifecycle only
+  - `docs/openapi/` is reference material, not the sole runtime truth
+  - historical milestone plans under `.agents/plans/` are not the architecture source of truth
+  - future non-trivial implementation work must read `docs/ARCHITECTURE.md` and `docs/RULES.md` first

@@ -3,6 +3,26 @@ name = "aptitude-client"
 version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
-    "fastapi>=0.128.8",
-    "uvicorn>=0.39.0",
+    "httpx>=0.27",
+    "packaging>=24.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "typer>=0.12",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+aptitude = "aptitude_client.interfaces.cli.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "integration: tests that hit the live Aptitude server",
+]
+
+

@@ -1,101 +1,188 @@
-# aptitude-client
+# Aptitude Client
 
-![Python Version](https://img.shields.io/badge/python-3.9+-3776AB?logo=python)
-![License](https://img.shields.io/github/license/y0ncha/aptitude-client)
-![Last Commit](https://img.shields.io/github/last-commit/y0ncha/aptitude-client)
-![Issues](https://img.shields.io/github/issues/y0ncha/aptitude-client)
-![Status](https://img.shields.io/badge/status-active--development-blue)
+Aptitude Client is a deterministic, package-manager-style client for AI skills.
 
-Aptitude Client is the runtime-facing client/orchestration service for the Aptitude ecosystem.  
-It translates runtime requests (prompt/tool calls) into execution plans while preserving deterministic repository contracts.
+The system is intentionally split in two:
 
-The repository provides:
+- Aptitude Server owns registry data, metadata, immutable artifacts, and discovery indexes
+- Aptitude Client owns intent interpretation, candidate selection, dependency resolution, governance, lock generation, and execution planning
 
-- Runtime request normalization
-- Deterministic resolve integration via repository APIs
-- Plugin-driven security/policy/overlap checks
-- Execution plan assembly with trace metadata
-- Client-local cache and observability surfaces
+## Current CLI
 
----
+Primary commands:
 
-## Design Principles
+- `aptitude install "<query>"`
+- `aptitude sync --lock aptitude.lock.json`
 
-- Repository contracts are authoritative and versioned
-- Runtime orchestration stays deterministic and auditable
-- Client and repository responsibilities stay strictly separated
-- Plugin outcomes are explicit and traceable
-- Interfaces remain transport-agnostic (MCP/CLI, optional HTTP adapters)
+Internal preview command:
 
----
+- `aptitude resolve "<query>"`
 
-## Architecture (High-Level)
+`resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help. The normal user-facing flow is `install`.
 
-Runtime Clients (MCP / CLI / HTTP Adapter)  
-→ Request Normalization  
-→ Repository Resolve API (contract-only)  
-→ Plugin Chain (Security + Policy + Overlap)  
-→ Execution Plan + Trace Output  
-→ Cache + Observability
+## What Works Today
 
----
+- discovery-backed query resolution from human-readable input
+- resolver-owned candidate version selection
+- deterministic recursive dependency graph resolution
+- lifecycle governance before lock generation
+- rich lockfile generation, serialization, parsing, and replay
+- lock-driven execution plan generation
+- local materialization from either a fresh plan or an existing lockfile
+- `sync --lock` as the lock-replay equivalent of `uv sync`
+- deterministic lockfiles for identical logical inputs
+- trace output for discovery, selection, resolver, lock, and execution steps
 
-## Current Status
+## What Is Still Incomplete
 
-The project is under active development and currently at foundation scaffold stage (`main.py`) with client implementation planned from PRD.
+- governance currently enforces lifecycle policy only
+- trust validation, organization rules, and cost constraints are not implemented yet
+- `plugins/`, `cache/`, and `telemetry/` are planned responsibilities, not current packages
+- MCP and SDK interfaces are not implemented yet
 
-Roadmap and implementation references:
+## Current User Flows
 
-- [Overview](docs/overview.md)
-- [Client PRD](docs/client-prd.md)
-- [Scope and Boundary](docs/scope.md)
+Fresh planning and install:
 
----
-
-## Planned Stack
-
-- API: FastAPI
-- Runtime: Python 3.9+
-- Server: Uvicorn
-- Package/deps: `uv` (recommended) or `pip`
-- Testing/quality (planned): pytest, ruff, mypy
-
----
-
-## Getting Started
-
-### Requirements
-
-- Python 3.9+
-- `uv` (recommended) or `pip`
-
-### Install
-
-Using `uv`:
-
-```bash
-uv sync
+```text
+install query
+-> discovery
+-> resolver
+-> governance
+-> lockfile
+-> execution plan
+-> materialization
 ```
 
-Using `pip`:
+Lock replay:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+```text
+sync --lock aptitude.lock.json
+-> lockfile parse
+-> lock replay
+-> execution plan
+-> materialization
 ```
 
-### Run locally
+## Example Commands
+
+Install from a query:
 
 ```bash
-uvicorn main:app --reload
+aptitude install "Postman Primary Skill"
 ```
 
-Server URL: `http://127.0.0.1:8000`
-
-### Smoke test
+Install as JSON for automation:
 
 ```bash
-curl http://127.0.0.1:8000/
-curl http://127.0.0.1:8000/hello/User
+aptitude install "Postman Primary Skill" --json
 ```
+
+Sync from an existing lockfile:
+
+```bash
+aptitude sync --lock aptitude.lock.json
+```
+
+Preview the resolved graph, lock, and execution plan without materializing:
+
+```bash
+py -3 -m aptitude_client.interfaces.cli.main resolve "Postman Primary Skill"
+```
+
+## Current Package Map
+
+```text
+src/aptitude_client/
+  application/
+    commands/
+    dto/
+    queries/
+    use_cases/
+  discovery/
+    intent/
+    query_builder/
+    reranking/
+  domain/
+    errors/
+    models/
+    policy/
+    tracing/
+  execution/
+  governance/
+  interfaces/
+    cli/
+  lockfile/
+  registry/
+  resolver/
+    conflict/
+    graph/
+    normalizer/
+    replay/
+    solver/
+    validation/
+  shared/
+    config/
+    logging/
+```
+
+## Current Registry Contract Used By The Client
+
+The client currently talks to the live registry through `registry/` using these runtime paths:
+
+- `POST /discovery`
+- `GET /skills/{slug}`
+- `GET /skills/{slug}/{version}`
+- `GET /resolution/{slug}/{version}`
+- `GET /skills/{slug}/{version}/content`
+
+The client treats the server as a source of immutable facts and candidate generation only. Final ranking, version choice, solving, policy enforcement, lock generation, and execution planning remain client-owned.
+
+## Development
+
+Requirements:
+
+- Python `>=3.9`
+
+Install:
+
+```bash
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+py -3 -m pip install -e ".[dev]"
+```
+
+Run the CLI:
+
+```bash
+aptitude --help
+aptitude install "Postman Primary Skill"
+aptitude sync --lock aptitude.lock.json
+```
+
+Or via Python:
+
+```bash
+py -3 -m aptitude_client.interfaces.cli.main --help
+```
+
+Run tests:
+
+```bash
+py -3 -m pytest -v
+```
+
+## Source Of Truth Docs
+
+The canonical pair for future implementation work is:
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/RULES.md](docs/RULES.md)
+
+Before any non-trivial implementation or refactor, read both.
+
+Supporting docs:
+
+- [docs/Aptitude-Recommended-Libraries.md](docs/Aptitude-Recommended-Libraries.md)
+
+The `docs/openapi/` directory is kept as raw server reference material, not as the sole source of truth for runtime behavior.
