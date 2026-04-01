@@ -240,7 +240,7 @@
     "message": "Materialized locked skill postman.dep.1775055812741-30910@1.0.0.",
     "data": {
       "node_id": "postman.dep.1775055812741-30910@1.0.0",
-      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-oampd9au/skills/postman.dep.1775055812741-30910/1.0.0"
+      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-g6a9rkzb/skills/postman.dep.1775055812741-30910/1.0.0"
     }
   },
   {
@@ -249,7 +249,7 @@
     "message": "Materialized locked skill postman.primary.1775055812741-30910@1.0.0.",
     "data": {
       "node_id": "postman.primary.1775055812741-30910@1.0.0",
-      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-oampd9au/skills/postman.primary.1775055812741-30910/1.0.0"
+      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-g6a9rkzb/skills/postman.primary.1775055812741-30910/1.0.0"
     }
   }
 ]
