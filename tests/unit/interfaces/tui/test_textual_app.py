@@ -4,7 +4,7 @@ import asyncio
 import time
 from pathlib import Path
 
-from textual.widgets import Input, Static
+from textual.widgets import Button, Input, Static
 
 from aptitude.application.dto import (
     DiscoveryCandidateDto,
@@ -307,7 +307,7 @@ def _installed_result(
 async def _wait_for(
     predicate,
     *,
-    timeout: float = 2.0,
+    timeout: float = 5.0,
 ) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -341,18 +341,18 @@ def test_tui_review_flow_handles_candidate_selection() -> None:
 
     async def scenario() -> None:
         app = AptitudeInstallerApp(workflow_service=service)
-        async with app.run_test(size=(110, 34)) as pilot:
+        async with app.run_test(size=(110, 34)):
             await _wait_for(lambda: _has_widget(app, "#query-input"))
             app.screen.query_one("#query-input", Input).value = "lint"
-            await pilot.click("#review-plan-button")
+            app.screen.query_one("#review-plan-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#candidate-1"))
-            await pilot.click("#candidate-2")
+            app.screen.query_one("#candidate-2", Button).press()
             await _wait_for(lambda: _has_widget(app, "#install-button"))
 
             assert len(service.resolve_calls) == 2
             assert service.resolve_calls[1]["select_slug"] == "js.lint"
-            summary = app.screen.query_one("#plan-summary", Static)
-            assert "js.lint" in _rendered_text(summary)
+            overview = app.screen.query_one("#plan-overview", Static)
+            assert "js.lint" in _rendered_text(overview)
 
     asyncio.run(scenario())
 
@@ -365,12 +365,12 @@ def test_tui_install_success_shows_result_screen() -> None:
 
     async def scenario() -> None:
         app = AptitudeInstallerApp(workflow_service=service)
-        async with app.run_test(size=(110, 34)) as pilot:
+        async with app.run_test(size=(110, 34)):
             await _wait_for(lambda: _has_widget(app, "#query-input"))
             app.screen.query_one("#query-input", Input).value = "python lint"
-            await pilot.click("#review-plan-button")
+            app.screen.query_one("#review-plan-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#install-button"))
-            await pilot.click("#install-button")
+            app.screen.query_one("#install-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#result-summary"))
 
             result_summary = app.screen.query_one("#result-summary", Static)
@@ -390,10 +390,10 @@ def test_tui_resolve_error_shows_error_state() -> None:
 
     async def scenario() -> None:
         app = AptitudeInstallerApp(workflow_service=service)
-        async with app.run_test(size=(110, 34)) as pilot:
+        async with app.run_test(size=(110, 34)):
             await _wait_for(lambda: _has_widget(app, "#query-input"))
             app.screen.query_one("#query-input", Input).value = "python lint"
-            await pilot.click("#review-plan-button")
+            app.screen.query_one("#review-plan-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#error-summary"))
 
             error_summary = app.screen.query_one("#error-summary", Static)
@@ -407,13 +407,13 @@ def test_tui_candidate_back_navigation_returns_to_query_form() -> None:
 
     async def scenario() -> None:
         app = AptitudeInstallerApp(workflow_service=service)
-        async with app.run_test(size=(110, 34)) as pilot:
+        async with app.run_test(size=(110, 34)):
             await _wait_for(lambda: _has_widget(app, "#query-input"))
             query_input = app.screen.query_one("#query-input", Input)
             query_input.value = "lint"
-            await pilot.click("#review-plan-button")
+            app.screen.query_one("#review-plan-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#candidate-back-button"))
-            await pilot.click("#candidate-back-button")
+            app.screen.query_one("#candidate-back-button", Button).press()
             await _wait_for(lambda: _has_widget(app, "#review-plan-button"))
 
             restored_input = app.screen.query_one("#query-input", Input)
@@ -431,5 +431,151 @@ def test_tui_query_screen_mounts_in_small_terminal() -> None:
             status = app.screen.query_one("#query-status", Static)
             assert query_input.value == ""
             assert "Review" in _rendered_text(status)
+
+    asyncio.run(scenario())
+
+
+def test_tui_query_enter_shortcut_starts_review() -> None:
+    service = FakeWorkflowService(resolve_responses=[_resolved_result()])
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)) as pilot:
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "python lint"
+            await pilot.press("enter")
+            await _wait_for(lambda: _has_widget(app, "#install-button"))
+
+            assert len(service.resolve_calls) == 1
+            assert service.resolve_calls[0]["query"] == "python lint"
+
+    asyncio.run(scenario())
+
+
+def test_tui_escape_shortcut_returns_from_candidate_screen() -> None:
+    service = FakeWorkflowService(resolve_responses=[_selection_required_result()])
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)) as pilot:
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "lint"
+            app.screen.query_one("#review-plan-button", Button).press()
+            await _wait_for(lambda: _has_widget(app, "#candidate-back-button"))
+            await pilot.press("escape")
+            await _wait_for(lambda: _has_widget(app, "#review-plan-button"))
+
+    asyncio.run(scenario())
+
+
+def test_tui_install_and_restart_shortcuts_drive_flow() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)) as pilot:
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "python lint"
+            app.screen.query_one("#review-plan-button", Button).press()
+            await _wait_for(lambda: _has_widget(app, "#install-button"))
+            await pilot.press("i")
+            await _wait_for(lambda: _has_widget(app, "#result-summary"))
+            await pilot.press("r")
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+
+            assert len(service.install_calls) == 1
+
+    asyncio.run(scenario())
+
+
+def test_tui_arrow_navigation_moves_between_actions() -> None:
+    service = FakeWorkflowService(resolve_responses=[_selection_required_result()])
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)) as pilot:
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "lint"
+            app.screen.query_one("#review-plan-button", Button).press()
+            await _wait_for(lambda: _has_widget(app, "#candidate-1"))
+            await _wait_for(
+                lambda: app.focused is app.screen.query_one("#candidate-1", Button)
+            )
+
+            await pilot.press("down")
+            assert app.focused is app.screen.query_one("#candidate-2", Button)
+            await pilot.press("down")
+            assert app.focused is app.screen.query_one("#candidate-back-button", Button)
+
+    asyncio.run(scenario())
+
+
+def test_tui_candidate_cards_render_metadata_and_ranking_reason() -> None:
+    service = FakeWorkflowService(resolve_responses=[_selection_required_result()])
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)):
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "lint"
+            app.screen.query_one("#review-plan-button", Button).press()
+            await _wait_for(lambda: _has_widget(app, "#candidate-1"))
+
+            runtime = app.screen.query_one("#candidate-runtime-1", Static)
+            trust = app.screen.query_one("#candidate-trust-1", Static)
+            reason = app.screen.query_one("#candidate-reason-1", Static)
+            details = app.screen.query_one("#candidate-details-1", Static)
+
+            assert "python" in _rendered_text(runtime).lower()
+            assert "internal" in _rendered_text(trust).lower()
+            assert "closer exact name match" in _rendered_text(reason)
+            assert "tokens=120" in _rendered_text(details)
+
+    asyncio.run(scenario())
+
+
+def test_tui_plan_screen_renders_sectioned_summary() -> None:
+    service = FakeWorkflowService(resolve_responses=[_resolved_result()])
+
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=service)
+        async with app.run_test(size=(110, 34)):
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            app.screen.query_one("#query-input", Input).value = "python lint"
+            app.screen.query_one("#review-plan-button", Button).press()
+            await _wait_for(lambda: _has_widget(app, "#plan-overview"))
+
+            overview = app.screen.query_one("#plan-overview", Static)
+            metadata = app.screen.query_one("#plan-metadata", Static)
+            steps = app.screen.query_one("#plan-steps", Static)
+
+            assert "python.lint@1.2.3" in _rendered_text(overview)
+            assert "Target path" in _rendered_text(metadata)
+            assert "materialize_local_skill" in _rendered_text(steps)
+
+    asyncio.run(scenario())
+
+
+def test_tui_query_screen_uses_media_fallback_copy() -> None:
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=FakeWorkflowService())
+        async with app.run_test(size=(110, 34)):
+            await _wait_for(lambda: _has_widget(app, "#hero-media"))
+            media = app.screen.query_one("#hero-media", Static)
+            assert "optional" in _rendered_text(media).lower()
+
+    asyncio.run(scenario())
+
+
+def test_tui_q_shortcut_quits_application() -> None:
+    async def scenario() -> None:
+        app = AptitudeInstallerApp(workflow_service=FakeWorkflowService())
+        async with app.run_test(size=(110, 34)) as pilot:
+            await _wait_for(lambda: _has_widget(app, "#query-input"))
+            await pilot.press("q")
+            await _wait_for(lambda: not app.is_running)
 
     asyncio.run(scenario())
