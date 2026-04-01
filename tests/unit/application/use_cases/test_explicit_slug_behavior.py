@@ -8,7 +8,11 @@ from aptitude_resolver.application.use_cases import (
     ResolveSkillQueryUseCase,
 )
 from aptitude_resolver.domain.errors import SkillNotFoundError
-from aptitude_resolver.domain.models import DiscoveryQuery, SkillIdentity, VersionSummary
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SkillIdentity,
+    VersionSummary,
+)
 
 
 class FakeRegistryClient:

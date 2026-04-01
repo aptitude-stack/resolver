@@ -1,10 +1,10 @@
-"""Client-owned error types used across Aptitude resolver layers."""
+"""Resolver-owned error types used across Aptitude Resolver layers."""
 
 from __future__ import annotations
 
 
 class AptitudeResolverError(Exception):
-    """Base error for client-controlled failures."""
+    """Base error for resolver-controlled failures."""
 
     def to_payload(self) -> dict[str, object]:
         """Return a structured payload suitable for CLI error output."""
@@ -32,7 +32,7 @@ class InvalidLockfileError(AptitudeResolverError):
 
 
 class InvalidResolverConfigurationError(AptitudeResolverError):
-    """Raised when client-side configuration cannot be parsed or validated safely."""
+    """Raised when resolver-side configuration cannot be parsed or validated safely."""
 
     def __init__(self, source: str, details: str) -> None:
         self.source = source
@@ -170,7 +170,7 @@ class ContentChecksumMismatchError(AptitudeResolverError):
 
 
 class UnsupportedDependencyShapeError(AptitudeResolverError):
-    """Raised when the current client cannot interpret a dependency selector."""
+    """Raised when the current resolver cannot interpret a dependency selector."""
 
     def __init__(self, slug: str, version: str, details: str) -> None:
         self.slug = slug

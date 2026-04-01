@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery
-from aptitude_resolver.domain.models import SkillCoordinate, SkillIdentity, VersionSummary
+from aptitude_resolver.domain.models import (
+    SkillCoordinate,
+    SkillIdentity,
+    VersionSummary,
+)
 
 
 class FakeRegistryClient:

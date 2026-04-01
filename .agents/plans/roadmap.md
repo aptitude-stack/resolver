@@ -1,4 +1,4 @@
-# Aptitude Client Roadmap
+# Aptitude Resolver Roadmap
 
 ## Current Baseline
 

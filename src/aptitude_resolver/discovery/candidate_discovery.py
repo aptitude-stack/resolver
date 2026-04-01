@@ -8,7 +8,10 @@ from typing import Protocol
 
 from aptitude_resolver.discovery.intent import parse_search_intent
 from aptitude_resolver.discovery.query_builder import build_discovery_query
-from aptitude_resolver.domain.errors import DiscoveryNoCandidatesError, SkillNotFoundError
+from aptitude_resolver.domain.errors import (
+    DiscoveryNoCandidatesError,
+    SkillNotFoundError,
+)
 from aptitude_resolver.domain.models import (
     DiscoveredSkill,
     DiscoveryQuery,
@@ -106,7 +109,7 @@ class DiscoverSkillCandidatesQuery:
             TraceEntry(
                 stage="query_builder",
                 action="build_discovery_query",
-                message="Built client-owned discovery query.",
+                message="Built resolver-owned discovery query.",
                 data={
                     "name": discovery_query.name,
                     "description": discovery_query.description,

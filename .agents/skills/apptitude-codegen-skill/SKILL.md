@@ -1,27 +1,27 @@
 ---
 name: apptitude-codegen
-description: Code generation rules and architectural constraints for the Aptitude Client repository.
+description: Code generation rules and architectural constraints for the Aptitude Resolver repository.
 origin: Aptitude
 ---
 
-# Aptitude Client Code Generation Skill
+# Aptitude Resolver Code Generation Skill
 
 Use this skill whenever code, tests, or architecture-facing docs change in this repository.
 
 Before any non-trivial implementation:
 
-1. read `docs/ARCHITECTURE.md`
-2. read `docs/RULES.md`
+1. read `docs/architecture/system-overview.md`
+2. read `docs/architecture/decision-rules.md`
 3. identify the owning module before editing code
 
-If the intended work changes the architecture or module boundaries, update `docs/ARCHITECTURE.md` first or in the same change. Do not silently drift from it.
+If the intended work changes the architecture or module boundaries, update the canonical architecture docs first or in the same change. Do not silently drift from them.
 
 ## Core Architecture Principles
 
-The Aptitude Client uses a layered architecture with one explicit server boundary.
+The Aptitude Resolver uses a layered architecture with one explicit server boundary.
 
 The server owns facts.
-The client owns decisions.
+The resolver owns decisions.
 
 ### Current architectural direction
 
@@ -58,7 +58,7 @@ Owns:
 - deterministic rule concepts
 - policy types
 - tracing models
-- client-owned errors
+- resolver-owned errors
 
 Must not own:
 
@@ -192,12 +192,13 @@ Focus on:
 
 When behavior or boundaries change, update the canonical docs in the same change:
 
-- `docs/ARCHITECTURE.md`
-- `docs/RULES.md`
+- `docs/architecture/system-overview.md`
+- `docs/architecture/decision-rules.md`
 
 Update supporting docs when needed:
 
 - `README.md`
+- `docs/README.md`
 - `.agents/agent.md`
 - `.agents/memory/meta.md`
 - `.agents/rules/repo.md`

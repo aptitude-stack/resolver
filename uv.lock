@@ -59,7 +59,7 @@ wheels = [
 ]
 
 [[package]]
-name = "aptitude-client"
+name = "aptitude-resolver"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

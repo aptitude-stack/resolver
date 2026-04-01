@@ -9,3 +9,12 @@ script = ""
 name = "Run"
 icon = "run"
 command = "make run"
+
+[[actions]]
+name = "Quality"
+icon = "tool"
+command = '''
+make lint
+make format
+make typecheck
+'''

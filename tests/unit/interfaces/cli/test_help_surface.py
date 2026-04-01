@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from typer.testing import CliRunner
 
 from aptitude_resolver.interfaces.cli import app as app_module
@@ -14,7 +16,7 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
     assert result.exit_code == 0
     assert "install" in result.stdout
     assert "sync" in result.stdout
-    assert "resolve" not in result.stdout
+    assert re.search(r"(?m)^\\s*resolve\\s{2,}", result.stdout) is None
     assert "APTITUDE_SERVER_BASE_URL" in result.stdout
     assert "APTITUDE_READ_TOKEN" in result.stdout
     assert "fresh planning from a query and local materialization" in result.stdout

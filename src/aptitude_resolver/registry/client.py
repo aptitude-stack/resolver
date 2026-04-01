@@ -155,7 +155,7 @@ class RegistryClient:
         return map_direct_dependencies(response_model)
 
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
-        """Discover candidate slugs for a client-owned discovery query."""
+        """Discover candidate slugs for a resolver-owned discovery query."""
 
         body: dict[str, Any] = {"name": query.name}
         if query.description:

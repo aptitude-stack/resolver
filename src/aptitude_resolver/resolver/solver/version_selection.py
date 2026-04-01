@@ -1,4 +1,4 @@
-"""Deterministic client-side version selection."""
+"""Deterministic resolver-side version selection."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ def select_preferred_version(
     *,
     allowed_lifecycle_statuses: list[str] | None = None,
 ) -> VersionSummary:
-    """Select one immutable version using deterministic client-owned rules."""
+    """Select one immutable version using deterministic resolver-owned rules."""
 
     if not versions:
         raise ValueError("At least one version is required for selection.")

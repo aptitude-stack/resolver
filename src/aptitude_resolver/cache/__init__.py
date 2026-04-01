@@ -1,4 +1,4 @@
-"""Advisory cache helpers for registry-backed client flows."""
+"""Advisory cache helpers for registry-backed resolver flows."""
 
 from aptitude_resolver.cache.keys import (
     content_key,

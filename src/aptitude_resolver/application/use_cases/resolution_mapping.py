@@ -23,7 +23,9 @@ from aptitude_resolver.application.dto import (
     TraceEntryDto,
 )
 from aptitude_resolver.execution import ExecutionPlan
-from aptitude_resolver.application.queries.plan_skill_resolution import ResolutionArtifact
+from aptitude_resolver.application.queries.plan_skill_resolution import (
+    ResolutionArtifact,
+)
 from aptitude_resolver.domain.models import DiscoveryCandidate, ResolutionGraph
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry

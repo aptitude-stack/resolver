@@ -1,6 +1,6 @@
-"""Client-owned error types."""
+"""Resolver-owned error types."""
 
-from aptitude_resolver.domain.errors.client_errors import (
+from aptitude_resolver.domain.errors.resolver_errors import (
     AptitudeResolverError,
     ContentChecksumMismatchError,
     DependencyCycleError,

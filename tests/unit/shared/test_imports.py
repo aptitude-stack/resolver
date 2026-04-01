@@ -24,6 +24,8 @@ import pytest
         "aptitude_resolver.execution",
         "aptitude_resolver.governance",
         "aptitude_resolver.interfaces.cli",
+        "aptitude_resolver.interfaces.shared",
+        "aptitude_resolver.interfaces.tui",
         "aptitude_resolver.lockfile",
         "aptitude_resolver.registry",
         "aptitude_resolver.resolver.graph",

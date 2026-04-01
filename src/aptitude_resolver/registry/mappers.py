@@ -97,7 +97,7 @@ def map_direct_dependencies(
 
 
 def map_dependency_selector(payload: DependencySelector) -> DependencySpec:
-    """Map one dependency selector into a client-owned domain model."""
+    """Map one dependency selector into a resolver-owned domain model."""
 
     return DependencySpec(
         slug=payload.slug,

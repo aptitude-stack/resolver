@@ -1,4 +1,4 @@
-"""Build client-owned discovery queries from normalized intent."""
+"""Build resolver-owned discovery queries from normalized intent."""
 
 from __future__ import annotations
 

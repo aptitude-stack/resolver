@@ -16,7 +16,7 @@ def normalize_dependency_selector(
         raise UnsupportedDependencyShapeError(
             source.slug,
             source.version,
-            "only exact dependency versions are supported in the current client flow",
+            "only exact dependency versions are supported in the current resolver flow",
         )
 
     return SkillCoordinate(slug=dependency.slug, version=dependency.version)

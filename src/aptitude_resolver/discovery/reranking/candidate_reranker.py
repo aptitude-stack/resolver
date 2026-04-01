@@ -1,4 +1,4 @@
-"""Deterministic client-side discovery reranking."""
+"""Deterministic resolver-side discovery reranking."""
 
 from __future__ import annotations
 

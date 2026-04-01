@@ -7,7 +7,11 @@ from aptitude_resolver.domain.errors import (
     SkillNotFoundError,
     VersionConflictError,
 )
-from aptitude_resolver.domain.models import DependencySpec, SkillCoordinate, SkillMetadata
+from aptitude_resolver.domain.models import (
+    DependencySpec,
+    SkillCoordinate,
+    SkillMetadata,
+)
 from aptitude_resolver.resolver.graph import resolve_recursive_graph
 
 

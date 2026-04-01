@@ -30,7 +30,7 @@ from aptitude_resolver.interfaces.shared import (
 
 ROOT_HELP = """Aptitude Resolver.
 
-Deterministic client for discovering, resolving, locking, and materializing AI skills.
+Deterministic resolver for discovering, resolving, locking, and materializing AI skills.
 
 Public commands:
   install  fresh planning from a query and local materialization

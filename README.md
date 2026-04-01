@@ -1,6 +1,6 @@
 # Aptitude Resolver
 
-Aptitude Resolver is a deterministic, package-manager-style client for AI skills.
+Aptitude Resolver is a deterministic, package-manager-style resolver for AI skills.
 
 The system is intentionally split in two:
 
@@ -19,6 +19,28 @@ Internal preview command:
 - `aptitude resolve "<query>"`
 
 `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help. The normal user-facing flow is `install`.
+
+## How To Install
+
+Install the resolver and its development dependencies with `uv`:
+
+```bash
+uv sync --extra dev
+```
+
+This creates the local environment from `pyproject.toml` and makes the `aptitude` entrypoint available through `uv run` or an activated environment.
+
+## How To Use
+
+Typical usage starts with one of these commands:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude.lock.json
+```
+
+Use `install` for fresh planning from a query and `sync --lock` for replaying an existing lockfile. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
 
 ## What Works Today
 
@@ -50,14 +72,14 @@ Internal preview command:
 The canonical architecture now defines these required semantics:
 
 - server provides immutable metadata such as lifecycle, trust, token, size, and checksum facts
-- client owns policy and candidate selection
+- resolver owns policy and candidate selection
 - governance is split into:
   - candidate-policy filtering before final ranking and final root selection
   - full graph governance after resolution and before lock generation
 - ranking compares only policy-compliant candidates
 - phase 1 checksum verification uses server-published `sha256` checksum metadata and fails fast on mismatch
 
-Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution is [docs/ARCHITECTURE.md](docs/architecture.md).
+Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution lives under [docs/README.md](docs/README.md).
 
 ## Current User Flows
 
@@ -106,7 +128,7 @@ aptitude sync --lock aptitude.lock.json
 Preview the resolved graph, lock, and execution plan without materializing:
 
 ```bash
-py -3 -m aptitude_resolver.interfaces.cli.main resolve "Postman Primary Skill"
+uv run python -m aptitude_resolver.interfaces.cli.main resolve "Postman Primary Skill"
 ```
 
 ## Current Package Map
@@ -146,9 +168,9 @@ src/aptitude_resolver/
   telemetry/
 ```
 
-## Current Registry Contract Used By The Client
+## Current Registry Contract Used By The Resolver
 
-The client currently talks to the live registry through `registry/` using these runtime paths:
+The resolver currently talks to the live registry through `registry/` using these runtime paths:
 
 - `POST /discovery`
 - `GET /skills/{slug}`
@@ -156,7 +178,7 @@ The client currently talks to the live registry through `registry/` using these 
 - `GET /resolution/{slug}/{version}`
 - `GET /skills/{slug}/{version}/content`
 
-The client treats the server as a source of immutable facts and candidate generation only. Final ranking, version choice, solving, policy enforcement, lock generation, and execution planning remain client-owned.
+The resolver treats the server as a source of immutable facts and candidate generation only. Final ranking, version choice, solving, policy enforcement, lock generation, and execution planning remain resolver-owned.
 
 ## Development
 
@@ -164,24 +186,18 @@ Requirements:
 
 - Python `>=3.9`
 
-Install:
-
-```bash
-uv sync --extra dev
-```
-
 Run the CLI:
 
 ```bash
-aptitude --help
-aptitude install "Postman Primary Skill"
-aptitude sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude.lock.json
 ```
 
 Or via Python:
 
 ```bash
-uv run python -m aptitude_resolver.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
 ```
 
 Developer workflow:
@@ -198,15 +214,21 @@ make check
 
 ## Source Of Truth Docs
 
-The canonical pair for future implementation work is:
+Start with the docs index:
 
-- [docs/ARCHITECTURE.md](docs/architecture.md)
-- [docs/RULES.md](docs/rules.md)
+- [docs/README.md](docs/README.md)
+
+The canonical architecture pair for future implementation work is:
+
+- [docs/architecture/system-overview.md](docs/architecture/system-overview.md)
+- [docs/architecture/decision-rules.md](docs/architecture/decision-rules.md)
 
 Before any non-trivial implementation or refactor, read both.
 
 Supporting docs:
 
-- [docs/Aptitude-Recommended-Libraries.md](docs/aptitude-recommended-libraries.md)
+- [docs/contributors/README.md](docs/contributors/README.md)
+- [docs/reference/recommended-libraries.md](docs/reference/recommended-libraries.md)
+- [docs/roadmap/README.md](docs/roadmap/README.md)
 
-The `docs/openapi/` directory is kept as raw server reference material, not as the sole source of truth for runtime behavior.
+The `docs/reference/openapi/` directory is kept as raw server reference material, not as the sole source of truth for runtime behavior.

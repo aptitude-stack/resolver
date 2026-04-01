@@ -1,7 +1,7 @@
 # Plan 03 - Registry Read Adapter
 
 ## Goal
-Implement the anti-corruption layer between `aptitude-client` and the server
+Implement the anti-corruption layer between `aptitude-resolver` and the server
 read API, keeping all raw HTTP and transport parsing inside `registry/`.
 
 ## Stack Alignment

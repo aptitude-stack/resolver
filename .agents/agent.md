@@ -1,22 +1,23 @@
-# Aptitude Client Agent Contract
+# Aptitude Resolver Agent Contract
 
-## Source And Instruction Files
+Agents should use canonical docs first and treat this directory as an operating layer.
 
-Use these as the primary repository guidance set:
+## Required Reading Order
 
 1. `../README.md`
-2. `../docs/ARCHITECTURE.md`
-3. `../docs/RULES.md`
-4. `rules/repo.md`
-5. `memory/meta.md`
+2. `../docs/README.md`
+3. `../docs/architecture/system-overview.md`
+4. `../docs/architecture/decision-rules.md`
+5. `rules/repo.md`
+6. `memory/meta.md`
 
 Historical plan files under `.agents/plans/` are implementation history, not the architecture source of truth.
 
-Before any non-trivial change, agents must read `docs/ARCHITECTURE.md` and `docs/RULES.md` first.
+Before any non-trivial change, agents must read the architecture docs first.
 
 ## Current Repository Reality
 
-Aptitude Client is a Python client for:
+Aptitude Resolver is a Python resolver for:
 
 - discovery-backed skill lookup
 - deterministic dependency resolution
@@ -66,7 +67,6 @@ Planned but not yet implemented as packages:
 ## Documentation Discipline
 
 - update `memory/meta.md` when stable repository facts change
-- update `rules/repo.md` when workflow rules change
-- update `docs/ARCHITECTURE.md` when architecture or boundaries change
-- update `docs/RULES.md` when implementation rules change
+- update `rules/repo.md` when agent workflow rules change
+- update canonical docs in `../docs/` when architecture, interfaces, or package boundaries change
 - keep historical plans for history, but do not treat them as the current source of truth
