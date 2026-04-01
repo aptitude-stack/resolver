@@ -1,6 +1,6 @@
 UV ?= UV_CACHE_DIR=.uv-cache uv
 
-.PHONY: run debug test lint format typecheck
+.PHONY: run debug test lint format typecheck package publish
 
 run:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude Resolver\033[0m\n"
@@ -25,3 +25,13 @@ format:
 
 typecheck:
 	$(UV) run --extra dev python -m mypy src tests
+
+package:
+	$(UV) build --no-sources
+
+publish:
+	@printf "\033[1;33mPublishing is handled by GitHub Actions trusted publishing.\033[0m\n"
+	@printf "Create and push a version tag that matches v*.\n\n"
+	@printf "Example:\n"
+	@printf "  git tag v0.1.0\n"
+	@printf "  git push origin v0.1.0\n"

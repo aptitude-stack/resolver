@@ -22,3 +22,4 @@ Before non-trivial implementation work, read:
 - Use `kebab-case` for new filenames and plan slugs unless a tool requires something else.
 - Save new plan files under `.agents/plans/`.
 - Treat historical plans as history, not current guidance.
+- When planning Python changes, use [`$python-testing`](/Users/yonatan/Dev/Aptitude/resolver/.agents/skills/python-testing/SKILL.md) to ensure the plan includes adding or updating tests.

@@ -1,6 +1,8 @@
 [project]
 name = "aptitude-resolver"
 version = "0.1.0"
+description = "Deterministic package-manager-style resolver for AI skills"
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "diskcache>=5.6",
@@ -24,6 +26,10 @@ dev = [
 
 [project.scripts]
 aptitude = "aptitude_resolver.interfaces.cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

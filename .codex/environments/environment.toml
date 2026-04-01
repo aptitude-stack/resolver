@@ -18,3 +18,8 @@ make lint
 make format
 make typecheck
 '''
+
+[[actions]]
+name = "Test"
+icon = "test"
+command = "make test"
