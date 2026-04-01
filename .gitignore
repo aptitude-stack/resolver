@@ -57,3 +57,4 @@ htmlcov/
 /.trace_cov/
 /.uv-tools/
 /.codex/
+/skills-lock.json

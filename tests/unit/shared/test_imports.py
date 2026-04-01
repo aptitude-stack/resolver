@@ -25,7 +25,6 @@ import pytest
         "aptitude.governance",
         "aptitude.interfaces.cli",
         "aptitude.interfaces.shared",
-        "aptitude.interfaces.tui",
         "aptitude.lockfile",
         "aptitude.registry",
         "aptitude.resolution.graph",

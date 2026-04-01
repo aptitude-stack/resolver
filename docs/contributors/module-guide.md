@@ -16,9 +16,8 @@ This guide maps responsibilities to the current `src/aptitude/` tree.
 
 ## Interface Packages
 
-- `interfaces/cli/`: Typer-based command surface
+- `interfaces/cli/`: Typer command surface, wizard metadata, and install-first guided flow
 - `interfaces/shared/`: shared workflow helpers used by multiple interface surfaces
-- `interfaces/tui/`: Textual application surface
 
 ## Support Packages
 

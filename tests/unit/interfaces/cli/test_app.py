@@ -760,8 +760,8 @@ def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
 
     assert result.exit_code == 1
     assert close_calls == []
-    assert '"type": "InvalidResolverConfigurationError"' in result.stderr
-    assert '"source": "CLI override"' in result.stderr
+    assert "Invalid CLI configuration." in result.stderr
+    assert "allowed_trust_tiers contains unknown values: unknown-tier." in result.stderr
 
 
 def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
@@ -834,7 +834,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
     )
 
     assert result.exit_code == 1
-    assert '"type": "PolicyViolationError"' in result.stderr
+    assert "Policy rejected the requested operation." in result.stderr
     assert "All discovered candidates were rejected by policy." in result.stderr
 
 
@@ -915,15 +915,59 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
-    assert '"type": "InvalidLockfileError"' in result.stderr
-    assert '"message": "Lockfile not found:' in result.stderr
+    assert "Lockfile error." in result.stderr
+    assert "Lockfile not found:" in result.stderr
 
 
-def test_cli_sync_requires_lock_option() -> None:
+def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = runner.invoke(app_module.app, ["install"])
+
+    assert result.exit_code == 0
+    assert calls == [{"initial_flow": "install", "target": Path("skill_demo")}]
+
+
+def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
     result = runner.invoke(app_module.app, ["sync"])
+
+    assert result.exit_code == 0
+    assert calls == [{"initial_flow": "sync", "target": Path("skill_demo")}]
+
+
+def test_cli_sync_with_json_still_requires_lock_option() -> None:
+    result = runner.invoke(app_module.app, ["sync", "--json"])
 
     assert result.exit_code == 2
     assert "Missing option '--lock'" in result.stderr
+
+
+def test_cli_sync_renders_unexpected_errors_without_tracebacks(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app_module,
+        "build_sync_use_case",
+        lambda: (_ for _ in ()).throw(RuntimeError("unable to open database file")),
+    )
+
+    result = runner.invoke(app_module.app, ["sync", "--lock", "aptitude.lock.json"])
+
+    assert result.exit_code == 1
+    assert "Aptitude could not open its local cache." in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
@@ -949,8 +993,8 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
-    assert '"type": "SelectionSlugNotFoundError"' in result.stderr
-    assert '"selected_slug": "missing.skill"' in result.stderr
+    assert "Requested selection is not available." in result.stderr
+    assert "Selected slug: missing.skill" in result.stderr
     assert result.stdout == ""
 
 
@@ -979,9 +1023,9 @@ def test_format_error_keeps_structured_payload_for_non_environment_config_errors
         )
     )
 
-    assert '"type": "InvalidResolverConfigurationError"' in rendered
-    assert '"source": "CLI override"' in rendered
-    assert '"details": "unsupported interaction mode"' in rendered
+    assert "Invalid CLI configuration." in rendered
+    assert "unsupported interaction mode" in rendered
+    assert "Review the supplied flags and try again." in rendered
 
 
 def test_format_error_includes_checksum_error_payload_details() -> None:
@@ -995,7 +1039,7 @@ def test_format_error_includes_checksum_error_payload_details() -> None:
         )
     )
 
-    assert '"type": "ContentChecksumMismatchError"' in rendered
-    assert '"slug": "python.lint"' in rendered
-    assert '"expected_digest": "expected"' in rendered
-    assert '"actual_digest": "actual"' in rendered
+    assert "Downloaded content failed integrity verification." in rendered
+    assert "Skill: python.lint@1.2.3" in rendered
+    assert "Expected digest: expected" in rendered
+    assert "Actual digest: actual" in rendered

@@ -23,6 +23,7 @@ Related entrypoints outside this directory:
 
 - [architecture/README.md](architecture/README.md): architecture reading order and normative docs
 - [architecture/system-overview.md](architecture/system-overview.md): high-level system shape
+- [architecture/cli-interface.md](architecture/cli-interface.md): current CLI command, wizard, and rendering contract
 - [architecture/server-resolver-boundary.md](architecture/server-resolver-boundary.md): hard ownership split with the registry and server-side facts
 - [architecture/decision-rules.md](architecture/decision-rules.md): implementation invariants and doc-sync rules
 

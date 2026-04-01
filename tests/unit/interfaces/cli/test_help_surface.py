@@ -17,6 +17,8 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
     assert result.exit_code == 0
     assert "install" in result.stdout
     assert "sync" in result.stdout
+    assert "manifest" in result.stdout
+    assert "--version" in result.stdout
     assert re.search(r"(?m)^\\s*resolve\\s{2,}", result.stdout) is None
     assert "APTITUDE_SERVER_BASE_URL" in result.stdout
     assert "APTITUDE_READ_TOKEN" in result.stdout
@@ -73,12 +75,55 @@ def test_hidden_resolve_help_is_rich_even_though_root_help_hides_it() -> None:
     assert "--max-content-size" in result.stdout
 
 
+def test_cli_manifest_lists_public_advanced_and_global_capabilities() -> None:
+    result = runner.invoke(app_module.app, ["manifest"])
+
+    assert result.exit_code == 0
+    assert (
+        "────────────────────────────────────────────────────────────────"
+        in result.stdout
+    )
+    assert "Public Commands" in result.stdout
+    assert "Advanced/Internal Commands" in result.stdout
+    assert "Global / Framework Flags" in result.stdout
+    assert 'aptitude install "query"' in result.stdout
+    assert "aptitude sync --lock aptitude.lock.json" in result.stdout
+    assert "aptitude manifest" in result.stdout
+    assert 'aptitude resolve "query"' in result.stdout
+    assert "--prefer" in result.stdout
+    assert "--lock" in result.stdout
+    assert "--version" in result.stdout
+    assert "--install-completion" in result.stdout
+    assert "--show-completion" in result.stdout
+
+
+def test_cli_version_prints_package_version() -> None:
+    result = runner.invoke(app_module.app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "0.1.0"
+
+
+def test_contributor_docs_describe_install_first_wizard_not_textual_tui() -> None:
+    contents = Path("docs/contributors/development-setup.md").read_text()
+
+    assert "Textual TUI" not in contents
+    assert "install-first wizard" in contents
+
+
+def test_readme_documents_manifest_command_and_wizard_first_entry() -> None:
+    contents = Path("README.md").read_text()
+
+    assert "aptitude manifest" in contents
+    assert "no arguments launches the install-first wizard" in contents
+
+
 def test_makefile_exposes_demo_target_that_sources_repo_env() -> None:
     makefile = Path("Makefile").read_text()
 
     assert "\ndemo:\n" in makefile
     assert ". ./.env" in makefile
-    assert "Running Aptitude demo TUI" in makefile
+    assert "Running Aptitude demo CLI" in makefile
     assert "Suggest:" in makefile
     assert "Postman Primary Skill" in makefile
     assert "PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main" in makefile

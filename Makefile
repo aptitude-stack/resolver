@@ -16,7 +16,7 @@ endif
 
 run:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude\033[0m\n"
-	@printf "\033[0;36m  Mode:\033[0m  TUI with CLI fallback\n"
+	@printf "\033[0;36m  Mode:\033[0m  Interactive CLI wizard\n"
 	@printf "\033[0;36m  Stop:\033[0m  Ctrl+C\n\n"
 	@PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
 
@@ -31,7 +31,7 @@ demo:
 		printf "\033[1;31merror:\033[0m missing .env file. Copy .env.example to .env and fill in your local values.\n"; \
 		exit 1; \
 	}
-	@printf "\033[1;36m==>\033[0m \033[1mRunning Aptitude demo TUI\033[0m\n"
+	@printf "\033[1;36m==>\033[0m \033[1mRunning Aptitude demo CLI\033[0m\n"
 	@printf "\033[0;36m  Suggest:\033[0m Postman Primary Skill\n"
 	@printf "\033[0;36m  Env:\033[0m    .env\n\n"
 	@set -a; \

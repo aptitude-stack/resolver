@@ -64,7 +64,7 @@ The current package tree is rooted at `src/aptitude/`.
 - `domain/`: models, policy types, tracing models, resolver-owned errors
 - `execution/`: lock-driven execution planning and materialization
 - `governance/`: legality checks before lock generation
-- `interfaces/`: CLI, shared interface helpers, and TUI surfaces
+- `interfaces/`: CLI, wizard-oriented interface helpers, and shared interface support
 - `lockfile/`: lock schema, serializer, parser, and replay helpers
 - `registry/`: Aptitude Server transport boundary and transport-to-domain mapping
 - `resolution/`: deterministic version choice, root selection, dependency expansion, and validation

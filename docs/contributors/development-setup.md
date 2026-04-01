@@ -38,7 +38,7 @@ UV_CACHE_DIR=.uv-cache uv run --extra dev python -m mypy src tests
 - verified repo-local entrypoint: `PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main`
 - logical console command name: `aptitude`
 
-Running the module entrypoint with no arguments currently enters the Textual TUI and falls back to CLI subcommands when arguments are present.
+Running the module entrypoint with no arguments currently launches the install-first wizard and falls back to CLI subcommands when arguments are present. Use `aptitude manifest` to inspect the full command and flag surface without entering the wizard.
 
 ## Naming Conventions
 

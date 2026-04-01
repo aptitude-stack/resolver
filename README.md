@@ -21,12 +21,13 @@ Primary commands:
 
 - `aptitude install "<query>"`
 - `aptitude sync --lock aptitude.lock.json`
+- `aptitude manifest`
 
 Internal preview command:
 
 - `aptitude resolve "<query>"`
 
-`resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help. The normal user-facing flow is `install`.
+Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, while `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
 ## How To Install
 
@@ -127,12 +128,14 @@ Use this mental model:
 For repo-local development, typical usage starts with one of these commands:
 
 ```bash
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
 PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
 PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
 PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main manifest
 ```
 
-Use `install` for fresh planning from a query and `sync --lock` for replaying an existing lockfile. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
 
 For published usage, prefer the installed CLI:
 
@@ -140,6 +143,7 @@ For published usage, prefer the installed CLI:
 aptitude --help
 aptitude install "Postman Primary Skill"
 aptitude sync --lock aptitude.lock.json
+aptitude manifest
 ```
 
 ## What Works Today
@@ -217,6 +221,12 @@ Install as JSON for automation:
 
 ```bash
 aptitude install "Postman Primary Skill" --json
+```
+
+Inspect the complete CLI surface:
+
+```bash
+aptitude manifest
 ```
 
 Sync from an existing lockfile:

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import json
-import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import typer
+from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from aptitude.application.composition import (
     build_install_use_case,
@@ -24,145 +25,85 @@ from aptitude.domain.errors import (
     AptitudeResolverError,
     InvalidResolverConfigurationError,
 )
+from aptitude.interfaces.cli.catalog import (
+    HORIZONTAL_SEPARATOR,
+    OPTIONS,
+    THEME,
+    build_command_help,
+    build_manifest_text,
+    build_root_help,
+)
+from aptitude.interfaces.cli.wizard import run_cli_wizard
+from aptitude.interfaces.cli.support import (
+    build_workflow_options,
+    build_workflow_service as _shared_build_workflow_service,
+    capture_cli_telemetry,
+    format_cli_error,
+    format_folded_cli_telemetry,
+    format_unexpected_cli_error,
+    is_interactive,
+    parse_csv_option,
+    parse_interaction_mode,
+    parse_missing_environment_variables,
+    resolve_cli_version,
+)
 from aptitude.interfaces.shared import (
     InteractionMode,
     InstallWorkflowOptions,
     InstallWorkflowService,
 )
 
+app = typer.Typer(no_args_is_help=True, help=build_root_help())
+T = TypeVar("T")
+_ACTIVITY_CONSOLE = Console(stderr=True)
 
-ROOT_HELP = """Aptitude.
 
-Deterministic resolver for discovering, resolving, locking, and materializing AI skills.
+def _version_callback(value: bool) -> None:
+    """Print the current Aptitude version and exit when requested."""
 
-Public commands:
-  install  fresh planning from a query and local materialization
-  sync     replay and materialize from an existing lockfile
-
-Required environment:
-  APTITUDE_SERVER_BASE_URL   registry base URL
-  APTITUDE_READ_TOKEN        registry read token
-
-Examples:
-  aptitude install "Postman Primary Skill"
-  aptitude install "Postman" --interaction-mode always
-  aptitude install "Postman Primary Skill" --prefer low-cost
-  aptitude sync --lock aptitude.lock.json
-
-Use `install --help` or `sync --help` for command-specific options."""
-
-INSTALL_HELP = """Install a skill query into a local demo workspace.
-
-Fresh planning flow:
-  discovery -> resolver -> governance -> lockfile -> execution
-
-Common examples:
-  aptitude install "Postman Primary Skill"
-  aptitude install "Postman" --interaction-mode always
-  aptitude install "Postman Primary Skill" --prefer low-cost
-  aptitude install "Postman Primary Skill" --json
-
-Selection behavior:
-  --select-slug       bypasses ambiguity by choosing one discovered candidate
-  --prefer            ranks legal candidates with balanced, low-cost, or high-trust
-  --interaction-mode  controls root ambiguity: auto, always, or never
-
-Policy behavior:
-  --allow-trust         restricts allowed trust tiers for fresh planning
-  --allow-lifecycle     restricts allowed lifecycle statuses for fresh planning
-  --max-tokens          rejects skills above a token ceiling
-  --max-content-size    rejects skills above a content-size ceiling
-
-Output behavior:
-  default   human-friendly install summary
-  --json    structured machine-readable result"""
-
-SYNC_HELP = """Materialize a locked system from an existing lockfile.
-
-Lock replay path:
-  lock parse + replay -> execution planning -> materialization
-
-Common examples:
-  aptitude sync --lock aptitude.lock.json
-  aptitude sync --lock aptitude.lock.json --target demo_postman
-  aptitude sync --lock aptitude.lock.json --json
-
-Behavior:
-  uses the existing lockfile as the source of truth
-  does not call discovery or resolver
-  rebuilds the local workspace from locked data only"""
-
-RESOLVE_HELP = """Resolve a skill query and print a stable JSON result.
-
-Fresh planning flow:
-  discovery -> resolver -> governance -> lockfile -> execution planning
-
-Common examples:
-  aptitude resolve "Postman Primary Skill"
-  aptitude resolve "Postman" --interaction-mode never
-  aptitude resolve "Postman Primary Skill" --prefer high-trust
-  aptitude resolve "Postman Primary Skill" --allow-trust verified,internal
-
-This is the hidden preview/debug surface. It follows the same planning path as install,
-but stops after planning and prints the result instead of materializing it."""
-
-app = typer.Typer(no_args_is_help=True, help=ROOT_HELP)
+    if not value:
+        return
+    typer.echo(resolve_cli_version())
+    raise typer.Exit()
 
 
 @app.callback()
-def main() -> None:
+def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help=OPTIONS["root_version"].help_text,
+    ),
+) -> None:
     """Aptitude CLI root command group."""
 
 
 def _format_error(error: AptitudeResolverError) -> str:
-    if isinstance(
-        error, InvalidResolverConfigurationError
-    ) and error.source.lower() == ("environment"):
-        return _format_environment_configuration_error(error)
+    """Backwards-compatible wrapper for shared CLI error formatting."""
 
-    return json.dumps(
-        {
-            "error": error.to_payload(),
-        },
-        indent=2,
-    )
+    return format_cli_error(error)
 
 
 def _format_environment_configuration_error(
     error: InvalidResolverConfigurationError,
 ) -> str:
-    """Render environment setup failures without leaking internal error mechanics."""
+    """Backwards-compatible wrapper for shared environment error rendering."""
 
-    missing_variables = _parse_missing_environment_variables(error.details)
-    lines = ["Aptitude is not configured."]
-
-    if missing_variables:
-        lines.append("Set the required environment variables:")
-        lines.extend(f"  - {name}" for name in missing_variables)
-    else:
-        lines.append(error.details)
-
-    lines.append("")
-    lines.append(
-        "Export them in your shell or place them in a local .env file, then try again."
-    )
-    return "\n".join(lines)
+    return format_cli_error(error)
 
 
 def _parse_missing_environment_variables(details: str) -> list[str]:
-    """Extract missing environment variable names from one settings error string."""
+    """Backwards-compatible wrapper for shared parsing logic."""
 
-    prefix = "Missing required environment variables: "
-    if not details.startswith(prefix):
-        return []
-    names = details.removeprefix(prefix).rstrip(".")
-    return [name.strip() for name in names.split(",") if name.strip()]
+    return parse_missing_environment_variables(details)
 
 
 def _build_workflow_service() -> InstallWorkflowService:
     """Create one workflow service using the current builder functions."""
 
-    return InstallWorkflowService(
+    return _shared_build_workflow_service(
         resolve_builder=build_resolve_use_case,
         install_builder=build_install_use_case,
         sync_builder=build_sync_use_case,
@@ -174,41 +115,21 @@ def _parse_csv_option(
     *,
     option_name: str,
 ) -> list[str] | None:
-    """Parse one comma-separated CLI option into trimmed values."""
+    """Backwards-compatible wrapper for shared CSV parsing."""
 
-    if value is None:
-        return None
-    items = [item.strip() for item in value.split(",")]
-    if any(not item for item in items):
-        raise typer.BadParameter(
-            f"{option_name} must be a comma-separated list without empty values."
-        )
-    deduplicated: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        if item in seen:
-            continue
-        seen.add(item)
-        deduplicated.append(item)
-    return deduplicated
+    return parse_csv_option(value, option_name=option_name)
 
 
 def _parse_interaction_mode(value: str | None) -> InteractionMode | None:
-    """Validate one CLI interaction mode string."""
+    """Backwards-compatible wrapper for shared interaction-mode parsing."""
 
-    if value is None:
-        return None
-    if value not in {"auto", "always", "never"}:
-        raise typer.BadParameter(
-            "--interaction-mode must be one of: auto, always, never."
-        )
-    return cast(InteractionMode, value)
+    return parse_interaction_mode(value)
 
 
 def _is_interactive() -> bool:
-    """Return whether the CLI can safely prompt the user."""
+    """Backwards-compatible wrapper for shared TTY detection."""
 
-    return sys.stdin.isatty() and sys.stdout.isatty()
+    return is_interactive()
 
 
 def _render_candidate(index: int, candidate: DiscoveryCandidateDto) -> str:
@@ -226,6 +147,53 @@ def _render_candidate(index: int, candidate: DiscoveryCandidateDto) -> str:
     if candidate.selection_reason:
         lines.append(f"   why ranked here: {candidate.selection_reason}")
     return "\n".join(lines)
+
+
+def _run_with_activity(
+    description: str,
+    operation: Callable[[], T],
+    *,
+    show_bar: bool = False,
+) -> T:
+    """Run one CLI operation with transient progress in interactive sessions."""
+
+    if not _is_interactive():
+        return operation()
+
+    if show_bar:
+        with Progress(
+            SpinnerColumn(style=THEME.accent),
+            TextColumn(f"[{THEME.text_primary}]{{task.description}}"),
+            BarColumn(
+                bar_width=28,
+                complete_style=THEME.accent,
+                finished_style=THEME.accent,
+            ),
+            transient=True,
+            console=_ACTIVITY_CONSOLE,
+        ) as progress:
+            task = progress.add_task(description, total=100)
+            progress.advance(task, 20)
+            result = operation()
+            progress.advance(task, 80)
+        return result
+
+    with _ACTIVITY_CONSOLE.status(
+        f"[{THEME.text_primary}]{description}",
+        spinner="dots",
+    ):
+        return operation()
+
+
+def _render_folded_telemetry(stage_timings) -> None:
+    """Render one folded telemetry summary for interactive human CLI runs."""
+
+    if not _is_interactive():
+        return
+    summary = format_folded_cli_telemetry(stage_timings)
+    if summary is None:
+        return
+    _ACTIVITY_CONSOLE.print(summary, style=THEME.text_subtle)
 
 
 def _prompt_for_candidate_slug(candidates: list[DiscoveryCandidateDto]) -> str:
@@ -264,7 +232,11 @@ def _resolved_install_coordinates(result: InstallResultDto) -> list[tuple[str, s
 def _format_install_success(result: InstallResultDto) -> str:
     """Render a human-friendly install summary inspired by package managers."""
 
-    lines = [f"Collecting {result.requested_query}"]
+    lines = [
+        "Install summary",
+        HORIZONTAL_SEPARATOR,
+        f"Collecting {result.requested_query}",
+    ]
 
     if result.selected_coordinate is not None:
         lines.append(
@@ -287,6 +259,7 @@ def _format_install_success(result: InstallResultDto) -> str:
         lines.append(f"Collecting dependency {dependency_slug} ({dependency_version})")
 
     if resolved_coordinates:
+        lines.append(HORIZONTAL_SEPARATOR)
         lines.append(
             "Installing collected resolver skills: "
             + ", ".join(slug for slug, _ in resolved_coordinates)
@@ -297,6 +270,7 @@ def _format_install_success(result: InstallResultDto) -> str:
         )
 
     if result.materialized_root:
+        lines.append(HORIZONTAL_SEPARATOR)
         lines.append(f"Installed to: {result.materialized_root}")
 
     return "\n".join(lines)
@@ -308,8 +282,13 @@ def _format_sync_success(lock_path: Path, result: SyncResultDto) -> str:
     resolved_coordinates = [
         (skill.slug, skill.version) for skill in result.installed_skills
     ]
-    lines = [f"Syncing locked resolver skills from {lock_path.resolve()}"]
+    lines = [
+        "Sync summary",
+        HORIZONTAL_SEPARATOR,
+        f"Syncing locked resolver skills from {lock_path.resolve()}",
+    ]
     if resolved_coordinates:
+        lines.append(HORIZONTAL_SEPARATOR)
         lines.append(
             "Installing locked resolver skills: "
             + ", ".join(slug for slug, _ in resolved_coordinates)
@@ -319,6 +298,7 @@ def _format_sync_success(lock_path: Path, result: SyncResultDto) -> str:
             + " ".join(f"{slug}-{version}" for slug, version in resolved_coordinates)
         )
     if result.materialized_root:
+        lines.append(HORIZONTAL_SEPARATOR)
         lines.append(f"Installed to: {result.materialized_root}")
     return "\n".join(lines)
 
@@ -336,28 +316,30 @@ def _resolve_query_result(
     prompt_capable = _is_interactive()
     use_case, close = workflow_service.prepare_resolve(options=options)
     try:
-        result = workflow_service.execute_resolve(
-            use_case,
-            query=query,
-            version=version,
-            select_slug=select_slug,
-            interaction_mode=None,
-            prompt_capable=prompt_capable,
-            selection_source=None,
-        )
+        with capture_cli_telemetry():
+            result = workflow_service.execute_resolve(
+                use_case,
+                query=query,
+                version=version,
+                select_slug=select_slug,
+                interaction_mode=None,
+                prompt_capable=prompt_capable,
+                selection_source=None,
+            )
         if result.status != "selection_required":
             return result
 
         chosen_slug = _prompt_for_candidate_slug(result.candidates)
-        return workflow_service.execute_resolve(
-            use_case,
-            query=query,
-            version=version,
-            select_slug=chosen_slug,
-            interaction_mode="never",
-            prompt_capable=False,
-            selection_source="interactive",
-        )
+        with capture_cli_telemetry():
+            return workflow_service.execute_resolve(
+                use_case,
+                query=query,
+                version=version,
+                select_slug=chosen_slug,
+                interaction_mode="never",
+                prompt_capable=False,
+                selection_source="interactive",
+            )
     finally:
         close()
 
@@ -415,66 +397,114 @@ def _sync_result(
     return workflow_service.sync_lock(lock_path=lock_path, target=target)
 
 
-@app.command(hidden=True, help=RESOLVE_HELP)
+def _exit_for_missing_query() -> None:
+    """Exit with a Typer-compatible missing-query error."""
+
+    typer.echo("Missing argument 'QUERY'.", err=True)
+    raise typer.Exit(code=2)
+
+
+def _exit_for_missing_lock_option() -> None:
+    """Exit with a Typer-compatible missing-lock error."""
+
+    typer.echo("Missing option '--lock'.", err=True)
+    raise typer.Exit(code=2)
+
+
+def _can_launch_install_flow(
+    *,
+    query: str | None,
+    version: str | None,
+    select_slug: str | None,
+    prefer: str | None,
+    interaction_mode: str | None,
+    allow_trust: str | None,
+    allow_lifecycle: str | None,
+    max_tokens: int | None,
+    max_content_size: int | None,
+    json_output: bool,
+) -> bool:
+    """Return whether a bare install invocation should open the guided flow."""
+
+    return (
+        query is None
+        and version is None
+        and select_slug is None
+        and prefer is None
+        and interaction_mode is None
+        and allow_trust is None
+        and allow_lifecycle is None
+        and max_tokens is None
+        and max_content_size is None
+        and not json_output
+    )
+
+
+def _can_launch_sync_flow(
+    *,
+    lock_path: Path | None,
+    json_output: bool,
+) -> bool:
+    """Return whether a bare sync invocation should open the guided flow."""
+
+    return lock_path is None and not json_output
+
+
+@app.command(hidden=True, help=build_command_help("resolve"))
 def resolve(
     query: str,
     version: str | None = typer.Option(
         None,
         "--version",
-        help="Optional exact immutable version. When omitted, the client selects a version deterministically.",
+        help=OPTIONS["version_select"].help_text,
     ),
     select_slug: str | None = typer.Option(
         None,
         "--select-slug",
-        help="Explicitly pick one discovered slug without prompting.",
+        help=OPTIONS["select_slug"].help_text,
     ),
     prefer: str | None = typer.Option(
         None,
         "--prefer",
-        help="Selection profile for choosing among legal candidates: balanced, low-cost, or high-trust.",
+        help=OPTIONS["prefer"].help_text,
     ),
     interaction_mode: str | None = typer.Option(
         None,
         "--interaction-mode",
-        help="How root ambiguity should be handled: auto, always, or never.",
+        help=OPTIONS["interaction_mode"].help_text,
     ),
     allow_trust: str | None = typer.Option(
         None,
         "--allow-trust",
-        help="Comma-separated allowed trust tiers for fresh planning.",
+        help=OPTIONS["allow_trust"].help_text,
     ),
     allow_lifecycle: str | None = typer.Option(
         None,
         "--allow-lifecycle",
-        help="Comma-separated allowed lifecycle statuses for fresh planning.",
+        help=OPTIONS["allow_lifecycle"].help_text,
     ),
     max_tokens: int | None = typer.Option(
         None,
         "--max-tokens",
         min=0,
-        help="Reject candidates and resolved graphs above this token ceiling.",
+        help=OPTIONS["max_tokens"].help_text,
     ),
     max_content_size: int | None = typer.Option(
         None,
         "--max-content-size",
         min=0,
-        help="Reject candidates and resolved graphs above this content-size ceiling in bytes.",
+        help=OPTIONS["max_content_size"].help_text,
     ),
 ) -> None:
     """Resolve a skill query and print a stable JSON result."""
 
-    allow_trust_values = _parse_csv_option(allow_trust, option_name="--allow-trust")
-    allow_lifecycle_values = _parse_csv_option(
-        allow_lifecycle,
-        option_name="--allow-lifecycle",
-    )
-    options = InstallWorkflowOptions(
-        selection_profile=prefer,
-        interaction_mode=_parse_interaction_mode(interaction_mode),
-        allowed_trust_tiers=allow_trust_values,
-        allowed_lifecycle_statuses=allow_lifecycle_values,
-        max_token_estimate=max_tokens,
-        max_content_size_bytes=max_content_size,
+    options = build_workflow_options(
+        prefer=prefer,
+        interaction_mode=interaction_mode,
+        allow_trust=allow_trust,
+        allow_lifecycle=allow_lifecycle,
+        max_tokens=max_tokens,
+        max_content_size=max_content_size,
     )
 
     try:
@@ -489,95 +519,123 @@ def resolve(
     except AptitudeResolverError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo(format_unexpected_cli_error(exc), err=True)
+        raise typer.Exit(code=1) from exc
 
     typer.echo(result.model_dump_json(indent=2, exclude_none=True))
 
 
-@app.command(help=INSTALL_HELP)
+@app.command(help=build_command_help("install"))
 def install(
-    query: str,
+    query: str | None = typer.Argument(None),
     version: str | None = typer.Option(
         None,
         "--version",
-        help="Optional exact immutable version. When omitted, the client selects a version deterministically.",
+        help=OPTIONS["version_select"].help_text,
     ),
     select_slug: str | None = typer.Option(
         None,
         "--select-slug",
-        help="Explicitly pick one discovered slug without prompting.",
+        help=OPTIONS["select_slug"].help_text,
     ),
     prefer: str | None = typer.Option(
         None,
         "--prefer",
-        help="Selection profile for choosing among legal candidates: balanced, low-cost, or high-trust.",
+        help=OPTIONS["prefer"].help_text,
     ),
     interaction_mode: str | None = typer.Option(
         None,
         "--interaction-mode",
-        help="How root ambiguity should be handled: auto, always, or never.",
+        help=OPTIONS["interaction_mode"].help_text,
     ),
     allow_trust: str | None = typer.Option(
         None,
         "--allow-trust",
-        help="Comma-separated allowed trust tiers for fresh planning.",
+        help=OPTIONS["allow_trust"].help_text,
     ),
     allow_lifecycle: str | None = typer.Option(
         None,
         "--allow-lifecycle",
-        help="Comma-separated allowed lifecycle statuses for fresh planning.",
+        help=OPTIONS["allow_lifecycle"].help_text,
     ),
     max_tokens: int | None = typer.Option(
         None,
         "--max-tokens",
         min=0,
-        help="Reject candidates and resolved graphs above this token ceiling.",
+        help=OPTIONS["max_tokens"].help_text,
     ),
     max_content_size: int | None = typer.Option(
         None,
         "--max-content-size",
         min=0,
-        help="Reject candidates and resolved graphs above this content-size ceiling in bytes.",
+        help=OPTIONS["max_content_size"].help_text,
     ),
     target: Path = typer.Option(
         Path("skill_demo"),
         "--target",
-        help="Local directory where the resolved graph should be materialized.",
+        help=OPTIONS["install_target"].help_text,
     ),
     json_output: bool = typer.Option(
         False,
         "--json",
-        help="Print the structured JSON install result for automation and CI.",
+        help=OPTIONS["install_json"].help_text,
     ),
 ) -> None:
     """Install a skill query into a local demo workspace."""
 
-    allow_trust_values = _parse_csv_option(allow_trust, option_name="--allow-trust")
-    allow_lifecycle_values = _parse_csv_option(
-        allow_lifecycle,
-        option_name="--allow-lifecycle",
-    )
-    options = InstallWorkflowOptions(
-        selection_profile=prefer,
-        interaction_mode=_parse_interaction_mode(interaction_mode),
-        allowed_trust_tiers=allow_trust_values,
-        allowed_lifecycle_statuses=allow_lifecycle_values,
-        max_token_estimate=max_tokens,
-        max_content_size_bytes=max_content_size,
+    if _can_launch_install_flow(
+        query=query,
+        version=version,
+        select_slug=select_slug,
+        prefer=prefer,
+        interaction_mode=interaction_mode,
+        allow_trust=allow_trust,
+        allow_lifecycle=allow_lifecycle,
+        max_tokens=max_tokens,
+        max_content_size=max_content_size,
+        json_output=json_output,
+    ):
+        run_cli_wizard(initial_flow="install", target=target)
+        return
+
+    if query is None:
+        _exit_for_missing_query()
+        raise AssertionError("unreachable")
+    install_query = query
+
+    options = build_workflow_options(
+        prefer=prefer,
+        interaction_mode=interaction_mode,
+        allow_trust=allow_trust,
+        allow_lifecycle=allow_lifecycle,
+        max_tokens=max_tokens,
+        max_content_size=max_content_size,
     )
 
     try:
         workflow_service = _build_workflow_service()
-        result = _install_result(
-            workflow_service,
-            query=query,
-            version=version,
-            select_slug=select_slug,
-            target=target,
-            options=options,
-        )
+        with capture_cli_telemetry() as telemetry:
+            result = _run_with_activity(
+                "Planning and installing resolver skills",
+                lambda: _install_result(
+                    workflow_service,
+                    query=install_query,
+                    version=version,
+                    select_slug=select_slug,
+                    target=target,
+                    options=options,
+                ),
+                show_bar=not json_output,
+            )
     except AptitudeResolverError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo(format_unexpected_cli_error(exc), err=True)
+        raise typer.Exit(code=1) from exc
+
+    _render_folded_telemetry(telemetry)
 
     if json_output or result.status != "installed":
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
@@ -586,40 +644,66 @@ def install(
     typer.echo(_format_install_success(result))
 
 
-@app.command(help=SYNC_HELP)
+@app.command(help=build_command_help("sync"))
 def sync(
-    lock_path: Path = typer.Option(
-        ...,
+    lock_path: Path | None = typer.Option(
+        None,
         "--lock",
-        help="Path to an existing resolver lockfile.",
+        help=OPTIONS["lock"].help_text,
     ),
     target: Path = typer.Option(
         Path("skill_demo"),
         "--target",
-        help="Local directory where the locked system should be materialized.",
+        help=OPTIONS["sync_target"].help_text,
     ),
     json_output: bool = typer.Option(
         False,
         "--json",
-        help="Print the structured JSON sync result for automation and CI.",
+        help=OPTIONS["sync_json"].help_text,
     ),
 ) -> None:
     """Materialize a locked system from an existing lockfile."""
 
+    if _can_launch_sync_flow(lock_path=lock_path, json_output=json_output):
+        run_cli_wizard(initial_flow="sync", target=target)
+        return
+
+    if lock_path is None:
+        _exit_for_missing_lock_option()
+        raise AssertionError("unreachable")
+    sync_lock_path = lock_path
+
     workflow_service = _build_workflow_service()
 
     try:
-        result = _sync_result(
-            workflow_service,
-            lock_path=lock_path,
-            target=target,
-        )
+        with capture_cli_telemetry() as telemetry:
+            result = _run_with_activity(
+                "Syncing locked resolver skills",
+                lambda: _sync_result(
+                    workflow_service,
+                    lock_path=sync_lock_path,
+                    target=target,
+                ),
+                show_bar=not json_output,
+            )
     except AptitudeResolverError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo(format_unexpected_cli_error(exc), err=True)
+        raise typer.Exit(code=1) from exc
+
+    _render_folded_telemetry(telemetry)
 
     if json_output:
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
         return
 
-    typer.echo(_format_sync_success(lock_path, result))
+    typer.echo(_format_sync_success(sync_lock_path, result))
+
+
+@app.command(help=build_command_help("manifest"))
+def manifest() -> None:
+    """Show the complete Aptitude CLI capability map."""
+
+    typer.echo(build_manifest_text())
