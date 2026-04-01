@@ -40,10 +40,10 @@ demo:
 	PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
 
 test:
-	$(UV) run --extra dev python -m pytest -q
+	$(UV) run --extra dev python -m pytest
 
 test-cov:
-	$(UV) run --extra dev python -m pytest --cov=src/aptitude --cov-branch --cov-report=term-missing -q
+	$(UV) run --extra dev python -m pytest --cov=src/aptitude --cov-branch --cov-report=term-missing
 
 lint:
 	$(UV) run --extra dev ruff check src tests
