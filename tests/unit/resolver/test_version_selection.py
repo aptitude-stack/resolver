@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import (
+from aptitude_resolver.domain.errors import (
     InteractiveSelectionUnavailableError,
     SelectionSlugNotFoundError,
     SkillNotFoundError,
 )
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.models import (
     DiscoveredSkill,
     DiscoveryCandidate,
     SearchIntent,
@@ -15,7 +15,7 @@ from aptitude_client.domain.models import (
     SkillMetadata,
     VersionSummary,
 )
-from aptitude_client.resolver.solver import (
+from aptitude_resolver.resolver.solver import (
     resolve_candidate_versions,
     select_final_candidate,
     select_preferred_version,

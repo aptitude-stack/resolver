@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.shared.config.aptitude_config import (
+from aptitude_resolver.shared.config.aptitude_config import (
     AptitudeConfig,
     PolicyConfig,
     SelectionConfig,

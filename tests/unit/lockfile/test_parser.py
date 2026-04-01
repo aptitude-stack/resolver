@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
-from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.lockfile import parse_lockfile
+from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.lockfile import parse_lockfile
 
 
 def _minimal_lock_payload() -> dict[str, object]:

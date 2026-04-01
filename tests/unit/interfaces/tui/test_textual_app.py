@@ -6,7 +6,7 @@ from pathlib import Path
 
 from textual.widgets import Input, Static
 
-from aptitude_client.application.dto import (
+from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
@@ -23,8 +23,8 @@ from aptitude_client.application.dto import (
     ResolveSkillSummaryDto,
     TraceEntryDto,
 )
-from aptitude_client.domain.errors import InvalidClientConfigurationError
-from aptitude_client.interfaces.tui.app import AptitudeInstallerApp
+from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
+from aptitude_resolver.interfaces.tui.app import AptitudeInstallerApp
 
 
 class FakeWorkflowService:
@@ -382,7 +382,7 @@ def test_tui_install_success_shows_result_screen() -> None:
 
 def test_tui_resolve_error_shows_error_state() -> None:
     service = FakeWorkflowService(
-        resolve_error=InvalidClientConfigurationError(
+        resolve_error=InvalidResolverConfigurationError(
             "environment",
             "unsupported interaction mode",
         )
@@ -397,7 +397,7 @@ def test_tui_resolve_error_shows_error_state() -> None:
             await _wait_for(lambda: _has_widget(app, "#error-summary"))
 
             error_summary = app.screen.query_one("#error-summary", Static)
-            assert "InvalidClientConfigurationError" in _rendered_text(error_summary)
+            assert "InvalidResolverConfigurationError" in _rendered_text(error_summary)
 
     asyncio.run(scenario())
 

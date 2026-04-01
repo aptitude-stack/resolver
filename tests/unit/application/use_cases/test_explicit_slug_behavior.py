@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.application.dto import InstallRequestDto, ResolveQueryRequestDto
-from aptitude_client.application.use_cases import (
+from aptitude_resolver.application.dto import InstallRequestDto, ResolveQueryRequestDto
+from aptitude_resolver.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
 )
-from aptitude_client.domain.errors import SkillNotFoundError
-from aptitude_client.domain.models import DiscoveryQuery, SkillIdentity, VersionSummary
+from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.domain.models import DiscoveryQuery, SkillIdentity, VersionSummary
 
 
 class FakeRegistryClient:

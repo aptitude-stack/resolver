@@ -5,23 +5,23 @@ import json
 from dataclasses import replace
 
 import pytest
-import aptitude_client.execution.materialize as materialize_module
+import aptitude_resolver.execution.materialize as materialize_module
 
-from aptitude_client.domain.errors import ContentChecksumMismatchError
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.errors import ContentChecksumMismatchError
+from aptitude_resolver.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude_client.domain.policy import PolicyEvaluation
-from aptitude_client.domain.tracing import TraceEntry
-from aptitude_client.execution import (
+from aptitude_resolver.domain.policy import PolicyEvaluation
+from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.execution import (
     build_execution_plan,
     materialize_lockfile,
     write_install_debug_artifacts,
 )
-from aptitude_client.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
+from aptitude_resolver.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
 
 
 class FakeRegistryClient:

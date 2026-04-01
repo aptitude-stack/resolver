@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aptitude_client.interfaces.cli import main as main_module
+from aptitude_resolver.interfaces.cli import main as main_module
 
 
 def test_main_launches_textual_app_when_invoked_without_subcommands(

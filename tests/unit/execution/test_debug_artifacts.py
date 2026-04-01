@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude_client.domain.policy import PolicyEvaluation
-from aptitude_client.domain.tracing import TraceEntry
-from aptitude_client.execution import write_install_debug_artifacts
+from aptitude_resolver.domain.policy import PolicyEvaluation
+from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.execution import write_install_debug_artifacts
 
 
 def _node(slug: str, version: str) -> ResolvedSkillNode:

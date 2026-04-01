@@ -1,11 +1,11 @@
-# Aptitude Client
+# Aptitude Resolver
 
-Aptitude Client is a deterministic, package-manager-style client for AI skills.
+Aptitude Resolver is a deterministic, package-manager-style client for AI skills.
 
 The system is intentionally split in two:
 
 - Aptitude Server owns registry data, metadata, immutable artifacts, and discovery indexes
-- Aptitude Client owns intent interpretation, candidate selection, dependency resolution, governance, lock generation, and execution planning
+- Aptitude Resolver owns intent interpretation, candidate selection, dependency resolution, governance, lock generation, and execution planning
 
 ## Current CLI
 
@@ -57,7 +57,7 @@ The canonical architecture now defines these required semantics:
 - ranking compares only policy-compliant candidates
 - phase 1 checksum verification uses server-published `sha256` checksum metadata and fails fast on mismatch
 
-Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution is [docs/ARCHITECTURE.md](docs/architecture.md).
 
 ## Current User Flows
 
@@ -106,13 +106,13 @@ aptitude sync --lock aptitude.lock.json
 Preview the resolved graph, lock, and execution plan without materializing:
 
 ```bash
-py -3 -m aptitude_client.interfaces.cli.main resolve "Postman Primary Skill"
+py -3 -m aptitude_resolver.interfaces.cli.main resolve "Postman Primary Skill"
 ```
 
 ## Current Package Map
 
 ```text
-src/aptitude_client/
+src/aptitude_resolver/
   application/
     dto/
     queries/
@@ -181,7 +181,7 @@ aptitude sync --lock aptitude.lock.json
 Or via Python:
 
 ```bash
-uv run python -m aptitude_client.interfaces.cli.main --help
+uv run python -m aptitude_resolver.interfaces.cli.main --help
 ```
 
 Developer workflow:
@@ -200,13 +200,13 @@ make check
 
 The canonical pair for future implementation work is:
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/RULES.md](docs/RULES.md)
+- [docs/ARCHITECTURE.md](docs/architecture.md)
+- [docs/RULES.md](docs/rules.md)
 
 Before any non-trivial implementation or refactor, read both.
 
 Supporting docs:
 
-- [docs/Aptitude-Recommended-Libraries.md](docs/Aptitude-Recommended-Libraries.md)
+- [docs/Aptitude-Recommended-Libraries.md](docs/aptitude-recommended-libraries.md)
 
 The `docs/openapi/` directory is kept as raw server reference material, not as the sole source of truth for runtime behavior.

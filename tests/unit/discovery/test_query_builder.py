@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from aptitude_client.discovery.intent import parse_search_intent
-from aptitude_client.discovery.query_builder import build_discovery_query
+from aptitude_resolver.discovery.intent import parse_search_intent
+from aptitude_resolver.discovery.query_builder import build_discovery_query
 
 
 def test_build_discovery_query_preserves_user_text_and_preferences() -> None:

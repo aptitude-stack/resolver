@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.models import (
     DiscoveryCandidate,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
     VersionSummary,
 )
-from aptitude_client.domain.policy import PolicyContext
-from aptitude_client.governance import (
+from aptitude_resolver.domain.policy import PolicyContext
+from aptitude_resolver.governance import (
     evaluate_resolution_graph,
     filter_policy_compliant_candidates,
 )

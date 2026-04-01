@@ -7,9 +7,9 @@ from dataclasses import dataclass
 import httpx
 import pytest
 
-from aptitude_client.domain.models import DiscoveryQuery
-from aptitude_client.registry.client import RegistryClient
-from aptitude_client.shared.config import Settings
+from aptitude_resolver.domain.models import DiscoveryQuery
+from aptitude_resolver.registry.client import RegistryClient
+from aptitude_resolver.shared.config import Settings
 
 
 pytestmark = pytest.mark.integration

@@ -1,0 +1,41 @@
+"""Client-owned error types."""
+
+from aptitude_resolver.domain.errors.client_errors import (
+    AptitudeResolverError,
+    ContentChecksumMismatchError,
+    DependencyCycleError,
+    DiscoveryNoCandidatesError,
+    InteractiveSelectionUnavailableError,
+    InvalidResolverConfigurationError,
+    InvalidCoordinateError,
+    InvalidLockfileError,
+    PolicyViolationError,
+    RegistryAccessError,
+    RegistryUnavailableError,
+    SelectionSlugNotFoundError,
+    SkillNotFoundError,
+    SkillSelectionError,
+    UnsupportedDependencyShapeError,
+    UnexpectedRegistryResponseError,
+    VersionConflictError,
+)
+
+__all__ = [
+    "AptitudeResolverError",
+    "ContentChecksumMismatchError",
+    "DependencyCycleError",
+    "DiscoveryNoCandidatesError",
+    "InteractiveSelectionUnavailableError",
+    "InvalidResolverConfigurationError",
+    "InvalidCoordinateError",
+    "InvalidLockfileError",
+    "PolicyViolationError",
+    "RegistryAccessError",
+    "RegistryUnavailableError",
+    "SelectionSlugNotFoundError",
+    "SkillNotFoundError",
+    "SkillSelectionError",
+    "UnsupportedDependencyShapeError",
+    "UnexpectedRegistryResponseError",
+    "VersionConflictError",
+]

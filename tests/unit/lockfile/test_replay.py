@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.lockfile import replay_lockfile
-from aptitude_client.lockfile.model import LockRoot, Lockfile, LockedEdge, LockedSkill
+from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.lockfile import replay_lockfile
+from aptitude_resolver.lockfile.model import LockRoot, Lockfile, LockedEdge, LockedSkill
 
 
 def _node(node_id: str, slug: str, version: str) -> LockedSkill:

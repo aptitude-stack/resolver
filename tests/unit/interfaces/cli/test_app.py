@@ -5,8 +5,8 @@ from typing import Any
 
 from typer.testing import CliRunner
 
-from aptitude_client.application import composition
-from aptitude_client.application.dto import (
+from aptitude_resolver.application import composition
+from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
@@ -25,18 +25,18 @@ from aptitude_client.application.dto import (
     SyncResultDto,
     TraceEntryDto,
 )
-from aptitude_client.domain.errors import (
+from aptitude_resolver.domain.errors import (
     ContentChecksumMismatchError,
-    InvalidClientConfigurationError,
+    InvalidResolverConfigurationError,
     InvalidLockfileError,
     SelectionSlugNotFoundError,
 )
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.models import (
     DiscoveryQuery,
     SkillCoordinate,
     VersionSummary,
 )
-from aptitude_client.interfaces.cli import app as app_module
+from aptitude_resolver.interfaces.cli import app as app_module
 
 
 runner = CliRunner()
@@ -724,7 +724,7 @@ def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
     close_calls: list[str] = []
 
     def build_resolve_use_case(**kwargs):
-        raise InvalidClientConfigurationError(
+        raise InvalidResolverConfigurationError(
             "CLI override", "allowed_trust_tiers contains unknown values: unknown-tier."
         )
 
@@ -737,7 +737,7 @@ def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
 
     assert result.exit_code == 1
     assert close_calls == []
-    assert '"type": "InvalidClientConfigurationError"' in result.stderr
+    assert '"type": "InvalidResolverConfigurationError"' in result.stderr
     assert '"source": "CLI override"' in result.stderr
 
 
@@ -933,10 +933,10 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
 
 def test_format_error_wraps_structured_payload_for_cli_output() -> None:
     rendered = app_module._format_error(
-        InvalidClientConfigurationError("environment", "unsupported interaction mode")
+        InvalidResolverConfigurationError("environment", "unsupported interaction mode")
     )
 
-    assert '"type": "InvalidClientConfigurationError"' in rendered
+    assert '"type": "InvalidResolverConfigurationError"' in rendered
     assert '"source": "environment"' in rendered
     assert '"details": "unsupported interaction mode"' in rendered
 

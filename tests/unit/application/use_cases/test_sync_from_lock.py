@@ -5,17 +5,17 @@ import json
 
 import pytest
 
-from aptitude_client.application.dto import SyncRequestDto
-from aptitude_client.application.use_cases import SyncFromLockUseCase
-from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.domain.models import (
+from aptitude_resolver.application.dto import SyncRequestDto
+from aptitude_resolver.application.use_cases import SyncFromLockUseCase
+from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude_client.domain.policy import SelectionPreferences
-from aptitude_client.lockfile import build_lockfile, serialize_lockfile
+from aptitude_resolver.domain.policy import SelectionPreferences
+from aptitude_resolver.lockfile import build_lockfile, serialize_lockfile
 
 
 class FakeRegistryClient:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aptitude_client.telemetry import TelemetryCollector, emit_stage_timings
+from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
 
 class FakeLogger:

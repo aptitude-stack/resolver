@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import VersionConflictError
-from aptitude_client.domain.models import SkillCoordinate
-from aptitude_client.resolver.conflict import ensure_no_version_conflict
+from aptitude_resolver.domain.errors import VersionConflictError
+from aptitude_resolver.domain.models import SkillCoordinate
+from aptitude_resolver.resolver.conflict import ensure_no_version_conflict
 
 
 def test_ensure_no_version_conflict_allows_matching_versions() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from aptitude_client.interfaces.cli import app as app_module
+from aptitude_resolver.interfaces.cli import app as app_module
 
 
 runner = CliRunner()

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import (
+from aptitude_resolver.domain.errors import (
     DependencyCycleError,
     SkillNotFoundError,
     VersionConflictError,
 )
-from aptitude_client.domain.models import DependencySpec, SkillCoordinate, SkillMetadata
-from aptitude_client.resolver.graph import resolve_recursive_graph
+from aptitude_resolver.domain.models import DependencySpec, SkillCoordinate, SkillMetadata
+from aptitude_resolver.resolver.graph import resolve_recursive_graph
 
 
 class FakeRegistryClient:

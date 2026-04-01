@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.application import composition
-from aptitude_client.application.use_cases import (
+from aptitude_resolver.application import composition
+from aptitude_resolver.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
     SyncFromLockUseCase,
 )
-from aptitude_client.domain.errors import InvalidClientConfigurationError
-from aptitude_client.shared.config.aptitude_config import (
+from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
+from aptitude_resolver.shared.config.aptitude_config import (
     AptitudeConfig,
     PolicyConfig,
     SelectionConfig,
@@ -119,7 +119,7 @@ def test_build_resolve_use_case_raises_for_invalid_selection_preference_source(
         lambda env=None: SelectionConfig(),
     )
 
-    with pytest.raises(InvalidClientConfigurationError) as exc_info:
+    with pytest.raises(InvalidResolverConfigurationError) as exc_info:
         composition.build_resolve_use_case()
 
     assert "workspace config" in str(exc_info.value)
@@ -268,7 +268,7 @@ def test_build_resolve_use_case_raises_for_invalid_cli_policy_override(
         composition, "read_env_selection_overrides", lambda env=None: None
     )
 
-    with pytest.raises(InvalidClientConfigurationError) as exc_info:
+    with pytest.raises(InvalidResolverConfigurationError) as exc_info:
         composition.build_resolve_use_case(
             allowed_trust_tiers_override=["verified", "unknown-tier"],
         )
@@ -340,7 +340,7 @@ def test_build_resolve_use_case_raises_for_invalid_workspace_policy(
         composition, "read_env_selection_overrides", lambda env=None: None
     )
 
-    with pytest.raises(InvalidClientConfigurationError) as exc_info:
+    with pytest.raises(InvalidResolverConfigurationError) as exc_info:
         composition.build_resolve_use_case()
 
     assert exc_info.value.source == "workspace config"
