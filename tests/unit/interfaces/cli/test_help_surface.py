@@ -78,7 +78,10 @@ def test_makefile_exposes_demo_target_that_sources_repo_env() -> None:
 
     assert "\ndemo:\n" in makefile
     assert ". ./.env" in makefile
-    assert 'install "Postman Primary Skill"' in makefile
+    assert "Running Aptitude demo TUI" in makefile
+    assert "Suggest:" in makefile
+    assert "Postman Primary Skill" in makefile
+    assert "PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main" in makefile
 
 
 def test_env_example_documents_required_registry_fields() -> None:

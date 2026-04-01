@@ -6,6 +6,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Protocol, cast
 
 from textual import events, work
@@ -41,6 +42,8 @@ INTERACTION_OPTIONS = [
     ("Never ask", "never"),
 ]
 
+
+textual_widgets: ModuleType | None
 
 try:
     from textual import widgets as textual_widgets
@@ -328,14 +331,18 @@ class QueryScreen(Screen):
                             "Review plan", id="review-plan-button", variant="primary"
                         )
                 with Horizontal(classes="card-grid"):
-                    with Vertical(id="context-card", classes="card card-secondary grid-card"):
+                    with Vertical(
+                        id="context-card", classes="card card-secondary grid-card"
+                    ):
                         yield Static("Install posture", classes="card-title")
                         yield Static(
                             _render_query_context(self._state),
                             id="query-context",
                             classes="card-copy",
                         )
-                    with Vertical(id="media-card", classes="card card-secondary grid-card"):
+                    with Vertical(
+                        id="media-card", classes="card card-secondary grid-card"
+                    ):
                         yield Static("Inspiration", classes="card-title")
                         yield Static(
                             _render_media_copy(),
@@ -555,7 +562,9 @@ class PlanScreen(Screen):
                     ):
                         yield widget
                 with Horizontal(classes="card-grid"):
-                    with Vertical(id="overview-card", classes="card card-primary grid-card"):
+                    with Vertical(
+                        id="overview-card", classes="card card-primary grid-card"
+                    ):
                         yield Static("Selected skill", classes="card-title")
                         yield Static(
                             _render_plan_overview(self._result),
@@ -565,14 +574,18 @@ class PlanScreen(Screen):
                         with Horizontal(classes="meta-row"):
                             yield _meta_chip(
                                 _format_runtime(
-                                    selected_skill.runtime if selected_skill is not None else None
+                                    selected_skill.runtime
+                                    if selected_skill is not None
+                                    else None
                                 ),
                                 tone="accent",
                             )
                             if selected_skill is not None:
                                 yield _meta_chip(selected_skill.trust_tier)
                                 yield _meta_chip(selected_skill.lifecycle_status)
-                    with Vertical(id="metadata-card", classes="card card-secondary grid-card"):
+                    with Vertical(
+                        id="metadata-card", classes="card card-secondary grid-card"
+                    ):
                         yield Static("Execution context", classes="card-title")
                         yield Static(
                             _render_plan_metadata(
@@ -1015,7 +1028,7 @@ class AptitudeInstallerApp(App[None]):
 
         self.push_screen(QueryScreen(self._state))
 
-    def action_back(self) -> None:
+    async def action_back(self) -> None:
         """Trigger the available back action for the current screen."""
 
         if isinstance(self.screen, CandidateScreen):

@@ -9,6 +9,7 @@ import pytest
 from aptitude.domain.errors import InvalidCoordinateError, SkillNotFoundError
 from aptitude.registry.client import RegistryClient
 from aptitude.shared.config import Settings
+from integration.registry.support import build_publish_payload, ensure_publish_ready
 
 
 pytestmark = pytest.mark.integration
@@ -41,82 +42,53 @@ def published_skill_set(integration_config, publish_token: str) -> PublishedSkil
         "Authorization": f"Bearer {publish_token}",
     }
 
-    dependency_payload = {
-        "slug": dependency_slug,
-        "version": version,
-        "content": {
-            "raw_markdown": f"# {dependency_name}\n\nRun `{run_id}` dependency version 1.\n",
-            "rendered_summary": "Integration dependency skill.",
-        },
-        "metadata": {
-            "name": dependency_name,
-            "description": f"Dependency seed for registry adapter integration tests ({run_id})",
-            "tags": ["integration", "dependency", run_id],
-            "headers": {"runtime": "python"},
-            "inputs_schema": {"type": "object"},
-            "outputs_schema": {"type": "object"},
-            "token_estimate": 110,
-            "maturity_score": 0.8,
-            "security_score": 0.9,
-        },
-        "relationships": {
-            "depends_on": [],
-            "extends": [],
-            "conflicts_with": [],
-            "overlaps_with": [],
-        },
-    }
+    dependency_payload = build_publish_payload(
+        version=version,
+        raw_markdown=f"# {dependency_name}\n\nRun `{run_id}` dependency version 1.\n",
+        name=dependency_name,
+        description=f"Dependency seed for registry adapter integration tests ({run_id})",
+        tags=["integration", "dependency", run_id],
+        token_estimate=110,
+        maturity_score=0.8,
+        security_score=0.9,
+    )
 
-    primary_payload = {
-        "slug": primary_slug,
-        "version": version,
-        "content": {
-            "raw_markdown": f"# {primary_name}\n\nRun `{run_id}` primary version 1.\n",
-            "rendered_summary": "Integration primary skill.",
-        },
-        "metadata": {
-            "name": primary_name,
-            "description": f"Primary seed for registry adapter integration tests ({run_id})",
-            "tags": ["integration", "primary", run_id],
-            "headers": {"runtime": "python"},
-            "inputs_schema": {"type": "object"},
-            "outputs_schema": {"type": "object"},
-            "token_estimate": 210,
-            "maturity_score": 0.9,
-            "security_score": 0.95,
-        },
-        "relationships": {
-            "depends_on": [
-                {
-                    "slug": dependency_slug,
-                    "version": version,
-                    "optional": False,
-                    "markers": ["linux"],
-                }
-            ],
-            "extends": [],
-            "conflicts_with": [],
-            "overlaps_with": [],
-        },
-    }
+    primary_payload = build_publish_payload(
+        version=version,
+        raw_markdown=f"# {primary_name}\n\nRun `{run_id}` primary version 1.\n",
+        name=primary_name,
+        description=f"Primary seed for registry adapter integration tests ({run_id})",
+        tags=["integration", "primary", run_id],
+        token_estimate=210,
+        maturity_score=0.9,
+        security_score=0.95,
+        depends_on=[
+            {
+                "slug": dependency_slug,
+                "version": version,
+                "optional": False,
+                "markers": ["linux"],
+            }
+        ],
+    )
 
     with httpx.Client(
         base_url=integration_config.base_url,
         timeout=integration_config.timeout_seconds,
     ) as client:
         dependency_response = client.post(
-            "/skill-versions",
+            f"/skills/{dependency_slug}",
             headers=publish_headers,
             json=dependency_payload,
         )
-        assert dependency_response.status_code == 201, dependency_response.text
+        ensure_publish_ready(dependency_response)
 
         primary_response = client.post(
-            "/skill-versions",
+            f"/skills/{primary_slug}",
             headers=publish_headers,
             json=primary_payload,
         )
-        assert primary_response.status_code == 201, primary_response.text
+        ensure_publish_ready(primary_response)
 
     return PublishedSkillSet(
         dependency_slug=dependency_slug,

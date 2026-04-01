@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import NoReturn
 
 import httpx
 import pytest
 
 from aptitude.shared.config import Settings
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 @dataclass(frozen=True)
@@ -21,11 +25,35 @@ class IntegrationConfig:
 
 
 def _env_value(*names: str, default: str | None = None) -> str | None:
+    env_file_values = _load_env_file_values(REPO_ROOT / ".env")
     for name in names:
         value = os.getenv(name)
         if value:
             return value
+        file_value = env_file_values.get(name)
+        if file_value:
+            return file_value
     return default
+
+
+def _load_env_file_values(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+
+    values: dict[str, str] = {}
+    for raw_line in path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        values[key.strip()] = _strip_optional_quotes(raw_value.strip())
+    return values
+
+
+def _strip_optional_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
 
 
 def _load_integration_config() -> IntegrationConfig:
@@ -52,7 +80,6 @@ def _load_integration_config() -> IntegrationConfig:
         )
         or "http://localhost:8000",
         read_token=_env_value(
-            "APTITUDE_INTEGRATION_READ_TOKEN",
             "APTITUDE_READ_TOKEN",
             default="reader-token",
         )
@@ -60,6 +87,7 @@ def _load_integration_config() -> IntegrationConfig:
         publish_token=_env_value(
             "APTITUDE_INTEGRATION_PUBLISH_TOKEN",
             "APTITUDE_PUBLISH_TOKEN",
+            "APTITUDE_READ_TOKEN",
         ),
         timeout_seconds=timeout_seconds,
     )
@@ -90,8 +118,7 @@ def _ensure_registry_ready(config: IntegrationConfig) -> None:
 
     if response.status_code in {401, 403}:
         pytest.skip(
-            "Live integration server rejected the read token. "
-            "Set APTITUDE_INTEGRATION_READ_TOKEN or APTITUDE_READ_TOKEN."
+            "Live integration server rejected the read token. Set APTITUDE_READ_TOKEN."
         )
 
     if response.status_code >= 500:
@@ -134,6 +161,6 @@ def publish_token(integration_config: IntegrationConfig) -> str:
 def _skip_missing_publish_token() -> NoReturn:
     pytest.skip(
         "Live integration publish token is not configured. "
-        "Set APTITUDE_INTEGRATION_PUBLISH_TOKEN or APTITUDE_PUBLISH_TOKEN."
+        "Set APTITUDE_PUBLISH_TOKEN or rely on APTITUDE_READ_TOKEN."
     )
     raise AssertionError("unreachable")

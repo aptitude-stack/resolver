@@ -40,7 +40,7 @@ This creates the local environment from `pyproject.toml` and makes the `aptitude
 
 ## Packaging And Publishing
 
-This project builds and publishes as a normal Python package. `uv` is the build tool, and the release registry is PyPI. There is no separate special "uv registry" format.
+This project builds and publishes as a normal Python package. `uv` is the build and publish tool, and the release registry is PyPI. There is no separate special "uv registry" format.
 
 The packaging metadata lives in `pyproject.toml`:
 
@@ -63,7 +63,28 @@ dist/*.tar.gz
 
 The wheel is the main installable artifact. It contains the `aptitude` package, its dependency metadata, and the `aptitude` console script.
 
-Publish to PyPI through GitHub Actions trusted publishing:
+For a local manual publish with a PyPI API token:
+
+```bash
+export PYPI_API_TOKEN=your-pypi-token
+make build-publish
+```
+
+`make build-publish`:
+
+- requires `PYPI_API_TOKEN`
+- builds fresh artifacts into `.build-publish-dist/`
+- publishes with `uv publish`
+- defaults to the production PyPI upload endpoint
+
+To rehearse the local flow against TestPyPI instead of production PyPI:
+
+```bash
+export PYPI_API_TOKEN=your-testpypi-token
+make build-publish REPOSITORY=testpypi
+```
+
+For the normal release path, publish to PyPI through GitHub Actions trusted publishing:
 
 ```bash
 git tag v0.1.0
@@ -76,7 +97,7 @@ The release workflow lives at `.github/workflows/publish.yml` and:
 - builds the wheel and sdist with `uv build --no-sources`
 - publishes with `pypa/gh-action-pypi-publish`
 - authenticates to PyPI with GitHub OIDC trusted publishing
-- does not use PyPI API tokens or repository secrets
+- does not use PyPI API tokens or repository secrets for the CI release path
 
 The publish job uses the GitHub Environment `pypi`. That is not required by PyPI itself, but it is recommended because it gives releases a dedicated protection boundary in GitHub.
 
@@ -96,6 +117,7 @@ uvx aptitude --help
 Use this mental model:
 
 - `make package` builds the distributable artifacts
+- `make build-publish` performs a local token-based publish to PyPI or TestPyPI
 - pushing a `v*` tag triggers the trusted publishing workflow
 - `uv tool install aptitude` installs the published CLI
 - `aptitude ...` is the command end users run after installation
