@@ -80,5 +80,7 @@ class ResolveSkillQueryUseCase:
             lockfile=lockfile_to_dto(plan.lockfile),
             execution_plan=execution_plan_to_dto(plan.execution_plan),
             trace=[trace_to_dto(item) for item in plan.trace],
-            policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
+            policy_evaluations=[
+                policy_to_dto(item) for item in plan.policy_evaluations
+            ],
         )

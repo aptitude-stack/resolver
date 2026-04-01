@@ -11,7 +11,11 @@ from aptitude_client.lockfile.model import (
 )
 from aptitude_client.lockfile.parser import load_lockfile, parse_lockfile
 from aptitude_client.lockfile.replay import ReplayedLock, replay_lockfile
-from aptitude_client.lockfile.serializer import build_lockfile, lockfile_to_dict, serialize_lockfile
+from aptitude_client.lockfile.serializer import (
+    build_lockfile,
+    lockfile_to_dict,
+    serialize_lockfile,
+)
 
 __all__ = [
     "GovernanceSnapshotEntry",

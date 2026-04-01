@@ -56,7 +56,10 @@ def resolve_candidate_versions(
             reasons.append("exact_name_match")
         if match.slug == intent.normalized_query.replace(" ", "."):
             reasons.append("exact_slug_match")
-        if intent.language and selected_version.headers.get("runtime") == intent.language:
+        if (
+            intent.language
+            and selected_version.headers.get("runtime") == intent.language
+        ):
             reasons.append("runtime_match")
         if matched_labels:
             reasons.append("label_overlap")
@@ -178,7 +181,9 @@ def _version_summary_from_metadata(metadata: SkillMetadata) -> VersionSummary:
     )
 
 
-def _merge_enriched_version(version: VersionSummary, metadata: SkillMetadata) -> VersionSummary:
+def _merge_enriched_version(
+    version: VersionSummary, metadata: SkillMetadata
+) -> VersionSummary:
     return VersionSummary(
         coordinate=metadata.coordinate,
         name=metadata.name,

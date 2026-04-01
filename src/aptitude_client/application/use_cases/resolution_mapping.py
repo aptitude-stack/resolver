@@ -77,8 +77,12 @@ def graph_to_dto(graph: ResolutionGraph) -> ResolvedGraphDto:
         ],
         edges=[
             ResolvedEdgeDto(
-                source=ResolveCoordinateDto(slug=edge.source.slug, version=edge.source.version),
-                target=ResolveCoordinateDto(slug=edge.target.slug, version=edge.target.version),
+                source=ResolveCoordinateDto(
+                    slug=edge.source.slug, version=edge.source.version
+                ),
+                target=ResolveCoordinateDto(
+                    slug=edge.target.slug, version=edge.target.version
+                ),
                 edge_type=edge.edge_type,
                 optional=edge.optional,
                 markers=list(edge.markers),
@@ -163,7 +167,9 @@ def lockfile_to_dto(lockfile: Lockfile) -> LockfileDto:
             PolicySnapshotDto(
                 profile=lockfile.policy.profile,
                 source=lockfile.policy.source,
-                allowed_lifecycle_statuses=list(lockfile.policy.allowed_lifecycle_statuses),
+                allowed_lifecycle_statuses=list(
+                    lockfile.policy.allowed_lifecycle_statuses
+                ),
                 allowed_trust_tiers=list(lockfile.policy.allowed_trust_tiers),
                 max_token_estimate=lockfile.policy.max_token_estimate,
                 max_content_size_bytes=lockfile.policy.max_content_size_bytes,

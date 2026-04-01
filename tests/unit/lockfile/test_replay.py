@@ -27,7 +27,9 @@ def _node(node_id: str, slug: str, version: str) -> LockedSkill:
     )
 
 
-def _lockfile(*, install_order: list[str], edges: list[LockedEdge] | None = None) -> Lockfile:
+def _lockfile(
+    *, install_order: list[str], edges: list[LockedEdge] | None = None
+) -> Lockfile:
     nodes = [
         _node("python.base@1.0.0", "python.base", "1.0.0"),
         _node("python.lint@1.2.3", "python.lint", "1.2.3"),

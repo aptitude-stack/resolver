@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -30,7 +31,11 @@ from aptitude_client.domain.errors import (
     InvalidLockfileError,
     SelectionSlugNotFoundError,
 )
-from aptitude_client.domain.models import DiscoveryQuery, SkillCoordinate, VersionSummary
+from aptitude_client.domain.models import (
+    DiscoveryQuery,
+    SkillCoordinate,
+    VersionSummary,
+)
 from aptitude_client.interfaces.cli import app as app_module
 
 
@@ -38,18 +43,19 @@ runner = CliRunner()
 
 
 class QueueUseCase:
-    def __init__(self, responses: list[object] | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self, responses: list[object] | None = None, error: Exception | None = None
+    ) -> None:
         self.responses = list(responses or [])
         self.error = error
-        self.requests: list[object] = []
+        self.requests: list[Any] = []
 
-    def execute(self, request):
+    def execute(self, request: Any) -> Any:
         self.requests.append(request)
         if self.error is not None:
             raise self.error
         assert self.responses
         return self.responses.pop(0)
-
 
 
 def _resolved_result(
@@ -110,7 +116,9 @@ def _resolved_result(
                     name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
-                    headers={"runtime": "python" if slug == "python.lint" else "javascript"},
+                    headers={
+                        "runtime": "python" if slug == "python.lint" else "javascript"
+                    },
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
                     trust_tier="internal",
@@ -154,7 +162,6 @@ def _resolved_result(
             )
         ],
     )
-
 
 
 def _selection_required_result() -> ResolveQueryResultDto:
@@ -219,8 +226,9 @@ def _selection_required_result() -> ResolveQueryResultDto:
     )
 
 
-
-def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> InstallResultDto:
+def _installed_result(
+    materialized_root: str = str(Path("skill_demo")),
+) -> InstallResultDto:
     return InstallResultDto(
         requested_query="python lint",
         status="installed",
@@ -316,12 +324,16 @@ def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> Insta
             InstalledSkillDto(
                 slug="dep.core",
                 version="0.9.0",
-                install_path=str(Path(materialized_root) / "skills" / "dep.core" / "0.9.0"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                ),
             ),
             InstalledSkillDto(
                 slug="python.lint",
                 version="1.2.3",
-                install_path=str(Path(materialized_root) / "skills" / "python.lint" / "1.2.3"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                ),
             ),
         ],
         materialized_root=materialized_root,
@@ -336,7 +348,9 @@ def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> Insta
     )
 
 
-def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo"))) -> SyncResultDto:
+def _synced_result(
+    lock_path: str, materialized_root: str = str(Path("skill_demo"))
+) -> SyncResultDto:
     return SyncResultDto(
         lock_path=lock_path,
         requested_query="python lint",
@@ -423,12 +437,16 @@ def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo
             InstalledSkillDto(
                 slug="dep.core",
                 version="0.9.0",
-                install_path=str(Path(materialized_root) / "skills" / "dep.core" / "0.9.0"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                ),
             ),
             InstalledSkillDto(
                 slug="python.lint",
                 version="1.2.3",
-                install_path=str(Path(materialized_root) / "skills" / "python.lint" / "1.2.3"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                ),
             ),
         ],
         materialized_root=materialized_root,
@@ -443,13 +461,15 @@ def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo
     )
 
 
-
 def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
+    use_case = QueueUseCase(
+        responses=[_resolved_result(selection_mode="non_interactive_top_ranked")]
+    )
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+
     def build_resolve_use_case(**kwargs):
         builder_kwargs.update(kwargs)
         return use_case, lambda: close_calls.append("closed")
@@ -465,16 +485,24 @@ def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
     assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].select_slug is None
     assert close_calls == ["closed"]
-    assert result.stdout == (_resolved_result(selection_mode="non_interactive_top_ranked").model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        _resolved_result(selection_mode="non_interactive_top_ranked").model_dump_json(
+            indent=2, exclude_none=True
+        )
+        + "\n"
+    )
     assert result.stderr == ""
 
 
-
-def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypatch) -> None:
+def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
+    monkeypatch,
+) -> None:
     use_case = QueueUseCase(
         responses=[
             _selection_required_result(),
-            _resolved_result(slug="js.lint", version="2.1.0", selection_mode="interactive_choice"),
+            _resolved_result(
+                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+            ),
         ]
     )
     close_calls: list[str] = []
@@ -491,7 +519,10 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
     assert result.exit_code == 0
     assert "Multiple matching skills were found:" in result.stdout
     assert "tokens=120 | size=256B | published=2026-03-18T00:00:00Z" in result.stdout
-    assert "why ranked here: ranked above js.lint@2.1.0: closer exact name match" in result.stdout
+    assert (
+        "why ranked here: ranked above js.lint@2.1.0: closer exact name match"
+        in result.stdout
+    )
     assert len(use_case.requests) == 2
     assert use_case.requests[0].interaction_mode is None
     assert use_case.requests[0].prompt_capable is True
@@ -503,9 +534,14 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
     assert close_calls == ["closed"]
 
 
-
 def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(slug="js.lint", version="2.1.0", selection_mode="explicit_slug")])
+    use_case = QueueUseCase(
+        responses=[
+            _resolved_result(
+                slug="js.lint", version="2.1.0", selection_mode="explicit_slug"
+            )
+        ]
+    )
     close_calls: list[str] = []
 
     monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
@@ -515,7 +551,9 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
         lambda: (use_case, lambda: close_calls.append("closed")),
     )
 
-    result = runner.invoke(app_module.app, ["resolve", "lint", "--select-slug", "js.lint"])
+    result = runner.invoke(
+        app_module.app, ["resolve", "lint", "--select-slug", "js.lint"]
+    )
 
     assert result.exit_code == 0
     assert len(use_case.requests) == 1
@@ -525,7 +563,6 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     assert close_calls == ["closed"]
 
 
-
 def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     target = tmp_path / "skill_demo"
     use_case = QueueUseCase(responses=[_installed_result(str(target))])
@@ -533,13 +570,16 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+
     def build_install_use_case(**kwargs):
         builder_kwargs.update(kwargs)
         return use_case, lambda: close_calls.append("closed")
 
     monkeypatch.setattr(app_module, "build_install_use_case", build_install_use_case)
 
-    result = runner.invoke(app_module.app, ["install", "python lint", "--target", str(target)])
+    result = runner.invoke(
+        app_module.app, ["install", "python lint", "--target", str(target)]
+    )
 
     assert result.exit_code == 0
     assert builder_kwargs == {}
@@ -551,13 +591,16 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert "Collecting python lint" in result.stdout
     assert "Using aptitude candidate python.lint (1.2.3)" in result.stdout
     assert "Collecting dependency dep.core (0.9.0)" in result.stdout
-    assert "Installing collected aptitude skills: dep.core, python.lint" in result.stdout
+    assert (
+        "Installing collected aptitude skills: dep.core, python.lint" in result.stdout
+    )
     assert "Successfully installed dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
 
 
-
-def test_cli_install_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
+def test_cli_install_json_flag_preserves_structured_output(
+    monkeypatch, tmp_path
+) -> None:
     target = tmp_path / "skill_demo"
     installed_result = _installed_result(str(target))
     use_case = QueueUseCase(responses=[installed_result])
@@ -577,10 +620,14 @@ def test_cli_install_json_flag_preserves_structured_output(monkeypatch, tmp_path
 
     assert result.exit_code == 0
     assert close_calls == ["closed"]
-    assert result.stdout == (installed_result.model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        installed_result.model_dump_json(indent=2, exclude_none=True) + "\n"
+    )
 
 
-def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp_path) -> None:
+def test_cli_install_passes_selection_flag_overrides_to_builder(
+    monkeypatch, tmp_path
+) -> None:
     target = tmp_path / "skill_demo"
     use_case = QueueUseCase(responses=[_installed_result(str(target))])
     close_calls: list[str] = []
@@ -630,7 +677,9 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp
 
 
 def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
+    use_case = QueueUseCase(
+        responses=[_resolved_result(selection_mode="non_interactive_top_ranked")]
+    )
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
@@ -668,12 +717,16 @@ def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> Non
     assert close_calls == ["closed"]
 
 
-def test_cli_resolve_prints_structured_error_for_invalid_policy_override(monkeypatch) -> None:
+def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
     close_calls: list[str] = []
 
     def build_resolve_use_case(**kwargs):
-        raise InvalidClientConfigurationError("CLI override", "allowed_trust_tiers contains unknown values: unknown-tier.")
+        raise InvalidClientConfigurationError(
+            "CLI override", "allowed_trust_tiers contains unknown values: unknown-tier."
+        )
 
     monkeypatch.setattr(app_module, "build_resolve_use_case", build_resolve_use_case)
 
@@ -688,7 +741,9 @@ def test_cli_resolve_prints_structured_error_for_invalid_policy_override(monkeyp
     assert '"source": "CLI override"' in result.stderr
 
 
-def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatch) -> None:
+def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
+    monkeypatch,
+) -> None:
     class FakeSettings:
         pass
 
@@ -703,7 +758,9 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatc
             return ["python.lint"]
 
         def fetch_skill_identity(self, slug: str):
-            raise AssertionError("slug identity lookup should not be used for this query")
+            raise AssertionError(
+                "slug identity lookup should not be used for this query"
+            )
 
         def list_skill_versions(self, slug: str) -> list[VersionSummary]:
             return [
@@ -727,18 +784,26 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatc
             ]
 
         def fetch_skill_metadata(self, slug: str, version: str):
-            raise AssertionError("metadata lookup should not happen after candidate policy rejection")
+            raise AssertionError(
+                "metadata lookup should not happen after candidate policy rejection"
+            )
 
         def fetch_direct_dependencies(self, slug: str, version: str) -> list[object]:
             return []
 
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
-    monkeypatch.setattr(composition, "load_workspace_aptitude_config", lambda cwd=None: None)
+    monkeypatch.setattr(
+        composition, "load_workspace_aptitude_config", lambda cwd=None: None
+    )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
     monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
-    monkeypatch.setattr(app_module, "build_resolve_use_case", composition.build_resolve_use_case)
+    monkeypatch.setattr(
+        app_module, "build_resolve_use_case", composition.build_resolve_use_case
+    )
 
     result = runner.invoke(
         app_module.app,
@@ -799,10 +864,14 @@ def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -
 
     assert result.exit_code == 0
     assert close_calls == ["closed"]
-    assert result.stdout == (synced_result.model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        synced_result.model_dump_json(indent=2, exclude_none=True) + "\n"
+    )
 
 
-def test_cli_sync_prints_structured_error_for_missing_lockfile(monkeypatch, tmp_path) -> None:
+def test_cli_sync_prints_structured_error_for_missing_lockfile(
+    monkeypatch, tmp_path
+) -> None:
     close_calls: list[str] = []
     missing_lock = tmp_path / "missing.lock.json"
 
@@ -810,7 +879,11 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(monkeypatch, tmp_
         app_module,
         "build_sync_use_case",
         lambda: (
-            QueueUseCase(error=InvalidLockfileError(f"Lockfile not found: {missing_lock.resolve()}")),
+            QueueUseCase(
+                error=InvalidLockfileError(
+                    f"Lockfile not found: {missing_lock.resolve()}"
+                )
+            ),
             lambda: close_calls.append("closed"),
         ),
     )
@@ -830,7 +903,6 @@ def test_cli_sync_requires_lock_option() -> None:
     assert "Missing option '--lock'" in result.stderr
 
 
-
 def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     close_calls: list[str] = []
 
@@ -840,13 +912,17 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
         "build_resolve_use_case",
         lambda: (
             QueueUseCase(
-                error=SelectionSlugNotFoundError("lint", "missing.skill", ["python.lint"])
+                error=SelectionSlugNotFoundError(
+                    "lint", "missing.skill", ["python.lint"]
+                )
             ),
             lambda: close_calls.append("closed"),
         ),
     )
 
-    result = runner.invoke(app_module.app, ["resolve", "lint", "--select-slug", "missing.skill"])
+    result = runner.invoke(
+        app_module.app, ["resolve", "lint", "--select-slug", "missing.skill"]
+    )
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]

@@ -8,7 +8,12 @@ import pytest
 from aptitude_client.application.dto import SyncRequestDto
 from aptitude_client.application.use_cases import SyncFromLockUseCase
 from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.domain.models import DependencyEdge, ResolutionGraph, ResolvedSkillNode, SkillCoordinate
+from aptitude_client.domain.models import (
+    DependencyEdge,
+    ResolutionGraph,
+    ResolvedSkillNode,
+    SkillCoordinate,
+)
 from aptitude_client.domain.policy import SelectionPreferences
 from aptitude_client.lockfile import build_lockfile, serialize_lockfile
 
@@ -60,8 +65,16 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
     graph = ResolutionGraph(
         root=root,
         nodes=[
-            _node(dependency.slug, dependency.version, content_by_coordinate[(dependency.slug, dependency.version)]),
-            _node(root.slug, root.version, content_by_coordinate[(root.slug, root.version)]),
+            _node(
+                dependency.slug,
+                dependency.version,
+                content_by_coordinate[(dependency.slug, dependency.version)],
+            ),
+            _node(
+                root.slug,
+                root.version,
+                content_by_coordinate[(root.slug, root.version)],
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency)],
         install_order=[dependency, root],
@@ -129,7 +142,11 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
                 dependency.version,
                 content_by_coordinate[(dependency.slug, dependency.version)],
             ),
-            _node(root.slug, root.version, content_by_coordinate[(root.slug, root.version)]),
+            _node(
+                root.slug,
+                root.version,
+                content_by_coordinate[(root.slug, root.version)],
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency)],
         install_order=[dependency, root],

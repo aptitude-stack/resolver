@@ -67,8 +67,16 @@ def _lockfile(content_by_coordinate: dict[tuple[str, str], str]):
     graph = ResolutionGraph(
         root=root,
         nodes=[
-            _node(dependency.slug, dependency.version, content_by_coordinate[(dependency.slug, dependency.version)]),
-            _node(root.slug, root.version, content_by_coordinate[(root.slug, root.version)]),
+            _node(
+                dependency.slug,
+                dependency.version,
+                content_by_coordinate[(dependency.slug, dependency.version)],
+            ),
+            _node(
+                root.slug,
+                root.version,
+                content_by_coordinate[(root.slug, root.version)],
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency)],
         install_order=[dependency, root],
@@ -116,8 +124,12 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
     materialized_root = tmp_path / "skill_demo"
     assert materialized_root.exists()
     assert registry_client.calls == [("python.base", "1.0.0"), ("python.lint", "1.2.3")]
-    assert (materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md").read_text(encoding="utf-8") == "# Python Lint\n"
-    loaded_lockfile = load_lockfile(materialized_root / "resolution" / "aptitude.lock.json")
+    assert (
+        materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md"
+    ).read_text(encoding="utf-8") == "# Python Lint\n"
+    loaded_lockfile = load_lockfile(
+        materialized_root / "resolution" / "aptitude.lock.json"
+    )
     assert loaded_lockfile == lockfile
     assert [item.action for item in result.trace] == [
         "materialize_locked_skill",
@@ -126,7 +138,12 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
 
 
 def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> None:
-    lockfile = _lockfile({("python.lint", "1.2.3"): "# Python Lint\n", ("python.base", "1.0.0"): "# Python Base\n"})
+    lockfile = _lockfile(
+        {
+            ("python.lint", "1.2.3"): "# Python Lint\n",
+            ("python.base", "1.0.0"): "# Python Base\n",
+        }
+    )
     registry_client = FakeRegistryClient(
         {
             ("python.base", "1.0.0"): "# Python Base\n",
@@ -150,7 +167,9 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
     assert payload["actual_digest"] == hashlib.sha256(b"tampered").hexdigest()
 
 
-def test_materialize_lockfile_reuses_precomputed_execution_plan(tmp_path, monkeypatch) -> None:
+def test_materialize_lockfile_reuses_precomputed_execution_plan(
+    tmp_path, monkeypatch
+) -> None:
     content_by_coordinate = {
         ("python.base", "1.0.0"): "# Python Base\n",
         ("python.lint", "1.2.3"): "# Python Lint\n",
@@ -160,7 +179,9 @@ def test_materialize_lockfile_reuses_precomputed_execution_plan(tmp_path, monkey
     registry_client = FakeRegistryClient(content_by_coordinate)
 
     def _unexpected_rebuild(_lockfile_arg) -> None:
-        raise AssertionError("materialize_lockfile should reuse the precomputed execution plan")
+        raise AssertionError(
+            "materialize_lockfile should reuse the precomputed execution plan"
+        )
 
     monkeypatch.setattr(materialize_module, "build_execution_plan", _unexpected_rebuild)
 
@@ -203,7 +224,9 @@ def test_build_execution_plan_ignores_selection_explainability_metadata() -> Non
     assert build_execution_plan(low_cost_lock) == build_execution_plan(high_trust_lock)
 
 
-def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(tmp_path) -> None:
+def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
+    tmp_path,
+) -> None:
     content_by_coordinate = {
         ("python.base", "1.0.0"): "# Python Base\n",
         ("python.lint", "1.2.3"): "# Python Lint\n",
@@ -211,8 +234,12 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(tmp_pa
     graph = ResolutionGraph(
         root=SkillCoordinate(slug="python.lint", version="1.2.3"),
         nodes=[
-            _node("python.base", "1.0.0", content_by_coordinate[("python.base", "1.0.0")]),
-            _node("python.lint", "1.2.3", content_by_coordinate[("python.lint", "1.2.3")]),
+            _node(
+                "python.base", "1.0.0", content_by_coordinate[("python.base", "1.0.0")]
+            ),
+            _node(
+                "python.lint", "1.2.3", content_by_coordinate[("python.lint", "1.2.3")]
+            ),
         ],
         edges=[
             DependencyEdge(
@@ -249,13 +276,15 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(tmp_pa
     )
 
     resolution_dir = tmp_path / "skill_demo" / "resolution"
-    assert json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))["root"] == {
+    assert json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))[
+        "root"
+    ] == {
         "slug": "python.lint",
         "version": "1.2.3",
     }
-    assert json.loads((resolution_dir / "trace.json").read_text(encoding="utf-8"))[0]["action"] == (
-        "materialize_locked_skill"
-    )
+    assert json.loads((resolution_dir / "trace.json").read_text(encoding="utf-8"))[0][
+        "action"
+    ] == ("materialize_locked_skill")
     assert json.loads((resolution_dir / "policy.json").read_text(encoding="utf-8"))[0][
         "coordinate"
     ] == {"slug": "python.lint", "version": "1.2.3"}

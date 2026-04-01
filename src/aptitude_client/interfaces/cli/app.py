@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import cast
 
 import typer
 
@@ -15,19 +16,16 @@ from aptitude_client.application.composition import (
 )
 from aptitude_client.application.dto import (
     DiscoveryCandidateDto,
-    InstallRequestDto,
     InstallResultDto,
-    ResolveQueryRequestDto,
     ResolveQueryResultDto,
-    SyncRequestDto,
     SyncResultDto,
 )
-from aptitude_client.application.use_cases import (
-    InstallSkillUseCase,
-    ResolveSkillQueryUseCase,
-    SyncFromLockUseCase,
-)
 from aptitude_client.domain.errors import AptitudeClientError
+from aptitude_client.interfaces.shared import (
+    InteractionMode,
+    InstallWorkflowOptions,
+    InstallWorkflowService,
+)
 
 
 ROOT_HELP = """Aptitude Client.
@@ -122,6 +120,16 @@ def _format_error(error: AptitudeClientError) -> str:
     )
 
 
+def _build_workflow_service() -> InstallWorkflowService:
+    """Create one workflow service using the current builder functions."""
+
+    return InstallWorkflowService(
+        resolve_builder=build_resolve_use_case,
+        install_builder=build_install_use_case,
+        sync_builder=build_sync_use_case,
+    )
+
+
 def _parse_csv_option(
     value: str | None,
     *,
@@ -144,6 +152,18 @@ def _parse_csv_option(
         seen.add(item)
         deduplicated.append(item)
     return deduplicated
+
+
+def _parse_interaction_mode(value: str | None) -> InteractionMode | None:
+    """Validate one CLI interaction mode string."""
+
+    if value is None:
+        return None
+    if value not in {"auto", "always", "never"}:
+        raise typer.BadParameter(
+            "--interaction-mode must be one of: auto, always, never."
+        )
+    return cast(InteractionMode, value)
 
 
 def _is_interactive() -> bool:
@@ -214,9 +234,15 @@ def _format_install_success(result: InstallResultDto) -> str:
         )
 
     resolved_coordinates = _resolved_install_coordinates(result)
-    selected_slug = result.selected_coordinate.slug if result.selected_coordinate is not None else None
+    selected_slug = (
+        result.selected_coordinate.slug
+        if result.selected_coordinate is not None
+        else None
+    )
     dependency_coordinates = [
-        coordinate for coordinate in resolved_coordinates if coordinate[0] != selected_slug
+        coordinate
+        for coordinate in resolved_coordinates
+        if coordinate[0] != selected_slug
     ]
     for dependency_slug, dependency_version in dependency_coordinates:
         lines.append(f"Collecting dependency {dependency_slug} ({dependency_version})")
@@ -240,7 +266,9 @@ def _format_install_success(result: InstallResultDto) -> str:
 def _format_sync_success(lock_path: Path, result: SyncResultDto) -> str:
     """Render a human-friendly sync summary inspired by package managers."""
 
-    resolved_coordinates = [(skill.slug, skill.version) for skill in result.installed_skills]
+    resolved_coordinates = [
+        (skill.slug, skill.version) for skill in result.installed_skills
+    ]
     lines = [f"Syncing locked aptitude skills from {lock_path.resolve()}"]
     if resolved_coordinates:
         lines.append(
@@ -257,30 +285,33 @@ def _format_sync_success(lock_path: Path, result: SyncResultDto) -> str:
 
 
 def _resolve_query_result(
-    use_case: ResolveSkillQueryUseCase,
+    workflow_service: InstallWorkflowService,
     *,
     query: str,
     version: str | None,
     select_slug: str | None,
+    options: InstallWorkflowOptions,
 ) -> ResolveQueryResultDto:
     """Execute resolve and, if needed, complete interactive candidate selection."""
 
     prompt_capable = _is_interactive()
-    result = use_case.execute(
-        ResolveQueryRequestDto(
+    use_case, close = workflow_service.prepare_resolve(options=options)
+    try:
+        result = workflow_service.execute_resolve(
+            use_case,
             query=query,
             version=version,
             select_slug=select_slug,
             interaction_mode=None,
             prompt_capable=prompt_capable,
+            selection_source=None,
         )
-    )
-    if result.status != "selection_required":
-        return result
+        if result.status != "selection_required":
+            return result
 
-    chosen_slug = _prompt_for_candidate_slug(result.candidates)
-    return use_case.execute(
-        ResolveQueryRequestDto(
+        chosen_slug = _prompt_for_candidate_slug(result.candidates)
+        return workflow_service.execute_resolve(
+            use_case,
             query=query,
             version=version,
             select_slug=chosen_slug,
@@ -288,36 +319,40 @@ def _resolve_query_result(
             prompt_capable=False,
             selection_source="interactive",
         )
-    )
+    finally:
+        close()
 
 
 def _install_result(
-    use_case: InstallSkillUseCase,
+    workflow_service: InstallWorkflowService,
     *,
     query: str,
     version: str | None,
     select_slug: str | None,
     target: Path,
+    options: InstallWorkflowOptions,
 ) -> InstallResultDto:
     """Execute install and, if needed, complete interactive candidate selection."""
 
     prompt_capable = _is_interactive()
-    result = use_case.execute(
-        InstallRequestDto(
+    use_case, close = workflow_service.prepare_install(options=options)
+    try:
+        result = workflow_service.execute_install(
+            use_case,
             query=query,
             version=version,
             select_slug=select_slug,
             target=target,
             interaction_mode=None,
             prompt_capable=prompt_capable,
+            selection_source=None,
         )
-    )
-    if result.status != "selection_required":
-        return result
+        if result.status != "selection_required":
+            return result
 
-    chosen_slug = _prompt_for_candidate_slug(result.candidates)
-    return use_case.execute(
-        InstallRequestDto(
+        chosen_slug = _prompt_for_candidate_slug(result.candidates)
+        return workflow_service.execute_install(
+            use_case,
             query=query,
             version=version,
             select_slug=chosen_slug,
@@ -326,23 +361,19 @@ def _install_result(
             prompt_capable=False,
             selection_source="interactive",
         )
-    )
+    finally:
+        close()
 
 
 def _sync_result(
-    use_case: SyncFromLockUseCase,
+    workflow_service: InstallWorkflowService,
     *,
     lock_path: Path,
     target: Path,
 ) -> SyncResultDto:
     """Execute sync from one existing lockfile."""
 
-    return use_case.execute(
-        SyncRequestDto(
-            lock_path=lock_path,
-            target=target,
-        )
-    )
+    return workflow_service.sync_lock(lock_path=lock_path, target=target)
 
 
 @app.command(hidden=True, help=RESOLVE_HELP)
@@ -393,40 +424,32 @@ def resolve(
 ) -> None:
     """Resolve a skill query and print a stable JSON result."""
 
-    build_kwargs: dict[str, object] = {}
-    if prefer is not None:
-        build_kwargs["selection_profile_override"] = prefer
-    if interaction_mode is not None:
-        build_kwargs["interaction_mode_override"] = interaction_mode
     allow_trust_values = _parse_csv_option(allow_trust, option_name="--allow-trust")
     allow_lifecycle_values = _parse_csv_option(
         allow_lifecycle,
         option_name="--allow-lifecycle",
     )
-    if allow_trust_values is not None:
-        build_kwargs["allowed_trust_tiers_override"] = allow_trust_values
-    if allow_lifecycle_values is not None:
-        build_kwargs["allowed_lifecycle_statuses_override"] = allow_lifecycle_values
-    if max_tokens is not None:
-        build_kwargs["max_token_estimate_override"] = max_tokens
-    if max_content_size is not None:
-        build_kwargs["max_content_size_bytes_override"] = max_content_size
-
-    close = lambda: None
+    options = InstallWorkflowOptions(
+        selection_profile=prefer,
+        interaction_mode=_parse_interaction_mode(interaction_mode),
+        allowed_trust_tiers=allow_trust_values,
+        allowed_lifecycle_statuses=allow_lifecycle_values,
+        max_token_estimate=max_tokens,
+        max_content_size_bytes=max_content_size,
+    )
 
     try:
-        use_case, close = build_resolve_use_case(**build_kwargs)
+        workflow_service = _build_workflow_service()
         result = _resolve_query_result(
-            use_case,
+            workflow_service,
             query=query,
             version=version,
             select_slug=select_slug,
+            options=options,
         )
     except AptitudeClientError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
-    finally:
-        close()
 
     typer.echo(result.model_dump_json(indent=2, exclude_none=True))
 
@@ -489,41 +512,33 @@ def install(
 ) -> None:
     """Install a skill query into a local demo workspace."""
 
-    build_kwargs: dict[str, object] = {}
-    if prefer is not None:
-        build_kwargs["selection_profile_override"] = prefer
-    if interaction_mode is not None:
-        build_kwargs["interaction_mode_override"] = interaction_mode
     allow_trust_values = _parse_csv_option(allow_trust, option_name="--allow-trust")
     allow_lifecycle_values = _parse_csv_option(
         allow_lifecycle,
         option_name="--allow-lifecycle",
     )
-    if allow_trust_values is not None:
-        build_kwargs["allowed_trust_tiers_override"] = allow_trust_values
-    if allow_lifecycle_values is not None:
-        build_kwargs["allowed_lifecycle_statuses_override"] = allow_lifecycle_values
-    if max_tokens is not None:
-        build_kwargs["max_token_estimate_override"] = max_tokens
-    if max_content_size is not None:
-        build_kwargs["max_content_size_bytes_override"] = max_content_size
-
-    close = lambda: None
+    options = InstallWorkflowOptions(
+        selection_profile=prefer,
+        interaction_mode=_parse_interaction_mode(interaction_mode),
+        allowed_trust_tiers=allow_trust_values,
+        allowed_lifecycle_statuses=allow_lifecycle_values,
+        max_token_estimate=max_tokens,
+        max_content_size_bytes=max_content_size,
+    )
 
     try:
-        use_case, close = build_install_use_case(**build_kwargs)
+        workflow_service = _build_workflow_service()
         result = _install_result(
-            use_case,
+            workflow_service,
             query=query,
             version=version,
             select_slug=select_slug,
             target=target,
+            options=options,
         )
     except AptitudeClientError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
-    finally:
-        close()
 
     if json_output or result.status != "installed":
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
@@ -552,19 +567,17 @@ def sync(
 ) -> None:
     """Materialize a locked system from an existing lockfile."""
 
-    use_case, close = build_sync_use_case()
+    workflow_service = _build_workflow_service()
 
     try:
         result = _sync_result(
-            use_case,
+            workflow_service,
             lock_path=lock_path,
             target=target,
         )
     except AptitudeClientError as exc:
         typer.echo(_format_error(exc), err=True)
         raise typer.Exit(code=1) from exc
-    finally:
-        close()
 
     if json_output:
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))

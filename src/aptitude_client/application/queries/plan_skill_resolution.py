@@ -42,7 +42,9 @@ from aptitude_client.resolver.validation import validate_resolution_graph
 from aptitude_client.telemetry import TelemetryCollector, emit_stage_timings
 
 
-class ResolutionPlanningRegistryPort(RegistryCandidatePort, RegistryCandidateVersionPort, Protocol):
+class ResolutionPlanningRegistryPort(
+    RegistryCandidatePort, RegistryCandidateVersionPort, Protocol
+):
     """Registry operations required for planning one resolved artifact."""
 
     def fetch_direct_dependencies(self, slug: str, version: str): ...
@@ -136,7 +138,9 @@ class PlanSkillResolutionQuery:
                 )
             trace.extend(governance_trace)
             if not candidates:
-                raise PolicyViolationError("All discovered candidates were rejected by policy.")
+                raise PolicyViolationError(
+                    "All discovered candidates were rejected by policy."
+                )
 
             with telemetry.measure("resolution"):
                 ranked_candidates = rerank_candidates(
@@ -185,8 +189,12 @@ class PlanSkillResolutionQuery:
                 validate_resolution_graph(graph)
             trace.extend(resolver_trace)
             with telemetry.measure("governance"):
-                policy_evaluations = evaluate_resolution_graph(graph, self._policy_context)
-            failed_evaluations = [item for item in policy_evaluations if not item.passed]
+                policy_evaluations = evaluate_resolution_graph(
+                    graph, self._policy_context
+                )
+            failed_evaluations = [
+                item for item in policy_evaluations if not item.passed
+            ]
             if failed_evaluations:
                 raise PolicyViolationError(failed_evaluations[0].message)
 
@@ -255,6 +263,7 @@ class PlanSkillResolutionQuery:
         finally:
             emit_stage_timings(telemetry)
 
+
 def _selection_explanation_trace(
     *,
     candidates: list[DiscoveryCandidate],
@@ -321,14 +330,18 @@ def _decisive_signals(
     runner_version = runner_up.selected_version
     signals: list[str] = list(selected_candidate.match_reasons)
 
-    if _is_lower_known_cost(selected_version.token_estimate, runner_version.token_estimate):
+    if _is_lower_known_cost(
+        selected_version.token_estimate, runner_version.token_estimate
+    ):
         signals.append("lower_token_estimate")
     if _is_lower_known_cost(
         selected_version.content_size_bytes,
         runner_version.content_size_bytes,
     ):
         signals.append("lower_content_size_bytes")
-    if trust_tier_rank(selected_version.trust_tier) > trust_tier_rank(runner_version.trust_tier):
+    if trust_tier_rank(selected_version.trust_tier) > trust_tier_rank(
+        runner_version.trust_tier
+    ):
         signals.append("higher_trust_tier")
     if lifecycle_status_rank(selected_version.lifecycle_status) > lifecycle_status_rank(
         runner_version.lifecycle_status
@@ -336,7 +349,9 @@ def _decisive_signals(
         signals.append("better_lifecycle_status")
     if selected_version.is_current_default and not runner_version.is_current_default:
         signals.append("current_default")
-    if Version(selected_version.coordinate.version) > Version(runner_version.coordinate.version):
+    if Version(selected_version.coordinate.version) > Version(
+        runner_version.coordinate.version
+    ):
         signals.append("newer_semver")
 
     if not signals:
@@ -345,7 +360,9 @@ def _decisive_signals(
     return list(dict.fromkeys(signals))
 
 
-def _is_lower_known_cost(selected_value: int | None, runner_up_value: int | None) -> bool:
+def _is_lower_known_cost(
+    selected_value: int | None, runner_up_value: int | None
+) -> bool:
     return (
         selected_value is not None
         and runner_up_value is not None

@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from aptitude_client.domain.models import DiscoveryCandidate, ResolutionGraph, SkillCoordinate
+from aptitude_client.domain.models import (
+    DiscoveryCandidate,
+    ResolutionGraph,
+    SkillCoordinate,
+)
 from aptitude_client.domain.policy import PolicyContext, PolicyEvaluation
 from aptitude_client.domain.tracing import TraceEntry
 
@@ -13,11 +17,20 @@ from aptitude_client.domain.tracing import TraceEntry
 class PolicySubject(Protocol):
     """Shared policy fields exposed by candidates and resolved nodes."""
 
-    coordinate: SkillCoordinate
-    lifecycle_status: str
-    trust_tier: str
-    token_estimate: int | None
-    content_size_bytes: int | None
+    @property
+    def coordinate(self) -> SkillCoordinate: ...
+
+    @property
+    def lifecycle_status(self) -> str: ...
+
+    @property
+    def trust_tier(self) -> str: ...
+
+    @property
+    def token_estimate(self) -> int | None: ...
+
+    @property
+    def content_size_bytes(self) -> int | None: ...
 
 
 @dataclass(frozen=True)
@@ -69,7 +82,9 @@ def filter_policy_compliant_candidates(
                 data={
                     "slug": candidate.slug,
                     "version": candidate.selected_coordinate.version,
-                    "applied_rules": [evaluation.rule for evaluation in decision.evaluations],
+                    "applied_rules": [
+                        evaluation.rule for evaluation in decision.evaluations
+                    ],
                 },
             )
         )
@@ -113,11 +128,15 @@ def _evaluate_subject(
         _evaluate_token_estimate(subject, policy_context),
         _evaluate_content_size(subject, policy_context),
     ]
-    failed_rules = [evaluation.rule for evaluation in evaluations if not evaluation.passed]
+    failed_rules = [
+        evaluation.rule for evaluation in evaluations if not evaluation.passed
+    ]
     return SubjectPolicyDecision(evaluations=evaluations, failed_rules=failed_rules)
 
 
-def _evaluate_lifecycle(subject: PolicySubject, policy_context: PolicyContext) -> PolicyEvaluation:
+def _evaluate_lifecycle(
+    subject: PolicySubject, policy_context: PolicyContext
+) -> PolicyEvaluation:
     allowed = subject.lifecycle_status in policy_context.allowed_lifecycle_statuses
     return PolicyEvaluation(
         rule="allowed_lifecycle_status",
@@ -131,7 +150,9 @@ def _evaluate_lifecycle(subject: PolicySubject, policy_context: PolicyContext) -
     )
 
 
-def _evaluate_trust(subject: PolicySubject, policy_context: PolicyContext) -> PolicyEvaluation:
+def _evaluate_trust(
+    subject: PolicySubject, policy_context: PolicyContext
+) -> PolicyEvaluation:
     allowed = subject.trust_tier in policy_context.allowed_trust_tiers
     return PolicyEvaluation(
         rule="allowed_trust_tiers",

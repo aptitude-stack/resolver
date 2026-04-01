@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from aptitude_client.domain.policy.ranking import LIFECYCLE_STATUS_RANKS, TRUST_TIER_RANKS
+from aptitude_client.domain.policy.ranking import (
+    LIFECYCLE_STATUS_RANKS,
+    TRUST_TIER_RANKS,
+)
 from aptitude_client.domain.models.skill_coordinate import SkillCoordinate
 
 
@@ -48,14 +51,23 @@ class PolicyContext:
         if self.max_token_estimate is not None and self.max_token_estimate < 0:
             raise ValueError("max_token_estimate must be greater than or equal to 0.")
         if self.max_content_size_bytes is not None and self.max_content_size_bytes < 0:
-            raise ValueError("max_content_size_bytes must be greater than or equal to 0.")
-        if self.max_total_token_estimate is not None and self.max_total_token_estimate < 0:
-            raise ValueError("max_total_token_estimate must be greater than or equal to 0.")
+            raise ValueError(
+                "max_content_size_bytes must be greater than or equal to 0."
+            )
+        if (
+            self.max_total_token_estimate is not None
+            and self.max_total_token_estimate < 0
+        ):
+            raise ValueError(
+                "max_total_token_estimate must be greater than or equal to 0."
+            )
         if (
             self.max_total_content_size_bytes is not None
             and self.max_total_content_size_bytes < 0
         ):
-            raise ValueError("max_total_content_size_bytes must be greater than or equal to 0.")
+            raise ValueError(
+                "max_total_content_size_bytes must be greater than or equal to 0."
+            )
 
 
 @dataclass(frozen=True)

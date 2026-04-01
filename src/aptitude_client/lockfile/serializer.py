@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 
 from aptitude_client.domain.models import ResolutionGraph
-from aptitude_client.domain.policy import PolicyContext, PolicyEvaluation, SelectionPreferences
+from aptitude_client.domain.policy import (
+    PolicyContext,
+    PolicyEvaluation,
+    SelectionPreferences,
+)
 from aptitude_client.lockfile.model import (
     GovernanceSnapshotEntry,
     LockRoot,
@@ -36,7 +40,9 @@ def build_lockfile(
                 node_id=_node_id(node.coordinate.slug, node.coordinate.version),
                 slug=node.coordinate.slug,
                 version=node.coordinate.version,
-                artifact_ref=_artifact_ref(node.coordinate.slug, node.coordinate.version),
+                artifact_ref=_artifact_ref(
+                    node.coordinate.slug, node.coordinate.version
+                ),
                 name=node.name,
                 description=node.description,
                 tags=sorted(node.tags),
@@ -98,7 +104,9 @@ def build_lockfile(
         for coordinate in graph.install_order
     ]
 
-    published_timestamps = sorted(node.published_at for node in nodes if node.published_at)
+    published_timestamps = sorted(
+        node.published_at for node in nodes if node.published_at
+    )
     generated_at = published_timestamps[-1] if published_timestamps else None
     effective_policy = policy_context or PolicyContext()
 
@@ -128,7 +136,9 @@ def build_lockfile(
         policy=PolicySnapshot(
             profile=effective_policy.profile,
             source=effective_policy.source,
-            allowed_lifecycle_statuses=list(effective_policy.allowed_lifecycle_statuses),
+            allowed_lifecycle_statuses=list(
+                effective_policy.allowed_lifecycle_statuses
+            ),
             allowed_trust_tiers=list(effective_policy.allowed_trust_tiers),
             max_token_estimate=effective_policy.max_token_estimate,
             max_content_size_bytes=effective_policy.max_content_size_bytes,
@@ -205,7 +215,9 @@ def lockfile_to_dict(lockfile: Lockfile) -> dict[str, object]:
             {
                 "profile": lockfile.policy.profile,
                 "source": lockfile.policy.source,
-                "allowed_lifecycle_statuses": list(lockfile.policy.allowed_lifecycle_statuses),
+                "allowed_lifecycle_statuses": list(
+                    lockfile.policy.allowed_lifecycle_statuses
+                ),
                 "allowed_trust_tiers": list(lockfile.policy.allowed_trust_tiers),
                 "max_token_estimate": lockfile.policy.max_token_estimate,
                 "max_content_size_bytes": lockfile.policy.max_content_size_bytes,

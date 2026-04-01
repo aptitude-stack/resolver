@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import os
-import tomllib
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - Python < 3.11 fallback
+    import tomli as tomllib
 
 
 class SelectionConfig(BaseModel):
@@ -74,11 +79,19 @@ def discover_user_config_path(
 
     if effective_os_name == "nt":
         appdata = env_map.get("APPDATA")
-        base = Path(appdata) if appdata is not None else effective_home / "AppData" / "Roaming"
+        base = (
+            Path(appdata)
+            if appdata is not None
+            else effective_home / "AppData" / "Roaming"
+        )
         candidate = base / "aptitude" / "aptitude.toml"
     else:
         xdg_config_home = env_map.get("XDG_CONFIG_HOME")
-        base = Path(xdg_config_home) if xdg_config_home is not None else effective_home / ".config"
+        base = (
+            Path(xdg_config_home)
+            if xdg_config_home is not None
+            else effective_home / ".config"
+        )
         candidate = base / "aptitude" / "aptitude.toml"
 
     if candidate.is_file():

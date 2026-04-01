@@ -7,7 +7,9 @@ from aptitude_client.domain.models import DependencySpec, SkillCoordinate
 from aptitude_client.resolver.normalizer import normalize_dependency_selector
 
 
-def test_normalize_dependency_selector_returns_exact_coordinate_when_version_is_present() -> None:
+def test_normalize_dependency_selector_returns_exact_coordinate_when_version_is_present() -> (
+    None
+):
     coordinate = normalize_dependency_selector(
         SkillCoordinate(slug="root.skill", version="1.0.0"),
         DependencySpec(

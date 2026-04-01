@@ -10,12 +10,16 @@ dependencies = [
     "pydantic-settings>=2.0",
     "structlog>=25.0",
     "tenacity>=9.0",
+    "textual>=8.1.1",
+    "tomli>=2.0; python_version < '3.11'",
     "typer>=0.12",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "mypy>=1.0",
     "pytest>=8.0",
+    "ruff>=0.0.1",
 ]
 
 [project.scripts]
@@ -28,4 +32,17 @@ markers = [
     "integration: tests that hit the live Aptitude server",
 ]
 
+[tool.mypy]
+python_version = "3.9"
+files = ["src", "tests"]
+show_error_codes = true
+pretty = true
 
+[[tool.mypy.overrides]]
+module = ["diskcache", "tomli"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pytest", "_pytest", "_pytest.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

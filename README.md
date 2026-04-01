@@ -167,9 +167,7 @@ Requirements:
 Install:
 
 ```bash
-py -3 -m venv .venv
-.venv\Scripts\Activate.ps1
-py -3 -m pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 Run the CLI:
@@ -183,13 +181,19 @@ aptitude sync --lock aptitude.lock.json
 Or via Python:
 
 ```bash
-py -3 -m aptitude_client.interfaces.cli.main --help
+uv run python -m aptitude_client.interfaces.cli.main --help
 ```
 
-Run tests:
+Developer workflow:
 
 ```bash
-py -3 -m pytest -v
+make help
+make format
+make format-check
+make lint
+make typecheck
+make test
+make check
 ```
 
 ## Source Of Truth Docs

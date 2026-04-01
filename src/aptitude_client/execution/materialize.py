@@ -17,7 +17,12 @@ from aptitude_client.execution.plan import (
     build_execution_plan,
     serialize_execution_plan,
 )
-from aptitude_client.lockfile import Lockfile, LockedSkill, replay_lockfile, serialize_lockfile
+from aptitude_client.lockfile import (
+    Lockfile,
+    LockedSkill,
+    replay_lockfile,
+    serialize_lockfile,
+)
 
 
 class RegistryContentPort(Protocol):
@@ -68,7 +73,9 @@ def materialize_lockfile(
 
     # Keep the staging directory under target.parent so promotion to target stays
     # on the same volume, which keeps the final replace safe on Windows.
-    with tempfile.TemporaryDirectory(prefix=f".{target.name}-", dir=target.parent) as temp_dir:
+    with tempfile.TemporaryDirectory(
+        prefix=f".{target.name}-", dir=target.parent
+    ) as temp_dir:
         staging_root = Path(temp_dir)
         installed_skills: list[MaterializedSkill] = []
         trace: list[TraceEntry] = []

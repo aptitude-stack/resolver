@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import pytest
 
@@ -58,13 +59,16 @@ def test_parse_lockfile_rejects_non_object_top_level_payload() -> None:
 
 def test_parse_lockfile_rejects_missing_required_field() -> None:
     payload = _minimal_lock_payload()
-    del payload["root"]["selected_node_id"]  # type: ignore[index]
+    root_payload = cast(dict[str, object], payload["root"])
+    del root_payload["selected_node_id"]
 
     with pytest.raises(InvalidLockfileError, match="selected_node_id"):
         parse_lockfile(json.dumps(payload))
 
 
-def test_parse_lockfile_accepts_older_payload_without_selection_or_policy_snapshot() -> None:
+def test_parse_lockfile_accepts_older_payload_without_selection_or_policy_snapshot() -> (
+    None
+):
     parsed = parse_lockfile(json.dumps(_minimal_lock_payload()))
 
     assert parsed.root.selected_node_id == "python.lint@1.2.3"

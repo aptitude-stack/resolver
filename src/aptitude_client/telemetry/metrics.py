@@ -6,7 +6,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Iterator
+from typing import Iterator, Protocol
 
 import structlog
 
@@ -41,10 +41,14 @@ class TelemetryCollector:
         ]
 
 
+class StageTimingLogger(Protocol):
+    def info(self, event: str, **kwargs: object) -> None: ...
+
+
 def emit_stage_timings(
     collector: TelemetryCollector,
     *,
-    logger: structlog.stdlib.BoundLogger | None = None,
+    logger: StageTimingLogger | None = None,
 ) -> None:
     """Emit one structured log event per recorded stage timing."""
 

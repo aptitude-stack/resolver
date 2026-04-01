@@ -33,7 +33,9 @@ def select_final_candidate(
     """Select the winning candidate from an already-ranked candidate list."""
 
     if select_slug is not None:
-        candidate = next((item for item in candidates if item.slug == select_slug), None)
+        candidate = next(
+            (item for item in candidates if item.slug == select_slug), None
+        )
         if candidate is None:
             raise SelectionSlugNotFoundError(
                 query,

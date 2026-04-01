@@ -6,4 +6,8 @@ from aptitude_client.discovery.candidate_discovery import (
     RegistryCandidatePort,
 )
 
-__all__ = ["DiscoverSkillCandidatesQuery", "DiscoveryMatchesResult", "RegistryCandidatePort"]
+__all__ = [
+    "DiscoverSkillCandidatesQuery",
+    "DiscoveryMatchesResult",
+    "RegistryCandidatePort",
+]

@@ -62,8 +62,9 @@ def _effective_selection_preferences(
                 profile=selection_profile_override,
                 interaction_mode=interaction_mode_override,
             )
-            if selection_profile_override is not None or interaction_mode_override is not None
-            else None
+            if selection_profile_override is not None
+            or interaction_mode_override is not None
+            else None,
         ),
     ]
 
@@ -117,7 +118,9 @@ def _effective_policy_context(
         lambda: load_workspace_aptitude_config(cwd),
         "workspace config",
     )
-    policy = _apply_policy_override(default_policy, workspace_policy_config, source="workspace_config")
+    policy = _apply_policy_override(
+        default_policy, workspace_policy_config, source="workspace_config"
+    )
     cli_policy_config = PolicyConfig(
         allowed_trust_tiers=allowed_trust_tiers_override,
         allowed_lifecycle_statuses=allowed_lifecycle_statuses_override,
@@ -134,7 +137,9 @@ def _effective_policy_context(
         )
     )
     if has_cli_override:
-        policy = _apply_policy_override(policy, cli_policy_config, source="cli_override")
+        policy = _apply_policy_override(
+            policy, cli_policy_config, source="cli_override"
+        )
 
     return policy
 
@@ -202,7 +207,9 @@ def _apply_policy_override(
             ),
         )
     except ValueError as exc:
-        error_source = "workspace config" if source == "workspace_config" else "CLI override"
+        error_source = (
+            "workspace config" if source == "workspace_config" else "CLI override"
+        )
         raise InvalidClientConfigurationError(error_source, str(exc)) from exc
 
 

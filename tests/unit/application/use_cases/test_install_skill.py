@@ -22,7 +22,9 @@ class FakeRegistryClient:
         self.identity_by_slug: dict[str, SkillIdentity] = {}
         self.versions_by_slug: dict[str, list[VersionSummary]] = {}
         self.metadata_by_coordinate: dict[tuple[str, str], SkillMetadata] = {}
-        self.dependencies_by_coordinate: dict[tuple[str, str], list[DependencySpec]] = {}
+        self.dependencies_by_coordinate: dict[
+            tuple[str, str], list[DependencySpec]
+        ] = {}
         self.content_by_coordinate: dict[tuple[str, str], str] = {}
         self.discovery_calls: list[DiscoveryQuery] = []
         self.version_calls: list[str] = []
@@ -48,7 +50,9 @@ class FakeRegistryClient:
         self.metadata_calls.append((slug, version))
         return self.metadata_by_coordinate[(slug, version)]
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]:
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]:
         self.dependency_calls.append((slug, version))
         return list(self.dependencies_by_coordinate.get((slug, version), []))
 
@@ -62,7 +66,6 @@ class FakeRegistryClient:
     ) -> str:
         self.content_calls.append((slug, version))
         return self.content_by_coordinate[(slug, version)]
-
 
 
 def _metadata(slug: str, version: str, *, name: str, content: str) -> SkillMetadata:
@@ -87,8 +90,9 @@ def _metadata(slug: str, version: str, *, name: str, content: str) -> SkillMetad
     )
 
 
-
-def _version_summary(slug: str, version: str, *, name: str, content: str) -> VersionSummary:
+def _version_summary(
+    slug: str, version: str, *, name: str, content: str
+) -> VersionSummary:
     return VersionSummary(
         coordinate=SkillCoordinate(slug=slug, version=version),
         name=name,
@@ -108,8 +112,9 @@ def _version_summary(slug: str, version: str, *, name: str, content: str) -> Ver
     )
 
 
-
-def test_install_use_case_reuses_one_planned_graph_for_materialization(tmp_path) -> None:
+def test_install_use_case_reuses_one_planned_graph_for_materialization(
+    tmp_path,
+) -> None:
     registry_client = FakeRegistryClient()
     root_content = "# Python Lint\n"
     dependency_content = "# Python Base\n"
@@ -174,7 +179,9 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(tmp_path)
     assert (resolution_dir / "graph.json").exists()
     assert (resolution_dir / "trace.json").exists()
     assert (resolution_dir / "policy.json").exists()
-    graph_payload = json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))
+    graph_payload = json.loads(
+        (resolution_dir / "graph.json").read_text(encoding="utf-8")
+    )
     assert graph_payload["root"] == {"slug": "python.lint", "version": "1.2.3"}
 
 
@@ -184,10 +191,14 @@ def test_install_use_case_returns_selection_required_before_dependency_resolutio
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["lint"] = ["python.lint", "js.lint"]
     registry_client.versions_by_slug["python.lint"] = [
-        _version_summary("python.lint", "1.2.3", name="Python Lint", content="# Python Lint\n")
+        _version_summary(
+            "python.lint", "1.2.3", name="Python Lint", content="# Python Lint\n"
+        )
     ]
     registry_client.versions_by_slug["js.lint"] = [
-        _version_summary("js.lint", "2.1.0", name="JavaScript Lint", content="# JavaScript Lint\n")
+        _version_summary(
+            "js.lint", "2.1.0", name="JavaScript Lint", content="# JavaScript Lint\n"
+        )
     ]
 
     result = InstallSkillUseCase(registry_client).execute(

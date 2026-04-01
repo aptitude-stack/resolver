@@ -15,7 +15,6 @@ from aptitude_client.shared.config import Settings
 pytestmark = pytest.mark.integration
 
 
-
 def _require_integration_enabled() -> None:
     if os.getenv("APTITUDE_RUN_INTEGRATION") != "1":
         pytest.skip(
@@ -45,7 +44,9 @@ def integration_config() -> IntegrationConfig:
     return IntegrationConfig(
         base_url=os.getenv("APTITUDE_INTEGRATION_BASE_URL", "http://localhost:8000"),
         read_token=os.getenv("APTITUDE_INTEGRATION_READ_TOKEN", "reader-token"),
-        publish_token=os.getenv("APTITUDE_INTEGRATION_PUBLISH_TOKEN", "publisher-token"),
+        publish_token=os.getenv(
+            "APTITUDE_INTEGRATION_PUBLISH_TOKEN", "publisher-token"
+        ),
         timeout_seconds=float(os.getenv("APTITUDE_INTEGRATION_TIMEOUT_SECONDS", "5.0")),
     )
 
@@ -113,7 +114,6 @@ def published_skill(integration_config: IntegrationConfig) -> PublishedSkill:
     return PublishedSkill(slug=slug, name=name, version=version, content=content)
 
 
-
 def test_fetch_skill_identity_against_live_server(
     integration_settings: Settings,
     published_skill: PublishedSkill,
@@ -128,7 +128,6 @@ def test_fetch_skill_identity_against_live_server(
     assert identity.current_version.version == published_skill.version
 
 
-
 def test_list_skill_versions_against_live_server(
     integration_settings: Settings,
     published_skill: PublishedSkill,
@@ -141,7 +140,6 @@ def test_list_skill_versions_against_live_server(
     assert versions[0].name == published_skill.name
 
 
-
 def test_fetch_skill_content_against_live_server(
     integration_settings: Settings,
     published_skill: PublishedSkill,
@@ -151,7 +149,6 @@ def test_fetch_skill_content_against_live_server(
     content = client.fetch_skill_content(published_skill.slug, published_skill.version)
 
     assert content == published_skill.content
-
 
 
 def test_discover_candidate_slugs_against_live_server(

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import DependencyCycleError, SkillNotFoundError, VersionConflictError
+from aptitude_client.domain.errors import (
+    DependencyCycleError,
+    SkillNotFoundError,
+    VersionConflictError,
+)
 from aptitude_client.domain.models import DependencySpec, SkillCoordinate, SkillMetadata
 from aptitude_client.resolver.graph import resolve_recursive_graph
 
@@ -10,17 +14,22 @@ from aptitude_client.resolver.graph import resolve_recursive_graph
 class FakeRegistryClient:
     def __init__(self) -> None:
         self.metadata_by_coordinate: dict[tuple[str, str], SkillMetadata] = {}
-        self.dependencies_by_coordinate: dict[tuple[str, str], list[DependencySpec]] = {}
+        self.dependencies_by_coordinate: dict[
+            tuple[str, str], list[DependencySpec]
+        ] = {}
 
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
         try:
             return self.metadata_by_coordinate[(slug, version)]
         except KeyError as exc:
-            raise SkillNotFoundError(f"Skill version not found: {slug}@{version}") from exc
+            raise SkillNotFoundError(
+                f"Skill version not found: {slug}@{version}"
+            ) from exc
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]:
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]:
         return list(self.dependencies_by_coordinate.get((slug, version), []))
-
 
 
 def _metadata(slug: str, version: str, *, name: str) -> SkillMetadata:
@@ -43,7 +52,6 @@ def _metadata(slug: str, version: str, *, name: str) -> SkillMetadata:
         trust_tier="internal",
         published_at="2026-03-18T00:00:00Z",
     )
-
 
 
 def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
@@ -74,20 +82,40 @@ def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
     )
 
     assert graph.root == SkillCoordinate(slug="python.lint", version="1.2.3")
-    assert [node.coordinate.slug for node in graph.nodes] == ["python.base", "python.fs", "python.lint"]
+    assert [node.coordinate.slug for node in graph.nodes] == [
+        "python.base",
+        "python.fs",
+        "python.lint",
+    ]
     assert [(edge.source.slug, edge.target.slug) for edge in graph.edges] == [
         ("python.lint", "python.base"),
         ("python.lint", "python.fs"),
     ]
-    assert [item.slug for item in graph.install_order] == ["python.base", "python.fs", "python.lint"]
+    assert [item.slug for item in graph.install_order] == [
+        "python.base",
+        "python.fs",
+        "python.lint",
+    ]
     assert any(item.action == "visit_node" for item in trace)
-    received_trace = next(item for item in trace if item.action == "list_dependencies_received")
-    sorted_trace = next(item for item in trace if item.action == "list_dependencies_sorted")
+    received_trace = next(
+        item for item in trace if item.action == "list_dependencies_received"
+    )
+    sorted_trace = next(
+        item for item in trace if item.action == "list_dependencies_sorted"
+    )
     traversal_traces = [item for item in trace if item.action == "traverse_dependency"]
-    assert received_trace.data["dependencies"] == ["python.base@1.0.0", "python.fs@2.0.0"]
+    assert received_trace.data["dependencies"] == [
+        "python.base@1.0.0",
+        "python.fs@2.0.0",
+    ]
     assert sorted_trace.data["dependencies"] == ["python.base@1.0.0", "python.fs@2.0.0"]
-    assert [item.data["target_slug"] for item in traversal_traces] == ["python.base", "python.fs"]
-    normalization_traces = [item for item in trace if item.action == "normalize_dependency_selector"]
+    assert [item.data["target_slug"] for item in traversal_traces] == [
+        "python.base",
+        "python.fs",
+    ]
+    normalization_traces = [
+        item for item in trace if item.action == "normalize_dependency_selector"
+    ]
     assert len(normalization_traces) == 2
     assert normalization_traces[0].data == {
         "source_slug": "python.lint",
@@ -100,7 +128,6 @@ def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
         "optional": False,
         "markers": [],
     }
-
 
 
 def test_recursive_graph_resolver_detects_cycles() -> None:
@@ -127,7 +154,6 @@ def test_recursive_graph_resolver_detects_cycles() -> None:
             SkillCoordinate(slug="python.lint", version="1.2.3"),
             registry_client,
         )
-
 
 
 def test_recursive_graph_resolver_detects_version_conflicts() -> None:
@@ -167,7 +193,9 @@ def test_recursive_graph_resolver_detects_version_conflicts() -> None:
         )
 
 
-def test_recursive_graph_resolver_is_order_independent_for_reordered_dependencies() -> None:
+def test_recursive_graph_resolver_is_order_independent_for_reordered_dependencies() -> (
+    None
+):
     first_registry = FakeRegistryClient()
     second_registry = FakeRegistryClient()
     root = SkillCoordinate(slug="root.skill", version="1.0.0")
@@ -211,17 +239,16 @@ def test_recursive_graph_resolver_is_order_independent_for_reordered_dependencie
     first_graph, first_trace = resolve_recursive_graph(root, first_registry)
     second_graph, second_trace = resolve_recursive_graph(root, second_registry)
 
-    assert [(node.coordinate.slug, node.coordinate.version) for node in first_graph.nodes] == [
-        (node.coordinate.slug, node.coordinate.version)
-        for node in second_graph.nodes
+    assert [
+        (node.coordinate.slug, node.coordinate.version) for node in first_graph.nodes
+    ] == [
+        (node.coordinate.slug, node.coordinate.version) for node in second_graph.nodes
     ]
     assert [(edge.source.slug, edge.target.slug) for edge in first_graph.edges] == [
-        (edge.source.slug, edge.target.slug)
-        for edge in second_graph.edges
+        (edge.source.slug, edge.target.slug) for edge in second_graph.edges
     ]
     assert [(item.slug, item.version) for item in first_graph.install_order] == [
-        (item.slug, item.version)
-        for item in second_graph.install_order
+        (item.slug, item.version) for item in second_graph.install_order
     ]
     assert [
         item.data["dependencies"]

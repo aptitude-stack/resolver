@@ -69,7 +69,9 @@ def _graph_to_dict(graph: ResolutionGraph) -> dict[str, object]:
             {
                 "code": conflict.code,
                 "message": conflict.message,
-                "coordinates": [_coordinate_to_dict(item) for item in conflict.coordinates],
+                "coordinates": [
+                    _coordinate_to_dict(item) for item in conflict.coordinates
+                ],
             }
             for conflict in graph.conflicts
         ],

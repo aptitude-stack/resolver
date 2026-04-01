@@ -9,9 +9,13 @@ from aptitude_client.application.dto import (
     InstallRequestDto,
     InstallResultDto,
     InstalledSkillDto,
+    ResolveCoordinateDto,
     ResolveQueryRequestDto,
 )
-from aptitude_client.application.queries import PlanSkillResolutionQuery, SelectionRequiredResult
+from aptitude_client.application.queries import (
+    PlanSkillResolutionQuery,
+    SelectionRequiredResult,
+)
 from aptitude_client.application.use_cases.resolution_mapping import (
     candidate_to_dto,
     execution_plan_to_dto,
@@ -21,7 +25,10 @@ from aptitude_client.application.use_cases.resolution_mapping import (
     trace_to_dto,
 )
 from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
-from aptitude_client.execution import materialize_lockfile, write_install_debug_artifacts
+from aptitude_client.execution import (
+    materialize_lockfile,
+    write_install_debug_artifacts,
+)
 from aptitude_client.telemetry import TelemetryCollector, emit_stage_timings
 
 
@@ -107,10 +114,10 @@ class InstallSkillUseCase:
                 requested_version=plan.requested_version,
                 status="installed",
                 selection_mode=plan.selection_mode,
-                selected_coordinate={
-                    "slug": plan.graph.root.slug,
-                    "version": plan.graph.root.version,
-                },
+                selected_coordinate=ResolveCoordinateDto(
+                    slug=plan.graph.root.slug,
+                    version=plan.graph.root.version,
+                ),
                 graph=graph_to_dto(plan.graph),
                 lockfile=lockfile_to_dto(plan.lockfile),
                 execution_plan=execution_plan_to_dto(materialization.execution_plan),
@@ -124,7 +131,9 @@ class InstallSkillUseCase:
                 ],
                 materialized_root=materialization.materialized_root,
                 trace=[trace_to_dto(item) for item in trace],
-                policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
+                policy_evaluations=[
+                    policy_to_dto(item) for item in plan.policy_evaluations
+                ],
             )
         finally:
             emit_stage_timings(telemetry)

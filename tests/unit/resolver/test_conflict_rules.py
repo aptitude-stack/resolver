@@ -18,7 +18,9 @@ def test_ensure_no_version_conflict_allows_matching_versions() -> None:
     )
 
 
-def test_ensure_no_version_conflict_raises_for_same_slug_with_different_versions() -> None:
+def test_ensure_no_version_conflict_raises_for_same_slug_with_different_versions() -> (
+    None
+):
     selected_versions = {
         "python.lint": SkillCoordinate(slug="python.lint", version="1.2.3")
     }

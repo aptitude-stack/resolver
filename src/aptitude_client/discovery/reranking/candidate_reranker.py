@@ -42,13 +42,17 @@ def rerank_candidates(
             selection_reason=_selection_reason(
                 candidate,
                 current_components=components,
-                next_candidate=ranked_candidates[index] if index < len(ranked_candidates) else None,
-                next_components=ranked_components[index] if index < len(ranked_components) else None,
+                next_candidate=ranked_candidates[index]
+                if index < len(ranked_candidates)
+                else None,
+                next_components=ranked_components[index]
+                if index < len(ranked_components)
+                else None,
                 profile=selection_preferences.profile,
             ),
         )
         for index, (candidate, components) in enumerate(
-            zip(ranked_candidates, ranked_components, strict=False),
+            zip(ranked_candidates, ranked_components),
             start=1,
         )
     ]
@@ -153,7 +157,8 @@ def _ranking_components(
     description_terms = set(normalize_text(version.description).split())
     matched_description_terms = len(query_labels.intersection(description_terms))
     preferred_trust = int(
-        intent.trust_preference is not None and version.trust_tier == intent.trust_preference
+        intent.trust_preference is not None
+        and version.trust_tier == intent.trust_preference
     )
     token_known, token_score = _cost_key(version.token_estimate)
     size_known, size_score = _cost_key(version.content_size_bytes)
@@ -192,8 +197,12 @@ def _varying_prompt_fields(candidates: list[DiscoveryCandidate]) -> set[str]:
     """Return candidate fields worth surfacing during interactive ambiguity."""
 
     fields: dict[str, set[object]] = {
-        "published_at": {candidate.selected_version.published_at for candidate in candidates},
-        "token_estimate": {candidate.selected_version.token_estimate for candidate in candidates},
+        "published_at": {
+            candidate.selected_version.published_at for candidate in candidates
+        },
+        "token_estimate": {
+            candidate.selected_version.token_estimate for candidate in candidates
+        },
         "content_size_bytes": {
             candidate.selected_version.content_size_bytes for candidate in candidates
         },
@@ -201,7 +210,11 @@ def _varying_prompt_fields(candidates: list[DiscoveryCandidate]) -> set[str]:
     return {
         field_name
         for field_name, values in fields.items()
-        if len(values) > 1 or (field_name in {"token_estimate", "content_size_bytes"} and None not in values)
+        if len(values) > 1
+        or (
+            field_name in {"token_estimate", "content_size_bytes"}
+            and None not in values
+        )
     }
 
 
@@ -216,7 +229,9 @@ def _selection_details(
 
     if "token_estimate" in varying_fields:
         details.append(
-            f"tokens={version.token_estimate}" if version.token_estimate is not None else "tokens=unknown"
+            f"tokens={version.token_estimate}"
+            if version.token_estimate is not None
+            else "tokens=unknown"
         )
     if "content_size_bytes" in varying_fields:
         details.append(
@@ -264,77 +279,302 @@ def _comparison_reason(
 
     if profile == "low-cost":
         comparisons = (
-            ("exact_name_match", current.exact_name_match, next_item.exact_name_match, "closer exact name match"),
-            ("exact_slug_match", current.exact_slug_match, next_item.exact_slug_match, "closer exact slug match"),
-            ("runtime_match", current.runtime_match, next_item.runtime_match, "better runtime match"),
-            ("matched_tags", current.matched_tags, next_item.matched_tags, "stronger tag match"),
-            ("matched_labels", current.matched_labels, next_item.matched_labels, "stronger label match"),
+            (
+                "exact_name_match",
+                current.exact_name_match,
+                next_item.exact_name_match,
+                "closer exact name match",
+            ),
+            (
+                "exact_slug_match",
+                current.exact_slug_match,
+                next_item.exact_slug_match,
+                "closer exact slug match",
+            ),
+            (
+                "runtime_match",
+                current.runtime_match,
+                next_item.runtime_match,
+                "better runtime match",
+            ),
+            (
+                "matched_tags",
+                current.matched_tags,
+                next_item.matched_tags,
+                "stronger tag match",
+            ),
+            (
+                "matched_labels",
+                current.matched_labels,
+                next_item.matched_labels,
+                "stronger label match",
+            ),
             (
                 "matched_description_terms",
                 current.matched_description_terms,
                 next_item.matched_description_terms,
                 "stronger description match",
             ),
-            ("preferred_trust", current.preferred_trust, next_item.preferred_trust, "matches requested trust preference"),
-            ("token_known", current.token_known, next_item.token_known, "known token estimate"),
-            ("token_score", current.token_score, next_item.token_score, "lower token estimate"),
-            ("size_known", current.size_known, next_item.size_known, "known content size"),
-            ("size_score", current.size_score, next_item.size_score, "smaller content size"),
-            ("trust_rank", current.trust_rank, next_item.trust_rank, "higher trust tier"),
-            ("lifecycle_rank", current.lifecycle_rank, next_item.lifecycle_rank, "better lifecycle status"),
-            ("current_default", current.current_default, next_item.current_default, "current default version"),
-            ("semantic_version", current.semantic_version, next_item.semantic_version, "newer semantic version"),
-            ("published_at", current.published_at, next_item.published_at, "newer publication date"),
+            (
+                "preferred_trust",
+                current.preferred_trust,
+                next_item.preferred_trust,
+                "matches requested trust preference",
+            ),
+            (
+                "token_known",
+                current.token_known,
+                next_item.token_known,
+                "known token estimate",
+            ),
+            (
+                "token_score",
+                current.token_score,
+                next_item.token_score,
+                "lower token estimate",
+            ),
+            (
+                "size_known",
+                current.size_known,
+                next_item.size_known,
+                "known content size",
+            ),
+            (
+                "size_score",
+                current.size_score,
+                next_item.size_score,
+                "smaller content size",
+            ),
+            (
+                "trust_rank",
+                current.trust_rank,
+                next_item.trust_rank,
+                "higher trust tier",
+            ),
+            (
+                "lifecycle_rank",
+                current.lifecycle_rank,
+                next_item.lifecycle_rank,
+                "better lifecycle status",
+            ),
+            (
+                "current_default",
+                current.current_default,
+                next_item.current_default,
+                "current default version",
+            ),
+            (
+                "semantic_version",
+                current.semantic_version,
+                next_item.semantic_version,
+                "newer semantic version",
+            ),
+            (
+                "published_at",
+                current.published_at,
+                next_item.published_at,
+                "newer publication date",
+            ),
             ("slug", current.slug, next_item.slug, "stable slug tiebreak"),
         )
     elif profile == "high-trust":
         comparisons = (
-            ("exact_name_match", current.exact_name_match, next_item.exact_name_match, "closer exact name match"),
-            ("exact_slug_match", current.exact_slug_match, next_item.exact_slug_match, "closer exact slug match"),
-            ("runtime_match", current.runtime_match, next_item.runtime_match, "better runtime match"),
-            ("matched_tags", current.matched_tags, next_item.matched_tags, "stronger tag match"),
-            ("matched_labels", current.matched_labels, next_item.matched_labels, "stronger label match"),
+            (
+                "exact_name_match",
+                current.exact_name_match,
+                next_item.exact_name_match,
+                "closer exact name match",
+            ),
+            (
+                "exact_slug_match",
+                current.exact_slug_match,
+                next_item.exact_slug_match,
+                "closer exact slug match",
+            ),
+            (
+                "runtime_match",
+                current.runtime_match,
+                next_item.runtime_match,
+                "better runtime match",
+            ),
+            (
+                "matched_tags",
+                current.matched_tags,
+                next_item.matched_tags,
+                "stronger tag match",
+            ),
+            (
+                "matched_labels",
+                current.matched_labels,
+                next_item.matched_labels,
+                "stronger label match",
+            ),
             (
                 "matched_description_terms",
                 current.matched_description_terms,
                 next_item.matched_description_terms,
                 "stronger description match",
             ),
-            ("preferred_trust", current.preferred_trust, next_item.preferred_trust, "matches requested trust preference"),
-            ("trust_rank", current.trust_rank, next_item.trust_rank, "higher trust tier"),
-            ("lifecycle_rank", current.lifecycle_rank, next_item.lifecycle_rank, "better lifecycle status"),
-            ("token_known", current.token_known, next_item.token_known, "known token estimate"),
-            ("token_score", current.token_score, next_item.token_score, "lower token estimate"),
-            ("size_known", current.size_known, next_item.size_known, "known content size"),
-            ("size_score", current.size_score, next_item.size_score, "smaller content size"),
-            ("current_default", current.current_default, next_item.current_default, "current default version"),
-            ("semantic_version", current.semantic_version, next_item.semantic_version, "newer semantic version"),
-            ("published_at", current.published_at, next_item.published_at, "newer publication date"),
+            (
+                "preferred_trust",
+                current.preferred_trust,
+                next_item.preferred_trust,
+                "matches requested trust preference",
+            ),
+            (
+                "trust_rank",
+                current.trust_rank,
+                next_item.trust_rank,
+                "higher trust tier",
+            ),
+            (
+                "lifecycle_rank",
+                current.lifecycle_rank,
+                next_item.lifecycle_rank,
+                "better lifecycle status",
+            ),
+            (
+                "token_known",
+                current.token_known,
+                next_item.token_known,
+                "known token estimate",
+            ),
+            (
+                "token_score",
+                current.token_score,
+                next_item.token_score,
+                "lower token estimate",
+            ),
+            (
+                "size_known",
+                current.size_known,
+                next_item.size_known,
+                "known content size",
+            ),
+            (
+                "size_score",
+                current.size_score,
+                next_item.size_score,
+                "smaller content size",
+            ),
+            (
+                "current_default",
+                current.current_default,
+                next_item.current_default,
+                "current default version",
+            ),
+            (
+                "semantic_version",
+                current.semantic_version,
+                next_item.semantic_version,
+                "newer semantic version",
+            ),
+            (
+                "published_at",
+                current.published_at,
+                next_item.published_at,
+                "newer publication date",
+            ),
             ("slug", current.slug, next_item.slug, "stable slug tiebreak"),
         )
     else:
         comparisons = (
-            ("exact_name_match", current.exact_name_match, next_item.exact_name_match, "closer exact name match"),
-            ("exact_slug_match", current.exact_slug_match, next_item.exact_slug_match, "closer exact slug match"),
-            ("runtime_match", current.runtime_match, next_item.runtime_match, "better runtime match"),
-            ("matched_tags", current.matched_tags, next_item.matched_tags, "stronger tag match"),
-            ("matched_labels", current.matched_labels, next_item.matched_labels, "stronger label match"),
+            (
+                "exact_name_match",
+                current.exact_name_match,
+                next_item.exact_name_match,
+                "closer exact name match",
+            ),
+            (
+                "exact_slug_match",
+                current.exact_slug_match,
+                next_item.exact_slug_match,
+                "closer exact slug match",
+            ),
+            (
+                "runtime_match",
+                current.runtime_match,
+                next_item.runtime_match,
+                "better runtime match",
+            ),
+            (
+                "matched_tags",
+                current.matched_tags,
+                next_item.matched_tags,
+                "stronger tag match",
+            ),
+            (
+                "matched_labels",
+                current.matched_labels,
+                next_item.matched_labels,
+                "stronger label match",
+            ),
             (
                 "matched_description_terms",
                 current.matched_description_terms,
                 next_item.matched_description_terms,
                 "stronger description match",
             ),
-            ("preferred_trust", current.preferred_trust, next_item.preferred_trust, "matches requested trust preference"),
-            ("trust_rank", current.trust_rank, next_item.trust_rank, "higher trust tier"),
-            ("token_known", current.token_known, next_item.token_known, "known token estimate"),
-            ("token_score", current.token_score, next_item.token_score, "lower token estimate"),
-            ("size_known", current.size_known, next_item.size_known, "known content size"),
-            ("size_score", current.size_score, next_item.size_score, "smaller content size"),
-            ("lifecycle_rank", current.lifecycle_rank, next_item.lifecycle_rank, "better lifecycle status"),
-            ("current_default", current.current_default, next_item.current_default, "current default version"),
-            ("semantic_version", current.semantic_version, next_item.semantic_version, "newer semantic version"),
-            ("published_at", current.published_at, next_item.published_at, "newer publication date"),
+            (
+                "preferred_trust",
+                current.preferred_trust,
+                next_item.preferred_trust,
+                "matches requested trust preference",
+            ),
+            (
+                "trust_rank",
+                current.trust_rank,
+                next_item.trust_rank,
+                "higher trust tier",
+            ),
+            (
+                "token_known",
+                current.token_known,
+                next_item.token_known,
+                "known token estimate",
+            ),
+            (
+                "token_score",
+                current.token_score,
+                next_item.token_score,
+                "lower token estimate",
+            ),
+            (
+                "size_known",
+                current.size_known,
+                next_item.size_known,
+                "known content size",
+            ),
+            (
+                "size_score",
+                current.size_score,
+                next_item.size_score,
+                "smaller content size",
+            ),
+            (
+                "lifecycle_rank",
+                current.lifecycle_rank,
+                next_item.lifecycle_rank,
+                "better lifecycle status",
+            ),
+            (
+                "current_default",
+                current.current_default,
+                next_item.current_default,
+                "current default version",
+            ),
+            (
+                "semantic_version",
+                current.semantic_version,
+                next_item.semantic_version,
+                "newer semantic version",
+            ),
+            (
+                "published_at",
+                current.published_at,
+                next_item.published_at,
+                "newer publication date",
+            ),
             ("slug", current.slug, next_item.slug, "stable slug tiebreak"),
         )
 

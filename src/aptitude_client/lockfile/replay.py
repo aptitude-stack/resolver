@@ -25,7 +25,9 @@ def replay_lockfile(lockfile: Lockfile) -> ReplayedLock:
     nodes_by_id: dict[str, LockedSkill] = {}
     for node in lockfile.nodes:
         if node.node_id in nodes_by_id:
-            raise InvalidLockfileError(f"Lockfile contains duplicate node id: {node.node_id}")
+            raise InvalidLockfileError(
+                f"Lockfile contains duplicate node id: {node.node_id}"
+            )
         nodes_by_id[node.node_id] = node
 
     if lockfile.root.selected_node_id not in nodes_by_id:
@@ -37,7 +39,9 @@ def replay_lockfile(lockfile: Lockfile) -> ReplayedLock:
     seen_install_order: set[str] = set()
     for node_id in lockfile.install_order:
         if node_id in seen_install_order:
-            raise InvalidLockfileError(f"Lockfile install order contains duplicate node id: {node_id}")
+            raise InvalidLockfileError(
+                f"Lockfile install order contains duplicate node id: {node_id}"
+            )
         try:
             install_order_nodes.append(nodes_by_id[node_id])
         except KeyError as exc:

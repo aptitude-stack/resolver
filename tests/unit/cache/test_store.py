@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from aptitude_client.cache import CacheStore, content_key, discovery_key, metadata_key, version_list_key
+from aptitude_client.cache import (
+    CacheStore,
+    content_key,
+    discovery_key,
+    metadata_key,
+    version_list_key,
+)
 from aptitude_client.domain.models import DiscoveryQuery
 
 

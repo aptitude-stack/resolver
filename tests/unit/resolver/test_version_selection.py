@@ -32,8 +32,9 @@ class FakeRegistryClient:
         try:
             return self.metadata_by_coordinate[(slug, version)]
         except KeyError as exc:
-            raise SkillNotFoundError(f"Skill version not found: {slug}@{version}") from exc
-
+            raise SkillNotFoundError(
+                f"Skill version not found: {slug}@{version}"
+            ) from exc
 
 
 def _version(
@@ -70,7 +71,6 @@ def _version(
     )
 
 
-
 def _metadata(
     slug: str,
     version: str,
@@ -101,7 +101,6 @@ def _metadata(
     )
 
 
-
 def _intent(query: str, *, language: str | None = None) -> SearchIntent:
     terms = query.split()
     return SearchIntent(
@@ -115,7 +114,6 @@ def _intent(query: str, *, language: str | None = None) -> SearchIntent:
     )
 
 
-
 def _candidate(slug: str, version: str) -> DiscoveryCandidate:
     return DiscoveryCandidate(
         slug=slug,
@@ -125,13 +123,17 @@ def _candidate(slug: str, version: str) -> DiscoveryCandidate:
     )
 
 
-
 def test_select_preferred_version_prefers_lifecycle_trust_and_semver() -> None:
     selected = select_preferred_version(
         [
             _version("python.lint", "2.0.0", trust_tier="untrusted"),
             _version("python.lint", "1.9.0", trust_tier="verified"),
-            _version("python.lint", "2.1.0", trust_tier="verified", lifecycle_status="deprecated"),
+            _version(
+                "python.lint",
+                "2.1.0",
+                trust_tier="verified",
+                lifecycle_status="deprecated",
+            ),
             _version("python.lint", "2.0.1", trust_tier="verified"),
         ]
     )
@@ -139,8 +141,9 @@ def test_select_preferred_version_prefers_lifecycle_trust_and_semver() -> None:
     assert selected.coordinate.version == "2.0.1"
 
 
-
-def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metadata() -> None:
+def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metadata() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.metadata_by_coordinate[("python.lint", "1.2.3")] = _metadata(
         "python.lint",
@@ -191,8 +194,9 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
     ]
 
 
-
-def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_candidates() -> None:
+def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_candidates() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.metadata_by_coordinate[("python.lint", "2.0.0")] = _metadata(
         "python.lint",
@@ -203,8 +207,14 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
     candidates, trace = resolve_candidate_versions(
         _intent("python lint", language="python"),
         [
-            DiscoveredSkill(slug="python.lint", available_versions=[_version("python.lint", "1.2.3")]),
-            DiscoveredSkill(slug="generic.lint", available_versions=[_version("generic.lint", "3.0.0")]),
+            DiscoveredSkill(
+                slug="python.lint",
+                available_versions=[_version("python.lint", "1.2.3")],
+            ),
+            DiscoveredSkill(
+                slug="generic.lint",
+                available_versions=[_version("generic.lint", "3.0.0")],
+            ),
         ],
         registry_client,
         version="2.0.0",
@@ -219,8 +229,9 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
     assert trace[1].data["slug"] == "generic.lint"
 
 
-
-def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected_version() -> None:
+def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected_version() -> (
+    None
+):
     registry_client = FakeRegistryClient()
 
     candidates, _ = resolve_candidate_versions(
@@ -253,7 +264,6 @@ def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected
     ]
 
 
-
 def test_select_final_candidate_respects_explicit_slug() -> None:
     result = select_final_candidate(
         query="lint",
@@ -269,8 +279,9 @@ def test_select_final_candidate_respects_explicit_slug() -> None:
     assert result.trace == []
 
 
-
-def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_when_prompt_capable() -> None:
+def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_when_prompt_capable() -> (
+    None
+):
     result = select_final_candidate(
         query="lint",
         candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
@@ -282,7 +293,6 @@ def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_wh
     assert result.selected_candidate is None
     assert result.selection_mode is None
     assert result.trace == []
-
 
 
 def test_select_final_candidate_returns_selection_required_for_always_mode() -> None:
@@ -303,14 +313,19 @@ def test_select_final_candidate_raises_when_always_mode_cannot_prompt() -> None:
     with pytest.raises(InteractiveSelectionUnavailableError):
         select_final_candidate(
             query="lint",
-            candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+            candidates=[
+                _candidate("python.lint", "1.2.3"),
+                _candidate("js.lint", "2.1.0"),
+            ],
             select_slug=None,
             interaction_mode="always",
             prompt_capable=False,
         )
 
 
-def test_select_final_candidate_auto_selects_top_ranked_candidate_when_prompt_unavailable() -> None:
+def test_select_final_candidate_auto_selects_top_ranked_candidate_when_prompt_unavailable() -> (
+    None
+):
     result = select_final_candidate(
         query="lint",
         candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
@@ -338,7 +353,6 @@ def test_select_final_candidate_never_mode_auto_selects_top_ranked_candidate() -
     assert result.selected_candidate.slug == "python.lint"
     assert result.selection_mode == "non_interactive_top_ranked"
     assert [item.action for item in result.trace] == ["auto_select_top_ranked"]
-
 
 
 def test_select_final_candidate_raises_when_selected_slug_is_missing() -> None:

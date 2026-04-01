@@ -6,7 +6,12 @@ from typing import Any
 
 import httpx
 from pydantic import ValidationError
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from aptitude_client.cache import (
     CacheStore,
@@ -117,17 +122,27 @@ class RegistryClient:
         return SkillIdentity(
             slug=slug,
             status="active",
-            current_version=current_version.coordinate if current_version is not None else None,
+            current_version=current_version.coordinate
+            if current_version is not None
+            else None,
             current_lifecycle_status=(
-                current_version.lifecycle_status if current_version is not None else None
+                current_version.lifecycle_status
+                if current_version is not None
+                else None
             ),
-            current_trust_tier=current_version.trust_tier if current_version is not None else None,
-            current_published_at=current_version.published_at if current_version is not None else None,
+            current_trust_tier=current_version.trust_tier
+            if current_version is not None
+            else None,
+            current_published_at=current_version.published_at
+            if current_version is not None
+            else None,
             created_at=None,
             updated_at=None,
         )
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]:
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]:
         """Fetch direct dependency declarations for one skill coordinate."""
 
         payload = self._get_json(f"/resolution/{slug}/{version}")
@@ -314,7 +329,10 @@ class RegistryClient:
         code = envelope.error.code
         message = envelope.error.message
 
-        if response.status_code == 404 and code in {"SKILL_VERSION_NOT_FOUND", "SKILL_NOT_FOUND"}:
+        if response.status_code == 404 and code in {
+            "SKILL_VERSION_NOT_FOUND",
+            "SKILL_NOT_FOUND",
+        }:
             raise SkillNotFoundError(message)
 
         if response.status_code == 422 and code == "INVALID_REQUEST":

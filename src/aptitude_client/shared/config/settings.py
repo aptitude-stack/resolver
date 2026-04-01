@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,3 +21,6 @@ class Settings(BaseSettings):
     server_base_url: str
     read_token: str
     server_timeout_seconds: float = Field(default=5.0, gt=0)
+
+    def __init__(self, **values: Any) -> None:
+        super().__init__(**cast(dict[str, Any], values))

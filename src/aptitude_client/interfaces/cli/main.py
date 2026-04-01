@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+import sys
+
 from aptitude_client.interfaces.cli.app import app
+
+
+def run_tui_app() -> None:
+    """Launch the full-screen Textual interface."""
+
+    from aptitude_client.interfaces.tui.app import run_tui_app as launch
+
+    launch()
 
 
 def main() -> None:
     """Run the Typer CLI app."""
 
+    if len(sys.argv) == 1:
+        run_tui_app()
+        return
     app()
 
 

@@ -73,7 +73,9 @@ def parse_lockfile(payload: str) -> Lockfile:
                     "size_bytes",
                 ),
             )
-            for node_data in (_expect_mapping(item, "nodes item") for item in nodes_data)
+            for node_data in (
+                _expect_mapping(item, "nodes item") for item in nodes_data
+            )
         ],
         edges=[
             LockedEdge(
@@ -83,7 +85,9 @@ def parse_lockfile(payload: str) -> Lockfile:
                 optional=_expect_bool(edge_data, "optional"),
                 markers=_expect_str_list(edge_data, "markers"),
             )
-            for edge_data in (_expect_mapping(item, "edges item") for item in edges_data)
+            for edge_data in (
+                _expect_mapping(item, "edges item") for item in edges_data
+            )
         ],
         install_order=_expect_str_list(data, "install_order"),
         selection=(
@@ -91,7 +95,9 @@ def parse_lockfile(payload: str) -> Lockfile:
                 profile=_expect_str(selection_data, "profile"),
                 interaction_mode=_expect_str(selection_data, "interaction_mode"),
                 profile_source=_expect_str(selection_data, "profile_source"),
-                interaction_mode_source=_expect_str(selection_data, "interaction_mode_source"),
+                interaction_mode_source=_expect_str(
+                    selection_data, "interaction_mode_source"
+                ),
             )
             if selection_data is not None
             else None
@@ -104,8 +110,12 @@ def parse_lockfile(payload: str) -> Lockfile:
                     policy_data,
                     "allowed_lifecycle_statuses",
                 ),
-                allowed_trust_tiers=_expect_str_list(policy_data, "allowed_trust_tiers"),
-                max_token_estimate=_expect_optional_int(policy_data, "max_token_estimate"),
+                allowed_trust_tiers=_expect_str_list(
+                    policy_data, "allowed_trust_tiers"
+                ),
+                max_token_estimate=_expect_optional_int(
+                    policy_data, "max_token_estimate"
+                ),
                 max_content_size_bytes=_expect_optional_int(
                     policy_data,
                     "max_content_size_bytes",
@@ -129,7 +139,9 @@ def parse_lockfile(payload: str) -> Lockfile:
                 message=_expect_str(item_data, "message"),
                 node_id=_expect_optional_str(item_data, "node_id"),
             )
-            for item_data in (_expect_mapping(item, "governance item") for item in governance_data)
+            for item_data in (
+                _expect_mapping(item, "governance item") for item in governance_data
+            )
         ],
     )
 
@@ -160,12 +172,16 @@ def _expect_list(data: dict[str, Any], field_name: str) -> list[Any]:
     return value
 
 
-def _expect_optional_dict(data: dict[str, Any], field_name: str) -> dict[str, Any] | None:
+def _expect_optional_dict(
+    data: dict[str, Any], field_name: str
+) -> dict[str, Any] | None:
     value = data.get(field_name)
     if value is None:
         return None
     if not isinstance(value, dict):
-        raise InvalidLockfileError(f"Lockfile field '{field_name}' must be an object or null.")
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must be an object or null."
+        )
     return value
 
 
@@ -180,7 +196,9 @@ def _expect_optional_str(data: dict[str, Any], field_name: str) -> str | None:
     value = data.get(field_name)
     if value is None or isinstance(value, str):
         return value
-    raise InvalidLockfileError(f"Lockfile field '{field_name}' must be a string or null.")
+    raise InvalidLockfileError(
+        f"Lockfile field '{field_name}' must be a string or null."
+    )
 
 
 def _expect_int(data: dict[str, Any], field_name: str) -> int:
@@ -194,7 +212,9 @@ def _expect_optional_int(data: dict[str, Any], field_name: str) -> int | None:
     value = data.get(field_name)
     if value is None or isinstance(value, int):
         return value
-    raise InvalidLockfileError(f"Lockfile field '{field_name}' must be an integer or null.")
+    raise InvalidLockfileError(
+        f"Lockfile field '{field_name}' must be an integer or null."
+    )
 
 
 def _expect_bool(data: dict[str, Any], field_name: str) -> bool:
@@ -207,7 +227,9 @@ def _expect_bool(data: dict[str, Any], field_name: str) -> bool:
 def _expect_str_list(data: dict[str, Any], field_name: str) -> list[str]:
     value = data.get(field_name)
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
-        raise InvalidLockfileError(f"Lockfile field '{field_name}' must be a list of strings.")
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must be a list of strings."
+        )
     return list(value)
 
 
@@ -215,7 +237,10 @@ def _expect_str_dict(data: dict[str, Any], field_name: str) -> dict[str, str]:
     value = data.get(field_name)
     if not isinstance(value, dict):
         raise InvalidLockfileError(f"Lockfile field '{field_name}' must be an object.")
-    if any(not isinstance(key, str) or not isinstance(item, str) for key, item in value.items()):
+    if any(
+        not isinstance(key, str) or not isinstance(item, str)
+        for key, item in value.items()
+    ):
         raise InvalidLockfileError(
             f"Lockfile field '{field_name}' must be a string-to-string object."
         )

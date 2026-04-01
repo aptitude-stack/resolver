@@ -106,7 +106,9 @@ def test_policy_context_phase_1_defaults_are_explicit() -> None:
     assert context.max_content_size_bytes is None
 
 
-def test_filter_policy_compliant_candidates_rejects_illegal_candidates_and_emits_trace() -> None:
+def test_filter_policy_compliant_candidates_rejects_illegal_candidates_and_emits_trace() -> (
+    None
+):
     candidates = [
         _candidate("trusted.skill", "1.0.0", trust_tier="verified"),
         _candidate("untrusted.skill", "1.0.0", trust_tier="untrusted"),
@@ -137,7 +139,9 @@ def test_filter_policy_compliant_candidates_rejects_disallowed_lifecycle() -> No
     assert trace[0].data["failed_rules"] == ["allowed_lifecycle_status"]
 
 
-def test_filter_policy_compliant_candidates_rejects_candidates_above_token_ceiling() -> None:
+def test_filter_policy_compliant_candidates_rejects_candidates_above_token_ceiling() -> (
+    None
+):
     compliant, trace = filter_policy_compliant_candidates(
         [_candidate("expensive.skill", "1.0.0", token_estimate=900)],
         PolicyContext(max_token_estimate=500),
@@ -148,7 +152,9 @@ def test_filter_policy_compliant_candidates_rejects_candidates_above_token_ceili
     assert trace[0].data["failed_rules"] == ["max_token_estimate"]
 
 
-def test_filter_policy_compliant_candidates_fails_closed_for_unknown_resource_values() -> None:
+def test_filter_policy_compliant_candidates_fails_closed_for_unknown_resource_values() -> (
+    None
+):
     compliant, trace = filter_policy_compliant_candidates(
         [_candidate("unknown.size", "1.0.0", content_size_bytes=None)],
         PolicyContext(max_content_size_bytes=512),
@@ -164,7 +170,9 @@ def test_evaluate_resolution_graph_checks_lifecycle_trust_and_resource_rules() -
         root=SkillCoordinate(slug="root.skill", version="1.0.0"),
         nodes=[
             _node("root.skill", "1.0.0", trust_tier="verified", token_estimate=120),
-            _node("dep.skill", "1.0.0", lifecycle_status="archived", token_estimate=None),
+            _node(
+                "dep.skill", "1.0.0", lifecycle_status="archived", token_estimate=None
+            ),
         ],
         edges=[],
         install_order=[
@@ -184,7 +192,9 @@ def test_evaluate_resolution_graph_checks_lifecycle_trust_and_resource_rules() -
     )
 
     assert any(
-        item.rule == "allowed_lifecycle_status" and item.coordinate == SkillCoordinate("dep.skill", "1.0.0") and not item.passed
+        item.rule == "allowed_lifecycle_status"
+        and item.coordinate == SkillCoordinate("dep.skill", "1.0.0")
+        and not item.passed
         for item in evaluations
     )
     assert any(
@@ -218,5 +228,11 @@ def test_evaluate_resolution_graph_checks_aggregate_resource_ceilings() -> None:
         ),
     )
 
-    assert any(item.rule == "max_total_token_estimate" and not item.passed for item in evaluations)
-    assert any(item.rule == "max_total_content_size_bytes" and item.passed for item in evaluations)
+    assert any(
+        item.rule == "max_total_token_estimate" and not item.passed
+        for item in evaluations
+    )
+    assert any(
+        item.rule == "max_total_content_size_bytes" and item.passed
+        for item in evaluations
+    )

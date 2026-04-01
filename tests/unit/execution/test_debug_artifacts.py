@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import json
 
-from aptitude_client.domain.models import DependencyEdge, ResolutionGraph, ResolvedSkillNode, SkillCoordinate
+from aptitude_client.domain.models import (
+    DependencyEdge,
+    ResolutionGraph,
+    ResolvedSkillNode,
+    SkillCoordinate,
+)
 from aptitude_client.domain.policy import PolicyEvaluation
 from aptitude_client.domain.tracing import TraceEntry
 from aptitude_client.execution import write_install_debug_artifacts
@@ -28,7 +33,9 @@ def _node(slug: str, version: str) -> ResolvedSkillNode:
     )
 
 
-def test_write_install_debug_artifacts_writes_expected_files_and_shapes(tmp_path) -> None:
+def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
+    tmp_path,
+) -> None:
     target = tmp_path / "skill_demo"
     graph = ResolutionGraph(
         root=SkillCoordinate(slug="python.lint", version="1.2.3"),
@@ -71,9 +78,15 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(tmp_path
     )
 
     resolution_dir = target / "resolution"
-    graph_payload = json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))
-    trace_payload = json.loads((resolution_dir / "trace.json").read_text(encoding="utf-8"))
-    policy_payload = json.loads((resolution_dir / "policy.json").read_text(encoding="utf-8"))
+    graph_payload = json.loads(
+        (resolution_dir / "graph.json").read_text(encoding="utf-8")
+    )
+    trace_payload = json.loads(
+        (resolution_dir / "trace.json").read_text(encoding="utf-8")
+    )
+    policy_payload = json.loads(
+        (resolution_dir / "policy.json").read_text(encoding="utf-8")
+    )
 
     assert sorted(path.name for path in resolution_dir.iterdir()) == [
         "graph.json",

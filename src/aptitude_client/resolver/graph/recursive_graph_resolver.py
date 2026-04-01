@@ -24,7 +24,9 @@ class RegistryResolvePort(Protocol):
 
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata: ...
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]: ...
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]: ...
 
 
 def resolve_recursive_graph(
@@ -54,8 +56,12 @@ def resolve_recursive_graph(
         ensure_no_version_conflict(selected_versions, coordinate)
         active_stack.append(coordinate)
 
-        metadata = registry_client.fetch_skill_metadata(coordinate.slug, coordinate.version)
-        dependencies = registry_client.fetch_direct_dependencies(coordinate.slug, coordinate.version)
+        metadata = registry_client.fetch_skill_metadata(
+            coordinate.slug, coordinate.version
+        )
+        dependencies = registry_client.fetch_direct_dependencies(
+            coordinate.slug, coordinate.version
+        )
         trace.append(
             TraceEntry(
                 stage="resolver",
@@ -67,7 +73,9 @@ def resolve_recursive_graph(
                 data={
                     "source_slug": coordinate.slug,
                     "source_version": coordinate.version,
-                    "dependencies": [_dependency_trace_label(item) for item in dependencies],
+                    "dependencies": [
+                        _dependency_trace_label(item) for item in dependencies
+                    ],
                 },
             )
         )
@@ -83,7 +91,9 @@ def resolve_recursive_graph(
                 data={
                     "source_slug": coordinate.slug,
                     "source_version": coordinate.version,
-                    "dependencies": [_dependency_trace_label(item) for item in dependencies],
+                    "dependencies": [
+                        _dependency_trace_label(item) for item in dependencies
+                    ],
                 },
             )
         )
@@ -209,7 +219,9 @@ def resolve_recursive_graph(
     return graph, trace
 
 
-def _dependency_sort_key(dependency: DependencySpec) -> tuple[str, str, bool, tuple[str, ...]]:
+def _dependency_sort_key(
+    dependency: DependencySpec,
+) -> tuple[str, str, bool, tuple[str, ...]]:
     selector = (
         f"version:{dependency.version}"
         if dependency.version is not None

@@ -98,7 +98,9 @@ def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -
     assert identity.current_trust_tier == "internal"
 
 
-def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summary() -> None:
+def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summary() -> (
+    None
+):
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
         assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0"
@@ -137,7 +139,9 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
 
     client = _client(handler)
 
-    metadata = client.fetch_skill_metadata("postman.primary.1774130709214-55706", "1.0.0")
+    metadata = client.fetch_skill_metadata(
+        "postman.primary.1774130709214-55706", "1.0.0"
+    )
 
     assert metadata.coordinate.slug == "postman.primary.1774130709214-55706"
     assert metadata.coordinate.version == "1.0.0"
@@ -148,7 +152,10 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
 def test_fetch_skill_content_uses_live_content_path() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
+        assert (
+            request.url.path
+            == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
+        )
         return httpx.Response(200, text="# Postman Primary Skill v1\n")
 
     client = _client(handler)
@@ -225,7 +232,9 @@ def test_registry_client_retries_transient_server_failures_then_succeeds() -> No
         nonlocal request_count
         request_count += 1
         if request_count < 3:
-            return httpx.Response(503, json={"error": {"code": "TEMPORARY", "message": "retry"}})
+            return httpx.Response(
+                503, json={"error": {"code": "TEMPORARY", "message": "retry"}}
+            )
         return httpx.Response(
             200,
             json={
@@ -269,7 +278,9 @@ def test_registry_client_does_not_retry_non_transient_not_found_errors() -> None
     assert request_count == 1
 
 
-def test_registry_client_raises_unavailable_after_exhausting_transient_retries() -> None:
+def test_registry_client_raises_unavailable_after_exhausting_transient_retries() -> (
+    None
+):
     request_count = 0
 
     def handler(request: httpx.Request) -> httpx.Response:

@@ -9,7 +9,11 @@ from aptitude_client.application.use_cases import (
     SyncFromLockUseCase,
 )
 from aptitude_client.domain.errors import InvalidClientConfigurationError
-from aptitude_client.shared.config.aptitude_config import AptitudeConfig, PolicyConfig, SelectionConfig
+from aptitude_client.shared.config.aptitude_config import (
+    AptitudeConfig,
+    PolicyConfig,
+    SelectionConfig,
+)
 
 
 class FakeSettings:
@@ -60,7 +64,9 @@ def test_build_install_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
     assert FakeRegistryClient.instances[0].closed is True
 
 
-def test_build_resolve_use_case_merges_selection_preferences_with_cli_precedence(monkeypatch) -> None:
+def test_build_resolve_use_case_merges_selection_preferences_with_cli_precedence(
+    monkeypatch,
+) -> None:
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
@@ -95,7 +101,9 @@ def test_build_resolve_use_case_merges_selection_preferences_with_cli_precedence
     assert FakeRegistryClient.instances[0].closed is True
 
 
-def test_build_resolve_use_case_raises_for_invalid_selection_preference_source(monkeypatch) -> None:
+def test_build_resolve_use_case_raises_for_invalid_selection_preference_source(
+    monkeypatch,
+) -> None:
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
@@ -118,7 +126,14 @@ def test_build_resolve_use_case_raises_for_invalid_selection_preference_source(m
 
 
 @pytest.mark.parametrize(
-    ("user_config", "workspace_config", "env_config", "cli_profile", "cli_mode", "expected"),
+    (
+        "user_config",
+        "workspace_config",
+        "env_config",
+        "cli_profile",
+        "cli_mode",
+        "expected",
+    ),
     [
         (
             None,
@@ -177,16 +192,22 @@ def test_build_resolve_use_case_selection_precedence_covers_default_to_cli(
     monkeypatch.setattr(
         composition,
         "load_user_aptitude_config",
-        lambda: AptitudeConfig(selection=user_config) if user_config is not None else None,
+        lambda: (
+            AptitudeConfig(selection=user_config) if user_config is not None else None
+        ),
     )
     monkeypatch.setattr(
         composition,
         "load_workspace_aptitude_config",
         lambda cwd=None: (
-            AptitudeConfig(selection=workspace_config) if workspace_config is not None else None
+            AptitudeConfig(selection=workspace_config)
+            if workspace_config is not None
+            else None
         ),
     )
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: env_config)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: env_config
+    )
 
     use_case, close = composition.build_resolve_use_case(
         selection_profile_override=cli_profile,
@@ -207,9 +228,13 @@ def test_build_resolve_use_case_applies_cli_policy_overrides(monkeypatch) -> Non
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
-    monkeypatch.setattr(composition, "load_workspace_aptitude_config", lambda cwd=None: None)
+    monkeypatch.setattr(
+        composition, "load_workspace_aptitude_config", lambda cwd=None: None
+    )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
 
     use_case, close = composition.build_resolve_use_case(
         allowed_trust_tiers_override=["internal", "verified"],
@@ -229,13 +254,19 @@ def test_build_resolve_use_case_applies_cli_policy_overrides(monkeypatch) -> Non
     assert FakeRegistryClient.instances[0].closed is True
 
 
-def test_build_resolve_use_case_raises_for_invalid_cli_policy_override(monkeypatch) -> None:
+def test_build_resolve_use_case_raises_for_invalid_cli_policy_override(
+    monkeypatch,
+) -> None:
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
-    monkeypatch.setattr(composition, "load_workspace_aptitude_config", lambda cwd=None: None)
+    monkeypatch.setattr(
+        composition, "load_workspace_aptitude_config", lambda cwd=None: None
+    )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
 
     with pytest.raises(InvalidClientConfigurationError) as exc_info:
         composition.build_resolve_use_case(
@@ -246,7 +277,9 @@ def test_build_resolve_use_case_raises_for_invalid_cli_policy_override(monkeypat
     assert "allowed_trust_tiers" in exc_info.value.details
 
 
-def test_build_resolve_use_case_merges_workspace_policy_with_stricter_cli_overrides(monkeypatch) -> None:
+def test_build_resolve_use_case_merges_workspace_policy_with_stricter_cli_overrides(
+    monkeypatch,
+) -> None:
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
@@ -265,7 +298,9 @@ def test_build_resolve_use_case_merges_workspace_policy_with_stricter_cli_overri
         ),
     )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
 
     use_case, close = composition.build_resolve_use_case(
         allowed_trust_tiers_override=["verified", "untrusted"],
@@ -287,7 +322,9 @@ def test_build_resolve_use_case_merges_workspace_policy_with_stricter_cli_overri
     assert FakeRegistryClient.instances[0].closed is True
 
 
-def test_build_resolve_use_case_raises_for_invalid_workspace_policy(monkeypatch) -> None:
+def test_build_resolve_use_case_raises_for_invalid_workspace_policy(
+    monkeypatch,
+) -> None:
     FakeRegistryClient.instances = []
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
@@ -299,7 +336,9 @@ def test_build_resolve_use_case_raises_for_invalid_workspace_policy(monkeypatch)
         ),
     )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
 
     with pytest.raises(InvalidClientConfigurationError) as exc_info:
         composition.build_resolve_use_case()

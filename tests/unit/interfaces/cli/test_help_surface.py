@@ -33,7 +33,9 @@ def test_cli_install_help_exposes_selection_preference_flags() -> None:
     assert "--allow-lifecycle" in result.stdout
     assert "--max-tokens" in result.stdout
     assert "--max-content-size" in result.stdout
-    assert "discovery -> resolver -> governance -> lockfile -> execution" in result.stdout
+    assert (
+        "discovery -> resolver -> governance -> lockfile -> execution" in result.stdout
+    )
     assert "--select-slug" in result.stdout
     assert "--json" in result.stdout
     assert "Common examples" in result.stdout
@@ -49,7 +51,7 @@ def test_cli_sync_help_explains_lock_replay_flow() -> None:
     assert "Lock replay path" in result.stdout
     assert "does not call discovery or resolver" in result.stdout
     assert "uses the existing lockfile as the source of truth" in result.stdout
-    assert 'aptitude sync --lock aptitude.lock.json --json' in result.stdout
+    assert "aptitude sync --lock aptitude.lock.json --json" in result.stdout
     assert "--allow-trust" not in result.stdout
     assert "--max-tokens" not in result.stdout
 

@@ -71,7 +71,9 @@ def map_version_summary(payload: MetadataResponse) -> VersionSummary:
     )
 
 
-def map_skill_version_list_response(payload: SkillVersionListResponse) -> list[VersionSummary]:
+def map_skill_version_list_response(
+    payload: SkillVersionListResponse,
+) -> list[VersionSummary]:
     """Map version list transport payloads into version summaries."""
 
     return [
@@ -86,7 +88,9 @@ def map_skill_version_list_response(payload: SkillVersionListResponse) -> list[V
     ]
 
 
-def map_direct_dependencies(payload: DirectDependenciesResponse) -> list[DependencySpec]:
+def map_direct_dependencies(
+    payload: DirectDependenciesResponse,
+) -> list[DependencySpec]:
     """Map direct dependency transport payloads into domain models."""
 
     return [map_dependency_selector(item) for item in payload.depends_on]

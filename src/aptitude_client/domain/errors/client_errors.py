@@ -176,7 +176,9 @@ class UnsupportedDependencyShapeError(AptitudeClientError):
         self.slug = slug
         self.version = version
         self.details = details
-        super().__init__(f"Unsupported dependency shape for {slug}@{version}: {details}")
+        super().__init__(
+            f"Unsupported dependency shape for {slug}@{version}: {details}"
+        )
 
     def to_payload(self) -> dict[str, object]:
         payload = super().to_payload()

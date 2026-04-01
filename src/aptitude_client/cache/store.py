@@ -30,7 +30,11 @@ def default_cache_dir(
         )
     else:
         xdg_cache_home = env_map.get("XDG_CACHE_HOME")
-        base = Path(xdg_cache_home) if xdg_cache_home is not None else effective_home / ".cache"
+        base = (
+            Path(xdg_cache_home)
+            if xdg_cache_home is not None
+            else effective_home / ".cache"
+        )
 
     return base / "aptitude" / "cache"
 

@@ -51,7 +51,9 @@ def integration_config() -> IntegrationConfig:
     return IntegrationConfig(
         base_url=os.getenv("APTITUDE_INTEGRATION_BASE_URL", "http://localhost:8000"),
         read_token=os.getenv("APTITUDE_INTEGRATION_READ_TOKEN", "reader-token"),
-        publish_token=os.getenv("APTITUDE_INTEGRATION_PUBLISH_TOKEN", "publisher-token"),
+        publish_token=os.getenv(
+            "APTITUDE_INTEGRATION_PUBLISH_TOKEN", "publisher-token"
+        ),
         timeout_seconds=float(os.getenv("APTITUDE_INTEGRATION_TIMEOUT_SECONDS", "5.0")),
     )
 
