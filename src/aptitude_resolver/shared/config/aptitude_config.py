@@ -34,14 +34,14 @@ class PolicyConfig(BaseModel):
 
 
 class AptitudeConfig(BaseModel):
-    """Raw workspace or user config loaded from aptitude.toml."""
+    """Raw workspace or user config loaded from aptitude_resolver.toml."""
 
     selection: SelectionConfig | None = None
     policy: PolicyConfig | None = None
 
 
 def load_aptitude_config(path: Path) -> AptitudeConfig:
-    """Load one aptitude.toml file into a typed raw config model."""
+    """Load one aptitude_resolver.toml file into a typed raw config model."""
 
     try:
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -51,15 +51,15 @@ def load_aptitude_config(path: Path) -> AptitudeConfig:
     try:
         return AptitudeConfig.model_validate(payload)
     except ValidationError as exc:
-        raise ValueError(f"Invalid aptitude config at {path}: {exc}") from exc
+        raise ValueError(f"Invalid aptitude_resolver config at {path}: {exc}") from exc
 
 
 def discover_workspace_config_path(cwd: Path | None = None) -> Path | None:
-    """Find the nearest workspace aptitude.toml from the current directory upward."""
+    """Find the nearest workspace aptitude_resolver.toml from the current directory upward."""
 
     current = (cwd or Path.cwd()).resolve()
     for directory in (current, *current.parents):
-        candidate = directory / "aptitude.toml"
+        candidate = directory / "aptitude_resolver.toml"
         if candidate.is_file():
             return candidate
     return None
@@ -71,7 +71,7 @@ def discover_user_config_path(
     home: Path | None = None,
     os_name: str | None = None,
 ) -> Path | None:
-    """Return the current user's aptitude.toml path if it exists."""
+    """Return the current user's aptitude_resolver.toml path if it exists."""
 
     env_map = os.environ if env is None else env
     effective_home = Path.home() if home is None else home
@@ -84,7 +84,7 @@ def discover_user_config_path(
             if appdata is not None
             else effective_home / "AppData" / "Roaming"
         )
-        candidate = base / "aptitude" / "aptitude.toml"
+        candidate = base / "aptitude_resolver" / "aptitude_resolver.toml"
     else:
         xdg_config_home = env_map.get("XDG_CONFIG_HOME")
         base = (
@@ -92,7 +92,7 @@ def discover_user_config_path(
             if xdg_config_home is not None
             else effective_home / ".config"
         )
-        candidate = base / "aptitude" / "aptitude.toml"
+        candidate = base / "aptitude_resolver" / "aptitude_resolver.toml"
 
     if candidate.is_file():
         return candidate
@@ -100,7 +100,7 @@ def discover_user_config_path(
 
 
 def load_workspace_aptitude_config(cwd: Path | None = None) -> AptitudeConfig | None:
-    """Load the nearest workspace aptitude.toml when present."""
+    """Load the nearest workspace aptitude_resolver.toml when present."""
 
     config_path = discover_workspace_config_path(cwd)
     if config_path is None:
@@ -109,7 +109,7 @@ def load_workspace_aptitude_config(cwd: Path | None = None) -> AptitudeConfig | 
 
 
 def load_user_aptitude_config() -> AptitudeConfig | None:
-    """Load the current user's aptitude.toml when present."""
+    """Load the current user's aptitude_resolver.toml when present."""
 
     config_path = discover_user_config_path()
     if config_path is None:

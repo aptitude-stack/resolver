@@ -36,7 +36,7 @@ def default_cache_dir(
             else effective_home / ".cache"
         )
 
-    return base / "aptitude" / "cache"
+    return base / "aptitude_resolver" / "cache"
 
 
 class CacheStore:

@@ -39,3 +39,10 @@ UV_CACHE_DIR=.uv-cache uv run --extra dev python -m mypy src tests
 - logical console command name: `aptitude`
 
 Running the module entrypoint with no arguments currently enters the Textual TUI and falls back to CLI subcommands when arguments are present.
+
+## Naming Conventions
+
+- prefer `kebab-case` for non-imported filenames such as Markdown docs and similar repo artifacts
+- keep Python packages and importable module files in `snake_case`
+
+Python import paths must be valid identifiers. Using `kebab-case` for importable Python modules creates awkward or invalid imports, so this repo should not apply the same filename rule everywhere.

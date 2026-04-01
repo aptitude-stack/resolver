@@ -16,7 +16,7 @@ def run_tui_app() -> None:
 
 
 def main() -> None:
-    """Run the Typer CLI app."""
+    """Run the Typer CLI aptitude_resolver."""
 
     if len(sys.argv) == 1:
         run_tui_app()

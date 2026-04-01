@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_resolver.application import composition
+import aptitude_resolver.application.composition as composition
 from aptitude_resolver.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,

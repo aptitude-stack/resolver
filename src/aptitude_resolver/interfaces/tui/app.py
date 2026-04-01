@@ -1,4 +1,4 @@
-"""Full-screen Textual app for guided Aptitude installs."""
+"""Full-screen Textual aptitude_resolver for guided Aptitude installs."""
 
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def _render_install_result(result: InstallResultDto) -> str:
 
 
 def _installer_app(screen: Screen) -> "AptitudeInstallerApp":
-    """Return the concrete installer app controller for a screen."""
+    """Return the concrete installer aptitude_resolver controller for a screen."""
 
     return cast("AptitudeInstallerApp", screen.app)
 

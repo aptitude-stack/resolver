@@ -14,7 +14,7 @@ from aptitude_resolver.shared.config.aptitude_config import (
 
 
 def test_load_aptitude_config_reads_selection_section(tmp_path) -> None:
-    config_path = tmp_path / "aptitude.toml"
+    config_path = tmp_path / "aptitude_resolver.toml"
     config_path.write_text(
         """
 [selection]
@@ -34,7 +34,7 @@ interaction_mode = "always"
 
 
 def test_load_aptitude_config_reads_policy_section(tmp_path) -> None:
-    config_path = tmp_path / "aptitude.toml"
+    config_path = tmp_path / "aptitude_resolver.toml"
     config_path.write_text(
         """
 [policy]
@@ -63,7 +63,7 @@ max_total_content_size_bytes = 4096
 
 
 def test_load_aptitude_config_raises_for_invalid_toml(tmp_path) -> None:
-    config_path = tmp_path / "aptitude.toml"
+    config_path = tmp_path / "aptitude_resolver.toml"
     config_path.write_text("[selection\nprofile = 'low-cost'", encoding="utf-8")
 
     with pytest.raises(ValueError):
@@ -71,7 +71,7 @@ def test_load_aptitude_config_raises_for_invalid_toml(tmp_path) -> None:
 
 
 def test_discover_workspace_config_path_returns_local_aptitude_toml(tmp_path) -> None:
-    config_path = tmp_path / "aptitude.toml"
+    config_path = tmp_path / "aptitude_resolver.toml"
     config_path.write_text("", encoding="utf-8")
 
     discovered = discover_workspace_config_path(tmp_path)
@@ -80,9 +80,9 @@ def test_discover_workspace_config_path_returns_local_aptitude_toml(tmp_path) ->
 
 
 def test_discover_user_config_path_uses_windows_appdata(tmp_path) -> None:
-    config_dir = tmp_path / "AppData" / "aptitude"
+    config_dir = tmp_path / "AppData" / "aptitude_resolver"
     config_dir.mkdir(parents=True)
-    config_path = config_dir / "aptitude.toml"
+    config_path = config_dir / "aptitude_resolver.toml"
     config_path.write_text("", encoding="utf-8")
 
     discovered = discover_user_config_path(

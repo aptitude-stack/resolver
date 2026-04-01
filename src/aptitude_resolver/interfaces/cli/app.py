@@ -41,10 +41,10 @@ Required environment:
   APTITUDE_READ_TOKEN        registry read token
 
 Examples:
-  aptitude install "Postman Primary Skill"
-  aptitude install "Postman" --interaction-mode always
-  aptitude install "Postman Primary Skill" --prefer low-cost
-  aptitude sync --lock aptitude.lock.json
+  aptitude_resolver install "Postman Primary Skill"
+  aptitude_resolver install "Postman" --interaction-mode always
+  aptitude_resolver install "Postman Primary Skill" --prefer low-cost
+  aptitude_resolver sync --lock aptitude_resolver.lock.json
 
 Use `install --help` or `sync --help` for command-specific options."""
 
@@ -54,10 +54,10 @@ Fresh planning flow:
   discovery -> resolver -> governance -> lockfile -> execution
 
 Common examples:
-  aptitude install "Postman Primary Skill"
-  aptitude install "Postman" --interaction-mode always
-  aptitude install "Postman Primary Skill" --prefer low-cost
-  aptitude install "Postman Primary Skill" --json
+  aptitude_resolver install "Postman Primary Skill"
+  aptitude_resolver install "Postman" --interaction-mode always
+  aptitude_resolver install "Postman Primary Skill" --prefer low-cost
+  aptitude_resolver install "Postman Primary Skill" --json
 
 Selection behavior:
   --select-slug       bypasses ambiguity by choosing one discovered candidate
@@ -80,9 +80,9 @@ Lock replay path:
   lock parse + replay -> execution planning -> materialization
 
 Common examples:
-  aptitude sync --lock aptitude.lock.json
-  aptitude sync --lock aptitude.lock.json --target demo_postman
-  aptitude sync --lock aptitude.lock.json --json
+  aptitude_resolver sync --lock aptitude_resolver.lock.json
+  aptitude_resolver sync --lock aptitude_resolver.lock.json --target demo_postman
+  aptitude_resolver sync --lock aptitude_resolver.lock.json --json
 
 Behavior:
   uses the existing lockfile as the source of truth
@@ -95,10 +95,10 @@ Fresh planning flow:
   discovery -> resolver -> governance -> lockfile -> execution planning
 
 Common examples:
-  aptitude resolve "Postman Primary Skill"
-  aptitude resolve "Postman" --interaction-mode never
-  aptitude resolve "Postman Primary Skill" --prefer high-trust
-  aptitude resolve "Postman Primary Skill" --allow-trust verified,internal
+  aptitude_resolver resolve "Postman Primary Skill"
+  aptitude_resolver resolve "Postman" --interaction-mode never
+  aptitude_resolver resolve "Postman Primary Skill" --prefer high-trust
+  aptitude_resolver resolve "Postman Primary Skill" --allow-trust verified,internal
 
 This is the hidden preview/debug surface. It follows the same planning path as install,
 but stops after planning and prints the result instead of materializing it."""
@@ -229,7 +229,7 @@ def _format_install_success(result: InstallResultDto) -> str:
 
     if result.selected_coordinate is not None:
         lines.append(
-            "  Using aptitude candidate "
+            "  Using aptitude_resolver candidate "
             f"{result.selected_coordinate.slug} ({result.selected_coordinate.version})"
         )
 
@@ -249,7 +249,7 @@ def _format_install_success(result: InstallResultDto) -> str:
 
     if resolved_coordinates:
         lines.append(
-            "Installing collected aptitude skills: "
+            "Installing collected aptitude_resolver skills: "
             + ", ".join(slug for slug, _ in resolved_coordinates)
         )
         lines.append(
@@ -269,10 +269,10 @@ def _format_sync_success(lock_path: Path, result: SyncResultDto) -> str:
     resolved_coordinates = [
         (skill.slug, skill.version) for skill in result.installed_skills
     ]
-    lines = [f"Syncing locked aptitude skills from {lock_path.resolve()}"]
+    lines = [f"Syncing locked aptitude_resolver skills from {lock_path.resolve()}"]
     if resolved_coordinates:
         lines.append(
-            "Installing locked aptitude skills: "
+            "Installing locked aptitude_resolver skills: "
             + ", ".join(slug for slug, _ in resolved_coordinates)
         )
         lines.append(
@@ -552,7 +552,7 @@ def sync(
     lock_path: Path = typer.Option(
         ...,
         "--lock",
-        help="Path to an existing aptitude lockfile.",
+        help="Path to an existing aptitude_resolver lockfile.",
     ),
     target: Path = typer.Option(
         Path("skill_demo"),

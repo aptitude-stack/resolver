@@ -25,7 +25,7 @@ def test_canonical_docs_use_resolver_identity() -> None:
     for relative_path in files:
         text = _read(relative_path)
         assert "Aptitude Client" not in text
-        assert "aptitude-client" not in text
+        assert "aptitude_resolver-client" not in text
 
 
 def test_readme_includes_install_and_use_sections() -> None:
@@ -34,4 +34,4 @@ def test_readme_includes_install_and_use_sections() -> None:
     assert "## How To Install" in readme
     assert "## How To Use" in readme
     assert "uv sync --extra dev" in readme
-    assert 'aptitude install "Postman Primary Skill"' in readme
+    assert 'aptitude_resolver install "Postman Primary Skill"' in readme

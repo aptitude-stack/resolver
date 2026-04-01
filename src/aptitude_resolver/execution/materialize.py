@@ -117,7 +117,7 @@ def materialize_lockfile(
 
         resolution_dir = staging_root / "resolution"
         resolution_dir.mkdir(parents=True, exist_ok=True)
-        (resolution_dir / "aptitude.lock.json").write_text(
+        (resolution_dir / "aptitude_resolver.lock.json").write_text(
             serialize_lockfile(lockfile),
             encoding="utf-8",
         )

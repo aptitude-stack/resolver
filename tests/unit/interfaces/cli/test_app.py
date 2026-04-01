@@ -589,10 +589,11 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
     assert "Collecting python lint" in result.stdout
-    assert "Using aptitude candidate python.lint (1.2.3)" in result.stdout
+    assert "Using aptitude_resolver candidate python.lint (1.2.3)" in result.stdout
     assert "Collecting dependency dep.core (0.9.0)" in result.stdout
     assert (
-        "Installing collected aptitude skills: dep.core, python.lint" in result.stdout
+        "Installing collected aptitude_resolver skills: dep.core, python.lint"
+        in result.stdout
     )
     assert "Successfully installed dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
@@ -816,7 +817,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
 
 
 def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
-    lock_path = tmp_path / "aptitude.lock.json"
+    lock_path = tmp_path / "aptitude_resolver.lock.json"
     target = tmp_path / "skill_demo"
     synced_result = _synced_result(str(lock_path.resolve()), str(target))
     use_case = QueueUseCase(responses=[synced_result])
@@ -838,14 +839,20 @@ def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].lock_path == lock_path
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
-    assert f"Syncing locked aptitude skills from {lock_path.resolve()}" in result.stdout
-    assert "Installing locked aptitude skills: dep.core, python.lint" in result.stdout
+    assert (
+        f"Syncing locked aptitude_resolver skills from {lock_path.resolve()}"
+        in result.stdout
+    )
+    assert (
+        "Installing locked aptitude_resolver skills: dep.core, python.lint"
+        in result.stdout
+    )
     assert "Successfully synced dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
 
 
 def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
-    lock_path = tmp_path / "aptitude.lock.json"
+    lock_path = tmp_path / "aptitude_resolver.lock.json"
     target = tmp_path / "skill_demo"
     synced_result = _synced_result(str(lock_path.resolve()), str(target))
     use_case = QueueUseCase(responses=[synced_result])

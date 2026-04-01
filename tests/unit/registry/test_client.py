@@ -26,7 +26,7 @@ def _client(handler, *, cache_dir=None) -> RegistryClient:
         _settings(),
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
         cache_store=CacheStore(
-            cache_dir or Path(tempfile.mkdtemp(prefix="aptitude-cache-test-"))
+            cache_dir or Path(tempfile.mkdtemp(prefix="aptitude_resolver-cache-test-"))
         ),
     )
 

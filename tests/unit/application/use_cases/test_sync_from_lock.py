@@ -80,7 +80,7 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
         install_order=[dependency, root],
         conflicts=[],
     )
-    lock_path = tmp_path / "aptitude.lock.json"
+    lock_path = tmp_path / "aptitude_resolver.lock.json"
     lock_path.write_text(
         serialize_lockfile(
             build_lockfile(
@@ -171,7 +171,7 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
     )
     lock_payload.pop("selection", None)
 
-    lock_path = tmp_path / "aptitude.lock.json"
+    lock_path = tmp_path / "aptitude_resolver.lock.json"
     lock_path.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
 
     registry_client = FakeRegistryClient(content_by_coordinate)

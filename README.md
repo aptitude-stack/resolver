@@ -37,7 +37,7 @@ Typical usage starts with one of these commands:
 ```bash
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude_resolver.lock.json
 ```
 
 Use `install` for fresh planning from a query and `sync --lock` for replaying an existing lockfile. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
@@ -110,19 +110,19 @@ sync --lock aptitude.lock.json
 Install from a query:
 
 ```bash
-aptitude install "Postman Primary Skill"
+aptitude_resolver install "Postman Primary Skill"
 ```
 
 Install as JSON for automation:
 
 ```bash
-aptitude install "Postman Primary Skill" --json
+aptitude_resolver install "Postman Primary Skill" --json
 ```
 
 Sync from an existing lockfile:
 
 ```bash
-aptitude sync --lock aptitude.lock.json
+aptitude_resolver sync --lock aptitude_resolver.lock.json
 ```
 
 Preview the resolved graph, lock, and execution plan without materializing:
@@ -191,7 +191,7 @@ Run the CLI:
 ```bash
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude_resolver.lock.json
 ```
 
 Or via Python:

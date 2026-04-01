@@ -128,7 +128,7 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
         materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md"
     ).read_text(encoding="utf-8") == "# Python Lint\n"
     loaded_lockfile = load_lockfile(
-        materialized_root / "resolution" / "aptitude.lock.json"
+        materialized_root / "resolution" / "aptitude_resolver.lock.json"
     )
     assert loaded_lockfile == lockfile
     assert [item.action for item in result.trace] == [
