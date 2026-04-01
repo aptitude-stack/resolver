@@ -28,10 +28,3 @@ typecheck:
 
 package:
 	$(UV) build --no-sources
-
-publish:
-	@printf "\033[1;33mPublishing is handled by GitHub Actions trusted publishing.\033[0m\n"
-	@printf "Create and push a version tag that matches v*.\n\n"
-	@printf "Example:\n"
-	@printf "  git tag v0.1.0\n"
-	@printf "  git push origin v0.1.0\n"
