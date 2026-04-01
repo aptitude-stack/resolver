@@ -1,4 +1,4 @@
-# Aptitude Resolver
+# Aptitude
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-managed-6E56CF?style=for-the-badge&logo=uv&logoColor=white)
@@ -8,12 +8,12 @@
 [![DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-0A66C2?style=for-the-badge&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAsVBMVEVHcEwmWMYZy38Akt0gwZoSaFIbYssUmr4gwJkBlN4WbNE4acofwZkBj9k4aMkBk94WgM0bsIM4aMkewJc2ZMM3Z8cbvIwYpHsewJYAftgBkt0fvpgBkt0cv44cv5wzYckAjtsCk90pasUboXsgwJkfwpYfwJg4aMoct44yXswAkd0BkN84Z8cBktwduZIjcO85lM4hwZo5acoBleA6a88iyaABmOQ8b9QhxZ0CnOoizaOW4DOvAAAAMHRSTlMAKCfW%2FAgWA%2F7%2FDfvMc9j7MU%2Frj3XBcRW%2FJMbe7kUxjI%2FlUzzz6tPQkJ%2BjVmW1oeulmmslAAAByUlEQVQ4y32Tia6jIBSGUVFcqliXtlq73rm3d50ERNC%2B%2F4PNQetoptMeE0PgC%2F9%2FFhCaBSH9Hz2J%2BONgPDl2DolSUWY%2FPL8oEQRCfPxHpFc3Ah5wHoiI6I05NXgjAOgQF3Jn1Dlo4XMPDDes09UE2d%2BREvl3lijBg4CrHNmrbcM2u9u5nwsRcAFfFHFY5sZ607Yua3GqpQiKE6G9cZHZThblZ4T2mLnMxde3ATASMUj72o0Pbs1fADDcLHqAjEDugJ3lC%2BztMGYTADcoLaFyH%2B02DP9%2BWS4ahrXE4laALFKcq8vZfscNY8312mxfr27bLJZjnsYhSDIHmUxLu9h9N%2Fep%2B7pazwoZQw%2B1Nwi33epu7c2p8RooeqCdAHMGoOJIq3CUwIMEniRIaHVe3ZVnO2Vgsh1MstEkQUXVUc%2BjXfk3zbemxS6%2BpQmlPtUeALJ8VKj4JHvAelBqFFdSS3h1SPzQKr%2F%2BaRa0%2B0cCIWtJLauG5U%2FfbgyG01uiNqQhyzA8ddKj1OvK28AsZyN3DKE4X6AEWrU1jJx9N7RFpdPxpHU%2FtMOQG9SjfTp3Yz8KgRVKpfx88Dqhpseq606h%2F%2Bzxfh6LJ8eEDKWbxx9XEDwqzP1SVgAAAABJRU5ErkJggg%3D%3D)](https://deepwiki.com/y0ncha/aptitude-client)
 ![Last Commit](https://img.shields.io/github/last-commit/aptitude-stack/resolver?style=for-the-badge)
 
-Aptitude Resolver is a deterministic, package-manager-style resolver for AI skills.
+Aptitude is a deterministic, package-manager-style resolver for AI skills.
 
 The system is intentionally split in two:
 
 - Aptitude Server owns registry data, metadata, immutable artifacts, and discovery indexes
-- Aptitude Resolver owns intent interpretation, candidate selection, dependency resolution, governance, lock generation, and execution planning
+- Aptitude owns intent interpretation, candidate selection, dependency resolution, governance, lock generation, and execution planning
 
 ## Current CLI
 
@@ -45,7 +45,7 @@ This project builds and publishes as a normal Python package. `uv` is the build 
 The packaging metadata lives in `pyproject.toml`:
 
 - `[project]` defines the package name, version, dependencies, and console entry point
-- `[project.scripts]` maps the installed `aptitude` command to `aptitude_resolver.interfaces.cli.main:main`
+- `[project.scripts]` maps the installed `aptitude` command to `aptitude.interfaces.cli.main:main`
 - `[build-system]` tells `uv` to build the package with `uv_build`
 
 Build the package artifacts locally:
@@ -61,7 +61,7 @@ dist/*.whl
 dist/*.tar.gz
 ```
 
-The wheel is the main installable artifact. It contains the `aptitude_resolver` package, its dependency metadata, and the `aptitude` console script.
+The wheel is the main installable artifact. It contains the `aptitude` package, its dependency metadata, and the `aptitude` console script.
 
 Publish to PyPI through GitHub Actions trusted publishing:
 
@@ -83,21 +83,21 @@ The publish job uses the GitHub Environment `pypi`. That is not required by PyPI
 Install and run after publishing:
 
 ```bash
-uv tool install aptitude-resolver
+uv tool install aptitude
 aptitude --help
 ```
 
 For one-off execution without a persistent install:
 
 ```bash
-uvx aptitude-resolver --help
+uvx aptitude --help
 ```
 
 Use this mental model:
 
 - `make package` builds the distributable artifacts
 - pushing a `v*` tag triggers the trusted publishing workflow
-- `uv tool install aptitude-resolver` installs the published CLI
+- `uv tool install aptitude` installs the published CLI
 - `aptitude ...` is the command end users run after installation
 
 ## How To Use
@@ -105,9 +105,9 @@ Use this mental model:
 For repo-local development, typical usage starts with one of these commands:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude_resolver.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main sync --lock aptitude.lock.json
 ```
 
 Use `install` for fresh planning from a query and `sync --lock` for replaying an existing lockfile. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
@@ -188,31 +188,31 @@ sync --lock aptitude.lock.json
 Install from a query:
 
 ```bash
-aptitude_resolver install "Postman Primary Skill"
+aptitude install "Postman Primary Skill"
 ```
 
 Install as JSON for automation:
 
 ```bash
-aptitude_resolver install "Postman Primary Skill" --json
+aptitude install "Postman Primary Skill" --json
 ```
 
 Sync from an existing lockfile:
 
 ```bash
-aptitude_resolver sync --lock aptitude_resolver.lock.json
+aptitude sync --lock aptitude.lock.json
 ```
 
 Preview the resolved graph, lock, and execution plan without materializing:
 
 ```bash
-uv run python -m aptitude_resolver.interfaces.cli.main resolve "Postman Primary Skill"
+uv run python -m aptitude.interfaces.cli.main resolve "Postman Primary Skill"
 ```
 
 ## Current Package Map
 
 ```text
-src/aptitude_resolver/
+src/aptitude/
   application/
     dto/
     queries/
@@ -233,11 +233,10 @@ src/aptitude_resolver/
     cli/
   lockfile/
   registry/
-  resolver/
+  resolution/
     conflict/
     graph/
     normalizer/
-    replay/
     solver/
     validation/
   shared/
@@ -267,15 +266,15 @@ Requirements:
 Run the CLI:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main sync --lock aptitude_resolver.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main sync --lock aptitude.lock.json
 ```
 
 Or via Python:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
 ```
 
 Developer workflow:

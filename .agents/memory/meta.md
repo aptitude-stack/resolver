@@ -5,18 +5,18 @@
 - Current public CLI: `install`, `sync`.
 - Current hidden internal CLI: `resolve`.
 - Current package structure:
-  - `src/aptitude_resolver/application/`
-  - `src/aptitude_resolver/cache/`
-  - `src/aptitude_resolver/discovery/`
-  - `src/aptitude_resolver/domain/`
-  - `src/aptitude_resolver/execution/`
-  - `src/aptitude_resolver/governance/`
-  - `src/aptitude_resolver/interfaces/`
-  - `src/aptitude_resolver/lockfile/`
-  - `src/aptitude_resolver/registry/`
-  - `src/aptitude_resolver/resolver/`
-  - `src/aptitude_resolver/shared/`
-  - `src/aptitude_resolver/telemetry/`
+  - `src/aptitude/application/`
+  - `src/aptitude/cache/`
+  - `src/aptitude/discovery/`
+  - `src/aptitude/domain/`
+  - `src/aptitude/execution/`
+  - `src/aptitude/governance/`
+  - `src/aptitude/interfaces/`
+  - `src/aptitude/lockfile/`
+  - `src/aptitude/registry/`
+  - `src/aptitude/resolution/`
+  - `src/aptitude/shared/`
+  - `src/aptitude/telemetry/`
 - Reserved but not yet implemented as top-level packages:
   - `plugins/`
 - Canonical docs:

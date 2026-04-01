@@ -1,6 +1,6 @@
 # Module Guide
 
-This guide maps responsibilities to the current `src/aptitude_resolver/` tree.
+This guide maps responsibilities to the current `src/aptitude/` tree.
 
 ## Core Packages
 
@@ -12,7 +12,7 @@ This guide maps responsibilities to the current `src/aptitude_resolver/` tree.
 - `governance/`: legality checks before lock generation
 - `lockfile/`: durable resolved representation, serializer, parser, and replay helpers
 - `registry/`: Aptitude Server transport, auth, and transport-to-domain mapping
-- `resolver/`: deterministic version selection, root selection, dependency expansion, conflict checks, validation
+- `resolution/`: deterministic version selection, root selection, dependency expansion, conflict checks, validation
 
 ## Interface Packages
 

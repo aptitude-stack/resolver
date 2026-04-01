@@ -1,4 +1,4 @@
-# Aptitude Resolver Decision Rules
+# Aptitude Decision Rules
 
 These rules are hard constraints, not style suggestions.
 

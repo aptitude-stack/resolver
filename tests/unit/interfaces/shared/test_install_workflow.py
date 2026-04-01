@@ -5,8 +5,8 @@ from typing import Callable, Generic, TypeVar, cast
 
 import pytest
 
-from aptitude_resolver.application.dto import InstallRequestDto, ResolveQueryRequestDto
-from aptitude_resolver.interfaces.shared.install_workflow import (
+from aptitude.application.dto import InstallRequestDto, ResolveQueryRequestDto
+from aptitude.interfaces.shared.install_workflow import (
     InstallBuilder,
     InstallWorkflowOptions,
     InstallWorkflowService,

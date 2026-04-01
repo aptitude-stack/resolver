@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-import aptitude_resolver.application.composition as composition
-from aptitude_resolver.application.use_cases import (
+import aptitude.application.composition as composition
+from aptitude.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
     SyncFromLockUseCase,
 )
-from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
-from aptitude_resolver.shared.config.aptitude_config import (
+from aptitude.domain.errors import InvalidResolverConfigurationError
+from aptitude.shared.config.aptitude_config import (
     AptitudeConfig,
     PolicyConfig,
     SelectionConfig,

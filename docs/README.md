@@ -1,4 +1,4 @@
-# Aptitude Resolver Docs
+# Aptitude Docs
 
 Use this directory as the canonical documentation entrypoint for contributors, reviewers, and operators.
 

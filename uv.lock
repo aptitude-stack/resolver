@@ -59,7 +59,7 @@ wheels = [
 ]
 
 [[package]]
-name = "aptitude-resolver"
+name = "aptitude"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

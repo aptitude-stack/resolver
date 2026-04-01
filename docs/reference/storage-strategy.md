@@ -1,6 +1,6 @@
 # Storage Strategy
 
-This document describes how Aptitude Resolver stores and materializes local state today.
+This document describes how aptitude stores and materializes local state today.
 
 ## Current Strategy
 

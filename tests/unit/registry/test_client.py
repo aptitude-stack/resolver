@@ -6,10 +6,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from aptitude_resolver.cache import CacheStore
-from aptitude_resolver.domain.errors import RegistryUnavailableError, SkillNotFoundError
-from aptitude_resolver.registry.client import RegistryClient
-from aptitude_resolver.shared.config import Settings
+from aptitude.cache import CacheStore
+from aptitude.domain.errors import RegistryUnavailableError, SkillNotFoundError
+from aptitude.registry.client import RegistryClient
+from aptitude.shared.config import Settings
 
 
 def _settings() -> Settings:
@@ -26,7 +26,7 @@ def _client(handler, *, cache_dir=None) -> RegistryClient:
         _settings(),
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
         cache_store=CacheStore(
-            cache_dir or Path(tempfile.mkdtemp(prefix="aptitude_resolver-cache-test-"))
+            cache_dir or Path(tempfile.mkdtemp(prefix="resolver-cache-test-"))
         ),
     )
 

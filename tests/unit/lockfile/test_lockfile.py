@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_resolver.domain.errors import InvalidLockfileError
-from aptitude_resolver.domain.models import (
+from aptitude.domain.errors import InvalidLockfileError
+from aptitude.domain.models import (
     DependencySpec,
     DependencyEdge,
     ResolutionGraph,
@@ -11,14 +11,14 @@ from aptitude_resolver.domain.models import (
     SkillMetadata,
     SkillCoordinate,
 )
-from aptitude_resolver.domain.policy import PolicyEvaluation, SelectionPreferences
-from aptitude_resolver.lockfile import (
+from aptitude.domain.policy import PolicyEvaluation, SelectionPreferences
+from aptitude.lockfile import (
     build_lockfile,
     parse_lockfile,
     replay_lockfile,
     serialize_lockfile,
 )
-from aptitude_resolver.resolver.graph import resolve_recursive_graph
+from aptitude.resolution.graph import resolve_recursive_graph
 
 
 def _node(slug: str, version: str, *, published_at: str) -> ResolvedSkillNode:

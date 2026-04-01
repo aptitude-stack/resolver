@@ -5,23 +5,23 @@ import json
 from dataclasses import replace
 
 import pytest
-import aptitude_resolver.execution.materialize as materialize_module
+import aptitude.execution.materialize as materialize_module
 
-from aptitude_resolver.domain.errors import ContentChecksumMismatchError
-from aptitude_resolver.domain.models import (
+from aptitude.domain.errors import ContentChecksumMismatchError
+from aptitude.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude_resolver.domain.policy import PolicyEvaluation
-from aptitude_resolver.domain.tracing import TraceEntry
-from aptitude_resolver.execution import (
+from aptitude.domain.policy import PolicyEvaluation
+from aptitude.domain.tracing import TraceEntry
+from aptitude.execution import (
     build_execution_plan,
     materialize_lockfile,
     write_install_debug_artifacts,
 )
-from aptitude_resolver.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
+from aptitude.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
 
 
 class FakeRegistryClient:
@@ -128,7 +128,7 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
         materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md"
     ).read_text(encoding="utf-8") == "# Python Lint\n"
     loaded_lockfile = load_lockfile(
-        materialized_root / "resolution" / "aptitude_resolver.lock.json"
+        materialized_root / "resolution" / "aptitude.lock.json"
     )
     assert loaded_lockfile == lockfile
     assert [item.action for item in result.trace] == [

@@ -10,6 +10,6 @@ This directory contains raw Aptitude Server API artifacts and Postman exports.
 
 ## What These Files Are Not
 
-- the canonical source of Aptitude Resolver behavior
+- the canonical source of aptitude behavior
 - a substitute for `docs/architecture/*`
 - proof that the resolver should mirror server ordering or server-side decisions

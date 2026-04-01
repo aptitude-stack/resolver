@@ -5,17 +5,17 @@ import json
 
 import pytest
 
-from aptitude_resolver.application.dto import SyncRequestDto
-from aptitude_resolver.application.use_cases import SyncFromLockUseCase
-from aptitude_resolver.domain.errors import InvalidLockfileError
-from aptitude_resolver.domain.models import (
+from aptitude.application.dto import SyncRequestDto
+from aptitude.application.use_cases import SyncFromLockUseCase
+from aptitude.domain.errors import InvalidLockfileError
+from aptitude.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude_resolver.domain.policy import SelectionPreferences
-from aptitude_resolver.lockfile import build_lockfile, serialize_lockfile
+from aptitude.domain.policy import SelectionPreferences
+from aptitude.lockfile import build_lockfile, serialize_lockfile
 
 
 class FakeRegistryClient:
@@ -80,7 +80,7 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
         install_order=[dependency, root],
         conflicts=[],
     )
-    lock_path = tmp_path / "aptitude_resolver.lock.json"
+    lock_path = tmp_path / "aptitude.lock.json"
     lock_path.write_text(
         serialize_lockfile(
             build_lockfile(
@@ -171,7 +171,7 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
     )
     lock_payload.pop("selection", None)
 
-    lock_path = tmp_path / "aptitude_resolver.lock.json"
+    lock_path = tmp_path / "aptitude.lock.json"
     lock_path.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
 
     registry_client = FakeRegistryClient(content_by_coordinate)

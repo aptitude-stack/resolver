@@ -1,13 +1,13 @@
-# Aptitude Resolver System Overview
+# Aptitude System Overview
 
 ## Identity
 
-Aptitude Resolver is the local decision-making engine for AI skill planning and materialization.
+Aptitude is the local decision-making engine for AI skill planning and materialization.
 
 The system is intentionally split:
 
 - Aptitude Server owns registry data, immutable metadata, immutable artifacts, and indexed candidate retrieval.
-- Aptitude Resolver owns intent interpretation, candidate selection, dependency solving, governance, locking, and execution planning.
+- Aptitude owns intent interpretation, candidate selection, dependency solving, governance, locking, and execution planning.
 
 The server returns facts.
 The resolver makes decisions.
@@ -56,7 +56,7 @@ Lock replay is intentionally shorter. Once a valid lock exists, discovery and de
 
 ## Package Boundaries
 
-The current package tree is rooted at `src/aptitude_resolver/`.
+The current package tree is rooted at `src/aptitude/`.
 
 - `application/`: orchestration and DTO boundaries
 - `cache/`: advisory caching helpers
@@ -67,7 +67,7 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 - `interfaces/`: CLI, shared interface helpers, and TUI surfaces
 - `lockfile/`: lock schema, serializer, parser, and replay helpers
 - `registry/`: Aptitude Server transport boundary and transport-to-domain mapping
-- `resolver/`: deterministic version choice, root selection, dependency expansion, and validation
+- `resolution/`: deterministic version choice, root selection, dependency expansion, and validation
 - `shared/`: config, logging, and small shared utilities
 - `telemetry/`: additive metrics and instrumentation
 

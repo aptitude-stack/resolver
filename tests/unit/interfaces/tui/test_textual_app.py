@@ -6,7 +6,7 @@ from pathlib import Path
 
 from textual.widgets import Input, Static
 
-from aptitude_resolver.application.dto import (
+from aptitude.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
@@ -23,8 +23,8 @@ from aptitude_resolver.application.dto import (
     ResolveSkillSummaryDto,
     TraceEntryDto,
 )
-from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
-from aptitude_resolver.interfaces.tui.app import AptitudeInstallerApp
+from aptitude.domain.errors import InvalidResolverConfigurationError
+from aptitude.interfaces.tui.app import AptitudeInstallerApp
 
 
 class FakeWorkflowService:

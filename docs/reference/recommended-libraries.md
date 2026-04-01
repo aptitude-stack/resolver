@@ -1,4 +1,4 @@
-# Aptitude Resolver Recommended Libraries
+# Aptitude Recommended Libraries
 
 ## Purpose
 
@@ -32,7 +32,7 @@ Add these only if the corresponding capability becomes real:
 - `pluggy`: plugin surface under a future `plugins/` package
 - `resolvelib`: only if the current deterministic resolver outgrows the explicit implementation
 - `networkx`: only if graph analysis or visualization clearly justifies it
-- `fastapi` / `uvicorn`: only if Aptitude Resolver grows a local HTTP service surface
+- `fastapi` / `uvicorn`: only if Aptitude grows a local HTTP service surface
 
 ## Guidance
 

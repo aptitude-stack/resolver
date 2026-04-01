@@ -44,7 +44,7 @@ Current main packages:
 - `interfaces/`
 - `lockfile/`
 - `registry/`
-- `resolver/`
+- `resolution/`
 - `shared/`
 - `cache/`
 - `telemetry/`

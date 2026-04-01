@@ -1,6 +1,6 @@
 # Contributor Guide
 
-This section is for engineers changing the Aptitude Resolver codebase.
+This section is for engineers changing the aptitude codebase.
 
 ## Reading Order
 

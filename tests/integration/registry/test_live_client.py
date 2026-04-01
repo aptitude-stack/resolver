@@ -7,9 +7,9 @@ from dataclasses import dataclass
 import httpx
 import pytest
 
-from aptitude_resolver.domain.errors import InvalidCoordinateError, SkillNotFoundError
-from aptitude_resolver.registry.client import RegistryClient
-from aptitude_resolver.shared.config import Settings
+from aptitude.domain.errors import InvalidCoordinateError, SkillNotFoundError
+from aptitude.registry.client import RegistryClient
+from aptitude.shared.config import Settings
 
 
 pytestmark = pytest.mark.integration

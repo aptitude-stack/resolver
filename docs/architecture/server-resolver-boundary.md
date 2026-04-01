@@ -1,6 +1,6 @@
 # Server-Resolver Boundary
 
-This document defines the hard ownership split between Aptitude Server and Aptitude Resolver.
+This document defines the hard ownership split between Aptitude Server and aptitude.
 
 ## Server Owns Facts
 

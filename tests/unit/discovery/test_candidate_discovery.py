@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery
-from aptitude_resolver.domain.models import (
+from aptitude.discovery import DiscoverSkillCandidatesQuery
+from aptitude.domain.models import (
     SkillCoordinate,
     SkillIdentity,
     VersionSummary,

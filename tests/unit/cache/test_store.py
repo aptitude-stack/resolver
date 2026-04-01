@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from aptitude_resolver.cache import (
+from aptitude.cache import (
     CacheStore,
     content_key,
     discovery_key,
     metadata_key,
     version_list_key,
 )
-from aptitude_resolver.domain.models import DiscoveryQuery
+from aptitude.domain.models import DiscoveryQuery
 
 
 def test_cache_store_round_trips_values(tmp_path) -> None:

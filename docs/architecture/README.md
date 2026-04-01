@@ -1,6 +1,6 @@
 # Architecture Docs
 
-These files define the current normative technical truth for Aptitude Resolver.
+These files define the current normative technical truth for Aptitude.
 
 ## Reading Order
 

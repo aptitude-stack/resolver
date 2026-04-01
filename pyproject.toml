@@ -1,5 +1,5 @@
 [project]
-name = "aptitude-resolver"
+name = "aptitude"
 version = "0.1.0"
 description = "Deterministic package-manager-style resolver for AI skills"
 readme = "README.md"
@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-aptitude = "aptitude_resolver.interfaces.cli.main:main"
+aptitude = "aptitude.interfaces.cli.main:main"
 
 [build-system]
 requires = ["uv_build>=0.10.8,<0.11.0"]
