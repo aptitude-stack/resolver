@@ -13,6 +13,7 @@ ENV/
 .env/
 .env.*
 .env
+!.env.example
 .direnv/
 
 # Packaging / build
@@ -53,3 +54,6 @@ htmlcov/
 .uv-cache
 
 .tmp_migration.db
+/.trace_cov/
+/.uv-tools/
+/.codex/

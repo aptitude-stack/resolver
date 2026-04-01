@@ -1,0 +1,18 @@
+{
+  "steps": [
+    {
+      "node_id": "postman.dep.1775055812741-30910@1.0.0",
+      "skill": "postman.dep.1775055812741-30910",
+      "version": "1.0.0",
+      "artifact_ref": "/skills/postman.dep.1775055812741-30910/1.0.0/content",
+      "action": "materialize_local_skill"
+    },
+    {
+      "node_id": "postman.primary.1775055812741-30910@1.0.0",
+      "skill": "postman.primary.1775055812741-30910",
+      "version": "1.0.0",
+      "artifact_ref": "/skills/postman.primary.1775055812741-30910/1.0.0/content",
+      "action": "materialize_local_skill"
+    }
+  ]
+}

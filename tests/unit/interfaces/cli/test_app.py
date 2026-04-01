@@ -676,6 +676,29 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(
     assert close_calls == ["closed"]
 
 
+def test_cli_install_reports_missing_environment_variables_cleanly(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(
+        app_module, "build_install_use_case", composition.build_install_use_case
+    )
+    monkeypatch.delenv("APTITUDE_SERVER_BASE_URL", raising=False)
+    monkeypatch.delenv("APTITUDE_READ_TOKEN", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app_module.app, ["install", "python lint"])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "Aptitude is not configured." in result.stderr
+    assert "APTITUDE_SERVER_BASE_URL" in result.stderr
+    assert "APTITUDE_READ_TOKEN" in result.stderr
+    assert ".env" in result.stderr
+    assert "InvalidResolverConfigurationError" not in result.stderr
+    assert "Traceback" not in result.stderr
+
+
 def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> None:
     use_case = QueueUseCase(
         responses=[_resolved_result(selection_mode="non_interactive_top_ranked")]
@@ -931,13 +954,33 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     assert result.stdout == ""
 
 
-def test_format_error_wraps_structured_payload_for_cli_output() -> None:
+def test_format_error_renders_environment_configuration_errors_for_humans() -> None:
     rendered = app_module._format_error(
-        InvalidResolverConfigurationError("environment", "unsupported interaction mode")
+        InvalidResolverConfigurationError(
+            "environment",
+            "Missing required environment variables: "
+            "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN.",
+        )
+    )
+
+    assert "Aptitude is not configured." in rendered
+    assert "APTITUDE_SERVER_BASE_URL" in rendered
+    assert "APTITUDE_READ_TOKEN" in rendered
+    assert ".env" in rendered
+    assert "InvalidResolverConfigurationError" not in rendered
+
+
+def test_format_error_keeps_structured_payload_for_non_environment_config_errors() -> (
+    None
+):
+    rendered = app_module._format_error(
+        InvalidResolverConfigurationError(
+            "CLI override", "unsupported interaction mode"
+        )
     )
 
     assert '"type": "InvalidResolverConfigurationError"' in rendered
-    assert '"source": "environment"' in rendered
+    assert '"source": "CLI override"' in rendered
     assert '"details": "unsupported interaction mode"' in rendered
 
 

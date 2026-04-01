@@ -102,3 +102,56 @@ def test_install_query_closes_builder_when_use_case_raises() -> None:
         )
 
     assert close_calls == ["closed"]
+
+
+def test_install_query_applies_builder_overrides_and_forwards_install_controls() -> (
+    None
+):
+    response = object()
+    use_case = QueueUseCase[InstallRequestDto, object](responses=[response])
+    builder_kwargs: dict[str, object] = {}
+    close_calls: list[str] = []
+    target = Path("project/.aptitude")
+
+    def build_install_use_case(
+        **kwargs: object,
+    ) -> tuple[QueueUseCase[InstallRequestDto, object], Callable[[], None]]:
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    service = InstallWorkflowService(
+        install_builder=cast(InstallBuilder, build_install_use_case)
+    )
+
+    result = service.install_query(
+        query="python lint",
+        version="1.2.3",
+        select_slug="python.lint",
+        target=target,
+        interaction_mode="never",
+        prompt_capable=False,
+        selection_source="cli_flag",
+        options=InstallWorkflowOptions(
+            selection_profile="low-cost",
+            interaction_mode="never",
+            allowed_trust_tiers=["verified", "internal"],
+            allowed_lifecycle_statuses=["published"],
+            max_token_estimate=300,
+            max_content_size_bytes=4096,
+        ),
+    )
+
+    assert result is response
+    assert builder_kwargs == {
+        "selection_profile_override": "low-cost",
+        "interaction_mode_override": "never",
+        "allowed_trust_tiers_override": ["verified", "internal"],
+        "allowed_lifecycle_statuses_override": ["published"],
+        "max_token_estimate_override": 300,
+        "max_content_size_bytes_override": 4096,
+    }
+    assert use_case.requests[0].target == target
+    assert use_case.requests[0].interaction_mode == "never"
+    assert use_case.requests[0].prompt_capable is False
+    assert use_case.requests[0].selection_source == "cli_flag"
+    assert close_calls == ["closed"]

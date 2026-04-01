@@ -1,0 +1,68 @@
+{
+  "root": {
+    "slug": "postman.primary.1775055812741-30910",
+    "version": "1.0.0"
+  },
+  "nodes": [
+    {
+      "slug": "postman.dep.1775055812741-30910",
+      "version": "1.0.0",
+      "name": "Postman Dependency Skill",
+      "description": "Dependency seed for relationship coverage",
+      "tags": [
+        "postman",
+        "sanity",
+        "dependency"
+      ],
+      "runtime": null,
+      "rendered_summary": "Dependency seed for relationship coverage",
+      "lifecycle_status": "published",
+      "trust_tier": "untrusted",
+      "published_at": "2026-04-01T15:03:33.149553Z"
+    },
+    {
+      "slug": "postman.primary.1775055812741-30910",
+      "version": "1.0.0",
+      "name": "Postman Primary Skill",
+      "description": "Primary sanity skill for collection coverage",
+      "tags": [
+        "postman",
+        "sanity",
+        "primary"
+      ],
+      "runtime": null,
+      "rendered_summary": "Primary sanity skill for collection coverage",
+      "lifecycle_status": "published",
+      "trust_tier": "internal",
+      "published_at": "2026-04-01T15:03:33.547576Z"
+    }
+  ],
+  "edges": [
+    {
+      "source": {
+        "slug": "postman.primary.1775055812741-30910",
+        "version": "1.0.0"
+      },
+      "target": {
+        "slug": "postman.dep.1775055812741-30910",
+        "version": "1.0.0"
+      },
+      "edge_type": "depends_on",
+      "optional": false,
+      "markers": [
+        "linux"
+      ]
+    }
+  ],
+  "install_order": [
+    {
+      "slug": "postman.dep.1775055812741-30910",
+      "version": "1.0.0"
+    },
+    {
+      "slug": "postman.primary.1775055812741-30910",
+      "version": "1.0.0"
+    }
+  ],
+  "conflicts": []
+}

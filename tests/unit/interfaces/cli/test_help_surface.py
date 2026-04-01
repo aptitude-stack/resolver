@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from typer.testing import CliRunner
 
@@ -70,3 +71,20 @@ def test_hidden_resolve_help_is_rich_even_though_root_help_hides_it() -> None:
     assert "--allow-lifecycle" in result.stdout
     assert "--max-tokens" in result.stdout
     assert "--max-content-size" in result.stdout
+
+
+def test_makefile_exposes_demo_target_that_sources_repo_env() -> None:
+    makefile = Path("Makefile").read_text()
+
+    assert "\ndemo:\n" in makefile
+    assert ". ./.env" in makefile
+    assert 'install "Postman Primary Skill"' in makefile
+
+
+def test_env_example_documents_required_registry_fields() -> None:
+    env_example = Path(".env.example")
+
+    assert env_example.exists()
+    contents = env_example.read_text()
+    assert "APTITUDE_SERVER_BASE_URL=" in contents
+    assert "APTITUDE_READ_TOKEN=" in contents

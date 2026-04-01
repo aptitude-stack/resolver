@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from aptitude.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
@@ -18,6 +20,7 @@ from aptitude.shared.config import (
     PolicyConfig,
     SelectionConfig,
     Settings,
+    describe_settings_validation_error,
     load_user_aptitude_config,
     load_workspace_aptitude_config,
     read_env_selection_overrides,
@@ -27,7 +30,14 @@ from aptitude.shared.config import (
 def build_registry_client() -> tuple[RegistryClient, Callable[[], None]]:
     """Create a registry client and its cleanup hook."""
 
-    registry_client = RegistryClient(Settings())
+    try:
+        settings = Settings()
+    except ValidationError as exc:
+        raise InvalidResolverConfigurationError(
+            "environment", describe_settings_validation_error(exc)
+        ) from exc
+
+    registry_client = RegistryClient(settings)
     return registry_client, registry_client.close
 
 

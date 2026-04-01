@@ -1,6 +1,6 @@
 UV ?= UV_CACHE_DIR=.uv-cache uv
 
-.PHONY: run debug test lint format typecheck package publish
+.PHONY: run debug demo test test-cov lint format typecheck package publish
 
 run:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude\033[0m\n"
@@ -14,8 +14,24 @@ debug:
 	@printf "\033[0;36m  Stop:\033[0m  Ctrl+C\n\n"
 	@PYTHONPATH=src PYTHONDEVMODE=1 .venv/bin/python -m aptitude.interfaces.cli.main
 
+demo:
+	@test -f .env || { \
+		printf "\033[1;31merror:\033[0m missing .env file. Copy .env.example to .env and fill in your local values.\n"; \
+		exit 1; \
+	}
+	@printf "\033[1;36m==>\033[0m \033[1mRunning Aptitude demo install\033[0m\n"
+	@printf "\033[0;36m  Query:\033[0m  Postman Primary Skill\n"
+	@printf "\033[0;36m  Env:\033[0m    .env\n\n"
+	@set -a; \
+	. ./.env; \
+	set +a; \
+	PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
+
 test:
 	$(UV) run --extra dev python -m pytest -q
+
+test-cov:
+	$(UV) run --extra dev python -m pytest --cov=src/aptitude --cov-branch --cov-report=term-missing -q
 
 lint:
 	$(UV) run --extra dev ruff check src tests

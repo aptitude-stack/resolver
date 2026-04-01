@@ -20,7 +20,10 @@ from aptitude.application.dto import (
     ResolveQueryResultDto,
     SyncResultDto,
 )
-from aptitude.domain.errors import AptitudeResolverError
+from aptitude.domain.errors import (
+    AptitudeResolverError,
+    InvalidResolverConfigurationError,
+)
 from aptitude.interfaces.shared import (
     InteractionMode,
     InstallWorkflowOptions,
@@ -112,12 +115,48 @@ def main() -> None:
 
 
 def _format_error(error: AptitudeResolverError) -> str:
+    if isinstance(
+        error, InvalidResolverConfigurationError
+    ) and error.source.lower() == ("environment"):
+        return _format_environment_configuration_error(error)
+
     return json.dumps(
         {
             "error": error.to_payload(),
         },
         indent=2,
     )
+
+
+def _format_environment_configuration_error(
+    error: InvalidResolverConfigurationError,
+) -> str:
+    """Render environment setup failures without leaking internal error mechanics."""
+
+    missing_variables = _parse_missing_environment_variables(error.details)
+    lines = ["Aptitude is not configured."]
+
+    if missing_variables:
+        lines.append("Set the required environment variables:")
+        lines.extend(f"  - {name}" for name in missing_variables)
+    else:
+        lines.append(error.details)
+
+    lines.append("")
+    lines.append(
+        "Export them in your shell or place them in a local .env file, then try again."
+    )
+    return "\n".join(lines)
+
+
+def _parse_missing_environment_variables(details: str) -> list[str]:
+    """Extract missing environment variable names from one settings error string."""
+
+    prefix = "Missing required environment variables: "
+    if not details.startswith(prefix):
+        return []
+    names = details.removeprefix(prefix).rstrip(".")
+    return [name.strip() for name in names.split(",") if name.strip()]
 
 
 def _build_workflow_service() -> InstallWorkflowService:

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "generated_at": "2026-04-01T15:03:33.547576Z",
+  "client_version": null,
+  "root": {
+    "request": "Postman Primary Skill",
+    "requested_version": null,
+    "selected_node_id": "postman.primary.1775055812741-30910@1.0.0",
+    "selection_mode": "single_candidate"
+  },
+  "nodes": [
+    {
+      "node_id": "postman.dep.1775055812741-30910@1.0.0",
+      "slug": "postman.dep.1775055812741-30910",
+      "version": "1.0.0",
+      "artifact_ref": "/skills/postman.dep.1775055812741-30910/1.0.0/content",
+      "name": "Postman Dependency Skill",
+      "description": "Dependency seed for relationship coverage",
+      "tags": [
+        "dependency",
+        "postman",
+        "sanity"
+      ],
+      "headers": {},
+      "rendered_summary": "Dependency seed for relationship coverage",
+      "lifecycle_status": "published",
+      "trust_tier": "untrusted",
+      "published_at": "2026-04-01T15:03:33.149553Z",
+      "content_checksum": {
+        "algorithm": "sha256",
+        "digest": "c6de41b8777493129212b5fe2178db1b374b369c00ef4fbfd8f910f5581ed4cd",
+        "size_bytes": 76
+      }
+    },
+    {
+      "node_id": "postman.primary.1775055812741-30910@1.0.0",
+      "slug": "postman.primary.1775055812741-30910",
+      "version": "1.0.0",
+      "artifact_ref": "/skills/postman.primary.1775055812741-30910/1.0.0/content",
+      "name": "Postman Primary Skill",
+      "description": "Primary sanity skill for collection coverage",
+      "tags": [
+        "postman",
+        "primary",
+        "sanity"
+      ],
+      "headers": {},
+      "rendered_summary": "Primary sanity skill for collection coverage",
+      "lifecycle_status": "published",
+      "trust_tier": "internal",
+      "published_at": "2026-04-01T15:03:33.547576Z",
+      "content_checksum": {
+        "algorithm": "sha256",
+        "digest": "9c83402fb4eba28d5c49e0eed1db0aa4cfac698ea31c0181aac7f1ace904954d",
+        "size_bytes": 79
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_node_id": "postman.primary.1775055812741-30910@1.0.0",
+      "target_node_id": "postman.dep.1775055812741-30910@1.0.0",
+      "edge_type": "depends_on",
+      "optional": false,
+      "markers": [
+        "linux"
+      ]
+    }
+  ],
+  "install_order": [
+    "postman.dep.1775055812741-30910@1.0.0",
+    "postman.primary.1775055812741-30910@1.0.0"
+  ],
+  "selection": {
+    "profile": "balanced",
+    "interaction_mode": "auto",
+    "profile_source": "default",
+    "interaction_mode_source": "default"
+  },
+  "policy": {
+    "profile": "default",
+    "source": "client_default",
+    "allowed_lifecycle_statuses": [
+      "published",
+      "deprecated",
+      "archived"
+    ],
+    "allowed_trust_tiers": [
+      "verified",
+      "internal",
+      "untrusted"
+    ],
+    "max_token_estimate": null,
+    "max_content_size_bytes": null,
+    "max_total_token_estimate": null,
+    "max_total_content_size_bytes": null
+  },
+  "governance": [
+    {
+      "rule": "allowed_lifecycle_status",
+      "passed": true,
+      "message": "Lifecycle 'published' is allowed.",
+      "node_id": "postman.dep.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "allowed_lifecycle_status",
+      "passed": true,
+      "message": "Lifecycle 'published' is allowed.",
+      "node_id": "postman.primary.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "allowed_trust_tiers",
+      "passed": true,
+      "message": "Trust tier 'untrusted' is allowed.",
+      "node_id": "postman.dep.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "allowed_trust_tiers",
+      "passed": true,
+      "message": "Trust tier 'internal' is allowed.",
+      "node_id": "postman.primary.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "max_content_size_bytes",
+      "passed": true,
+      "message": "No content size ceiling is configured.",
+      "node_id": "postman.dep.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "max_content_size_bytes",
+      "passed": true,
+      "message": "No content size ceiling is configured.",
+      "node_id": "postman.primary.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "max_token_estimate",
+      "passed": true,
+      "message": "No token estimate ceiling is configured.",
+      "node_id": "postman.dep.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "max_token_estimate",
+      "passed": true,
+      "message": "No token estimate ceiling is configured.",
+      "node_id": "postman.primary.1775055812741-30910@1.0.0"
+    },
+    {
+      "rule": "max_total_content_size_bytes",
+      "passed": true,
+      "message": "No aggregate content size ceiling is configured.",
+      "node_id": null
+    },
+    {
+      "rule": "max_total_token_estimate",
+      "passed": true,
+      "message": "No aggregate token estimate ceiling is configured.",
+      "node_id": null
+    }
+  ]
+}

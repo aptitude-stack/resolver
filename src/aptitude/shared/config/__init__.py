@@ -11,13 +11,17 @@ from aptitude.shared.config.aptitude_config import (
     load_workspace_aptitude_config,
     read_env_selection_overrides,
 )
-from aptitude.shared.config.settings import Settings
+from aptitude.shared.config.settings import (
+    Settings,
+    describe_settings_validation_error,
+)
 
 __all__ = [
     "AptitudeConfig",
     "PolicyConfig",
     "SelectionConfig",
     "Settings",
+    "describe_settings_validation_error",
     "discover_user_config_path",
     "discover_workspace_config_path",
     "load_aptitude_config",

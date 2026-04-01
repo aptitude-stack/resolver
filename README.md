@@ -1,4 +1,4 @@
-# Aptitude
+# Aptitude Resolver
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-managed-6E56CF?style=for-the-badge&logo=uv&logoColor=white)
@@ -286,6 +286,7 @@ make format-check
 make lint
 make typecheck
 make test
+make test-cov
 make check
 ```
 

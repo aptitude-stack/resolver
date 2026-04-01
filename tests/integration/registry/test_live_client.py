@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import uuid
 from dataclasses import dataclass
 
@@ -13,23 +12,6 @@ from aptitude.shared.config import Settings
 
 
 pytestmark = pytest.mark.integration
-
-
-def _require_integration_enabled() -> None:
-    if os.getenv("APTITUDE_RUN_INTEGRATION") != "1":
-        pytest.skip(
-            "Set APTITUDE_RUN_INTEGRATION=1 to run live Aptitude server integration tests."
-        )
-
-
-@dataclass(frozen=True)
-class IntegrationConfig:
-    """Runtime configuration for live server integration tests."""
-
-    base_url: str
-    read_token: str
-    publish_token: str
-    timeout_seconds: float
 
 
 @dataclass(frozen=True)
@@ -45,30 +27,7 @@ class PublishedSkillSet:
 
 
 @pytest.fixture(scope="session")
-def integration_config() -> IntegrationConfig:
-    _require_integration_enabled()
-
-    return IntegrationConfig(
-        base_url=os.getenv("APTITUDE_INTEGRATION_BASE_URL", "http://localhost:8000"),
-        read_token=os.getenv("APTITUDE_INTEGRATION_READ_TOKEN", "reader-token"),
-        publish_token=os.getenv(
-            "APTITUDE_INTEGRATION_PUBLISH_TOKEN", "publisher-token"
-        ),
-        timeout_seconds=float(os.getenv("APTITUDE_INTEGRATION_TIMEOUT_SECONDS", "5.0")),
-    )
-
-
-@pytest.fixture(scope="session")
-def integration_settings(integration_config: IntegrationConfig) -> Settings:
-    return Settings(
-        server_base_url=integration_config.base_url,
-        read_token=integration_config.read_token,
-        server_timeout_seconds=integration_config.timeout_seconds,
-    )
-
-
-@pytest.fixture(scope="session")
-def published_skill_set(integration_config: IntegrationConfig) -> PublishedSkillSet:
+def published_skill_set(integration_config, publish_token: str) -> PublishedSkillSet:
     run_id = uuid.uuid4().hex
     dependency_slug = f"it.dep.{run_id}"
     primary_slug = f"it.primary.{run_id}"
@@ -79,7 +38,7 @@ def published_skill_set(integration_config: IntegrationConfig) -> PublishedSkill
     publish_headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {integration_config.publish_token}",
+        "Authorization": f"Bearer {publish_token}",
     }
 
     dependency_payload = {

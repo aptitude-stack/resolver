@@ -1,0 +1,22 @@
+{
+  "slug": "postman.dep.1775055812741-30910",
+  "version": "1.0.0",
+  "name": "Postman Dependency Skill",
+  "description": "Dependency seed for relationship coverage",
+  "tags": [
+    "dependency",
+    "postman",
+    "sanity"
+  ],
+  "headers": {},
+  "rendered_summary": "Dependency seed for relationship coverage",
+  "lifecycle_status": "published",
+  "trust_tier": "untrusted",
+  "published_at": "2026-04-01T15:03:33.149553Z",
+  "artifact_ref": "/skills/postman.dep.1775055812741-30910/1.0.0/content",
+  "content_checksum": {
+    "algorithm": "sha256",
+    "digest": "c6de41b8777493129212b5fe2178db1b374b369c00ef4fbfd8f910f5581ed4cd",
+    "size_bytes": 76
+  }
+}

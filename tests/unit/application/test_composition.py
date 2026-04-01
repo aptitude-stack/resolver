@@ -14,6 +14,7 @@ from aptitude.shared.config.aptitude_config import (
     PolicyConfig,
     SelectionConfig,
 )
+from aptitude.shared.config.settings import Settings
 
 
 class FakeSettings:
@@ -62,6 +63,23 @@ def test_build_install_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
     close()
 
     assert FakeRegistryClient.instances[0].closed is True
+
+
+def test_build_registry_client_reports_missing_environment_variables_cleanly(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(composition, "Settings", lambda: Settings(_env_file=None))
+    monkeypatch.delenv("APTITUDE_SERVER_BASE_URL", raising=False)
+    monkeypatch.delenv("APTITUDE_READ_TOKEN", raising=False)
+
+    with pytest.raises(InvalidResolverConfigurationError) as exc_info:
+        composition.build_registry_client()
+
+    assert exc_info.value.source == "environment"
+    assert (
+        exc_info.value.details == "Missing required environment variables: "
+        "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN."
+    )
 
 
 def test_build_resolve_use_case_merges_selection_preferences_with_cli_precedence(
