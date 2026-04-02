@@ -97,7 +97,8 @@ PLAN_SUMMARY_LABEL_WIDTH = len("Interaction")
 
 WORDMARKS: dict[BannerStyle, str] = {
     "classic": (
-        "   ______          __          \n\n"
+        "\n"
+        "   ______          __          \n"
         "  /\\  _  \\        /\\ \\__       \n"
         "  \\ \\ \\L\\ \\  _____\\ \\ ,_\\      \n"
         "   \\ \\  __ \\/\\ '__`\\ \\ \\/      \n"
@@ -750,15 +751,18 @@ class CliWizard:
         try:
             self._render_header(initial_flow=initial_flow)
             flow: WizardLauncherAction | None = initial_flow
+            launcher_menu_rendered = False
             while True:
                 if flow is None:
-                    self._print_step_separator()
+                    if launcher_menu_rendered:
+                        self._print_step_separator()
                     selected_flow: WizardLauncherAction = self._select(
                         "Choose a flow",
                         FLOW_OPTIONS,
                         "Start with install, sync, or help.",
                         FLOW_DESCRIPTIONS,
                     )
+                    launcher_menu_rendered = True
                     flow = selected_flow
                 if flow == "help":
                     self._console.print(_render_cli_manifest())
@@ -768,13 +772,11 @@ class CliWizard:
                     self._console.print("Exited.", style="yellow")
                     return
                 if flow == "sync":
-                    self._print_step_separator()
                     sync_result = self._run_sync_flow()
                     self._print_step_separator()
                     self._console.print(_render_materialization_panel(sync_result))
                     return
 
-                self._print_step_separator()
                 install_outcome = self._run_install_flow(initial_query=initial_query)
                 if install_outcome is None:
                     return
@@ -807,6 +809,7 @@ class CliWizard:
 
         query = initial_query.strip() if initial_query is not None else None
         if query is None:
+            self._print_step_separator()
             query = self._prompt_install_query()
         if not query:
             self._console.print("No query entered. Exiting.", style="yellow")
@@ -919,6 +922,7 @@ class CliWizard:
     def _run_sync_flow(self) -> SyncResultDto:
         """Run the guided sync flow after the user selects it."""
 
+        self._print_step_separator()
         lock_path = Path(
             self._prompt_text("Lockfile path", "aptitude.lock.json").strip()
             or "aptitude.lock.json"

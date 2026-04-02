@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import builtins
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from io import StringIO
 from pathlib import Path
@@ -32,6 +32,7 @@ from aptitude_resolver.application.dto import (
 from aptitude_resolver.domain.errors import DiscoveryNoCandidatesError
 from aptitude_resolver.interfaces.cli import wizard as wizard_module
 from aptitude_resolver.interfaces.cli.wizard import CliWizard
+from aptitude_resolver.interfaces.shared import InstallWorkflowOptions
 from aptitude_resolver.telemetry.metrics import StageTiming
 
 
@@ -69,6 +70,40 @@ class FakeWorkflowService:
         self.sync_calls.append(kwargs)
         assert self.sync_responses
         return self.sync_responses.pop(0)
+
+
+def _select_direct_install_option(select_calls: list[str]) -> Callable[..., str]:
+    def select_one(title: str, *_args: object, **_kwargs: object) -> str:
+        select_calls.append(title)
+        return "balanced" if title == "Selection profile" else "auto"
+
+    return select_one
+
+
+def _select_direct_install_event(events: list[str]) -> Callable[..., str]:
+    def select_one(title: str, *_args: object, **_kwargs: object) -> str:
+        events.append(f"select:{title}")
+        return "balanced" if title == "Selection profile" else "auto"
+
+    return select_one
+
+
+def _record_separator(
+    events: list[str], original_print_step_separator: Callable[[], None]
+) -> Callable[[], None]:
+    def wrapped() -> None:
+        events.append("separator")
+        original_print_step_separator()
+
+    return wrapped
+
+
+def _record_prompt(events: list[str], answers: Iterator[str]) -> Callable[..., str]:
+    def prompt_text(label: str, *_args: object, **_kwargs: object) -> str:
+        events.append(f"prompt:{label}")
+        return next(answers)
+
+    return prompt_text
 
 
 def _resolved_result(
@@ -449,6 +484,25 @@ def test_cli_wizard_passes_flow_descriptions_to_selector() -> None:
     }
 
 
+def test_cli_wizard_does_not_print_back_to_back_separators_before_launcher_menu() -> (
+    None
+):
+    transcript = StringIO()
+
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    wizard.run()
+
+    separator = "─" * 80
+    assert f"{separator}\n\n{separator}" not in transcript.getvalue()
+
+
 def test_active_menu_description_follows_hovered_option() -> None:
     descriptions = {
         "install": "Guided fresh planning and materialization.",
@@ -580,9 +634,7 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
         workflow_service=service,
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=prompt_text,
-        select_one=lambda title, *_, **__: (
-            select_calls.append(title) or ("balanced" if title == "Selection profile" else "auto")
-        ),
+        select_one=_select_direct_install_option(select_calls),
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -593,9 +645,38 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     assert prompt_calls == []
     assert select_calls[:2] == ["Selection profile", "Interaction mode"]
     assert service.resolve_calls[0]["query"] == "postman primary skill"
-    assert service.resolve_calls[0]["options"].selection_profile == "balanced"
-    assert service.resolve_calls[0]["options"].interaction_mode == "auto"
+    options = cast(InstallWorkflowOptions, service.resolve_calls[0]["options"])
+    assert options.selection_profile == "balanced"
+    assert options.interaction_mode == "auto"
     assert service.install_calls[0]["query"] == "postman primary skill"
+
+
+def test_cli_wizard_direct_install_flow_prints_one_separator_before_selection_profile() -> (
+    None
+):
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    events: list[str] = []
+    confirmations = iter([True])
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=_select_direct_install_event(events),
+        confirm=lambda *_, **__: next(confirmations),
+    )
+    original_print_step_separator = wizard._print_step_separator
+    wizard._print_step_separator = _record_separator(  # type: ignore[method-assign]
+        events, original_print_step_separator
+    )
+
+    wizard.run(initial_flow="install", initial_query="postman primary skill")
+
+    assert events[:2] == ["separator", "select:Selection profile"]
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
@@ -618,6 +699,31 @@ def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
     assert service.sync_calls[0]["lock_path"] == Path("aptitude.lock.json")
     assert service.sync_calls[0]["target"] == Path("demo_sync")
     assert "Installed Skills" in transcript.getvalue()
+
+
+def test_cli_wizard_direct_sync_flow_prints_one_separator_before_lockfile_prompt() -> (
+    None
+):
+    service = FakeWorkflowService(sync_responses=[_synced_result()])
+    transcript = StringIO()
+    answers = iter(["aptitude.lock.json", "demo_sync"])
+    events: list[str] = []
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=_record_prompt(events, answers),
+        select_one=lambda *_, **__: "sync",
+        confirm=lambda *_, **__: False,
+    )
+    original_print_step_separator = wizard._print_step_separator
+    wizard._print_step_separator = _record_separator(  # type: ignore[method-assign]
+        events, original_print_step_separator
+    )
+
+    wizard.run(initial_flow="sync")
+
+    assert events[:2] == ["separator", "prompt:Lockfile path"]
 
 
 def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
