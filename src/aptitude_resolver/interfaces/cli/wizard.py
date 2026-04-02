@@ -66,6 +66,8 @@ PROFILE_OPTIONS: list[tuple[str, str]] = [
 WizardEntryFlow = Literal["install", "sync"]
 WizardLauncherAction = Literal["install", "sync", "help", "exit"]
 ReturnOption = Literal["__return__"]
+DEFAULT_INSTALL_SELECTION_PROFILE = "balanced"
+DEFAULT_INSTALL_INTERACTION_MODE: InteractionMode = "auto"
 
 FLOW_OPTIONS: list[tuple[str, WizardLauncherAction]] = [
     ("Install from query", "install"),
@@ -738,7 +740,12 @@ class CliWizard:
             ),
         )
 
-    def run(self, initial_flow: WizardEntryFlow | None = None) -> None:
+    def run(
+        self,
+        initial_flow: WizardEntryFlow | None = None,
+        *,
+        initial_query: str | None = None,
+    ) -> None:
         """Run the inline wizard launcher."""
         try:
             self._render_header(initial_flow=initial_flow)
@@ -768,7 +775,7 @@ class CliWizard:
                     return
 
                 self._print_step_separator()
-                install_outcome = self._run_install_flow()
+                install_outcome = self._run_install_flow(initial_query=initial_query)
                 if install_outcome is None:
                     return
                 install_result, telemetry_summary = install_outcome
@@ -791,8 +798,15 @@ class CliWizard:
             self._console.print(format_unexpected_cli_error(exc), style="red")
             return
 
-    def _run_install_flow(self) -> tuple[InstallResultDto, str | None] | None:
+    def _run_install_flow(
+        self,
+        *,
+        initial_query: str | None = None,
+    ) -> tuple[InstallResultDto, str | None] | None:
         """Run the guided install flow after the user selects it."""
+
+        if initial_query is not None:
+            return self._run_install_flow_from_plan(query=initial_query.strip())
 
         query = self._prompt_install_query()
         if not query:
@@ -879,6 +893,67 @@ class CliWizard:
 
             if retry_query:
                 continue
+
+    def _run_install_flow_from_plan(
+        self,
+        *,
+        query: str,
+    ) -> tuple[InstallResultDto, str | None] | None:
+        """Run the install flow from the plan step using default wizard options."""
+
+        if not query:
+            self._console.print("No query entered. Exiting.", style="yellow")
+            return None
+
+        selection_profile = DEFAULT_INSTALL_SELECTION_PROFILE
+        interaction_mode = DEFAULT_INSTALL_INTERACTION_MODE
+        options = build_workflow_options(
+            prefer=selection_profile,
+            interaction_mode=interaction_mode,
+        )
+
+        while True:
+            try:
+                resolve_result = self._resolve(query=query, options=options)
+            except DiscoveryNoCandidatesError as exc:
+                self._print_step_separator()
+                self._console.print(_format_error(exc), style="red")
+                self._print_step_separator()
+                query = self._prompt_install_query()
+                if not query:
+                    self._console.print("No query entered. Exiting.", style="yellow")
+                    return None
+                continue
+
+            if resolve_result is None:
+                self._print_step_separator()
+                query = self._prompt_install_query()
+                if not query:
+                    self._console.print("No query entered. Exiting.", style="yellow")
+                    return None
+                continue
+
+            self._print_step_separator()
+            self._console.print(
+                _render_plan_panel(
+                    resolve_result,
+                    selection_profile=selection_profile,
+                    interaction_mode=interaction_mode,
+                    target=self._target,
+                )
+            )
+            self._print_step_separator()
+            if not self._confirm("Proceed with installation?", True):
+                self._console.print("Installation cancelled.", style="yellow")
+                return None
+
+            return self._install(
+                query=query,
+                select_slug=resolve_result.selected_coordinate.slug
+                if resolve_result.selected_coordinate is not None
+                else None,
+                options=options,
+            )
 
     def _prompt_install_query(self) -> str:
         """Prompt for one install query using the larger free-text surface."""
@@ -1093,9 +1168,13 @@ class CliWizard:
 def run_cli_wizard(
     *,
     initial_flow: WizardEntryFlow | None = None,
+    initial_query: str | None = None,
     target: Path = Path("skill_demo"),
     banner_style: BannerStyle = "classic",
 ) -> None:
     """Launch the inline CLI wizard, optionally entering one flow directly."""
 
-    CliWizard(target=target, banner_style=banner_style).run(initial_flow=initial_flow)
+    CliWizard(target=target, banner_style=banner_style).run(
+        initial_flow=initial_flow,
+        initial_query=initial_query,
+    )

@@ -466,8 +466,7 @@ def _can_launch_install_flow(
     """Return whether a bare install invocation should open the guided flow."""
 
     return (
-        query is None
-        and version is None
+        version is None
         and select_slug is None
         and prefer is None
         and interaction_mode is None
@@ -635,8 +634,16 @@ def install(
         max_content_size=max_content_size,
         json_output=json_output,
     ):
-        run_cli_wizard(initial_flow="install", target=target)
-        return
+        if query is None or _is_interactive():
+            if query is None:
+                run_cli_wizard(initial_flow="install", target=target)
+            else:
+                run_cli_wizard(
+                    initial_flow="install",
+                    initial_query=query,
+                    target=target,
+                )
+            return
 
     if query is None:
         _exit_for_missing_query()

@@ -556,6 +556,43 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
+def test_cli_wizard_can_start_directly_at_install_plan_with_initial_query() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    prompt_calls: list[tuple[str, str | None, bool]] = []
+    confirmations = iter([True])
+
+    def prompt_text(
+        label: str,
+        default: str | None,
+        *,
+        large: bool = False,
+    ) -> str:
+        prompt_calls.append((label, default, large))
+        return ""
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=prompt_text,
+        select_one=lambda *_, **__: (_ for _ in ()).throw(
+            AssertionError("selection menus should be skipped")
+        ),
+        confirm=lambda *_, **__: next(confirmations),
+    )
+
+    wizard.run(initial_flow="install", initial_query="postman primary skill")
+
+    output = transcript.getvalue()
+    assert "Choose a flow" not in output
+    assert prompt_calls == []
+    assert service.resolve_calls[0]["query"] == "postman primary skill"
+    assert service.install_calls[0]["query"] == "postman primary skill"
+
+
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
     service = FakeWorkflowService(sync_responses=[_synced_result()])
     transcript = StringIO()

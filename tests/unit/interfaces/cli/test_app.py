@@ -619,11 +619,19 @@ def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
     monkeypatch.setattr(
         app_module,
         "build_install_use_case",
-        lambda: (use_case, lambda: None),
+        lambda **_kwargs: (use_case, lambda: None),
     )
 
     result = runner.invoke(
-        app_module.app, ["install", "python lint", "--target", str(target)]
+        app_module.app,
+        [
+            "install",
+            "python lint",
+            "--target",
+            str(target),
+            "--interaction-mode",
+            "never",
+        ],
     )
 
     assert result.exit_code == 0
@@ -970,6 +978,30 @@ def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> 
 
     assert result.exit_code == 0
     assert calls == [{"initial_flow": "install", "target": Path("skill_demo")}]
+
+
+def test_cli_install_with_only_query_launches_wizard_at_plan_step(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = runner.invoke(app_module.app, ["install", "python lint"])
+
+    assert result.exit_code == 0
+    assert calls == [
+        {
+            "initial_flow": "install",
+            "initial_query": "python lint",
+            "target": Path("skill_demo"),
+        }
+    ]
 
 
 def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
