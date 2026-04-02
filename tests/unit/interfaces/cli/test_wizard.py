@@ -484,6 +484,23 @@ def test_cli_wizard_passes_flow_descriptions_to_selector() -> None:
     }
 
 
+def test_cli_wizard_header_separator_is_followed_by_blank_line() -> None:
+    transcript = StringIO()
+
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    wizard.run()
+
+    separator = "─" * 80
+    assert f"{separator}\n\nExited." in transcript.getvalue()
+
+
 def test_cli_wizard_does_not_print_back_to_back_separators_before_launcher_menu() -> (
     None
 ):

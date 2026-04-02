@@ -1094,7 +1094,7 @@ class CliWizard:
         """Write one exact separator line without Rich reflow."""
 
         prefix = "\n" if prefix_newline else ""
-        suffix = "\n\n" if suffix_newline else "\n"
+        suffix = "\n\n" if suffix_newline else "\n\n"
         self._console.file.write(
             f"{prefix}{_render_step_separator(self._console.size.width)}{suffix}"
         )
