@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.application.dto import InstallRequestDto, ResolveQueryRequestDto
-from aptitude.application.use_cases import (
+from aptitude_resolver.application.dto import InstallRequestDto, ResolveQueryRequestDto
+from aptitude_resolver.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
 )
-from aptitude.domain.errors import SkillNotFoundError
-from aptitude.domain.models import (
+from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.domain.models import (
     DiscoveryQuery,
     SkillIdentity,
     VersionSummary,

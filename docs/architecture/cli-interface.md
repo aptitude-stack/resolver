@@ -45,11 +45,11 @@ The CLI must not:
 
 The CLI surface is split across five files:
 
-- `src/aptitude/interfaces/cli/main.py`: root entrypoint; launches the wizard for zero-argument invocations and otherwise delegates to Typer
-- `src/aptitude/interfaces/cli/app.py`: Typer command definitions and non-wizard command execution
-- `src/aptitude/interfaces/cli/wizard.py`: guided install and sync flows, interactive prompts, and review panels
-- `src/aptitude/interfaces/cli/catalog.py`: canonical command metadata, help text, manifest text, theme tokens, and separator conventions
-- `src/aptitude/interfaces/cli/support.py`: shared workflow wiring, telemetry capture, TTY detection, option parsing, and user-facing error formatting
+- `src/aptitude_resolver/interfaces/cli/main.py`: root entrypoint; launches the wizard for zero-argument invocations and otherwise delegates to Typer
+- `src/aptitude_resolver/interfaces/cli/app.py`: Typer command definitions and non-wizard command execution
+- `src/aptitude_resolver/interfaces/cli/wizard.py`: guided install and sync flows, interactive prompts, and review panels
+- `src/aptitude_resolver/interfaces/cli/catalog.py`: canonical command metadata, help text, manifest text, theme tokens, and separator conventions
+- `src/aptitude_resolver/interfaces/cli/support.py`: shared workflow wiring, telemetry capture, TTY detection, option parsing, and user-facing error formatting
 
 ## Entry And Routing
 

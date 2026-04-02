@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aptitude.shared.config.settings import Settings
+from aptitude_resolver.shared.config.settings import Settings
 
 
 def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:

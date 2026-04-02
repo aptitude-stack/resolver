@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.domain.models import (
+from aptitude_resolver.domain.models import (
     DependencyEdge,
     ResolutionGraph,
     ResolvedSkillNode,
     SkillCoordinate,
 )
-from aptitude.resolution.validation import validate_resolution_graph
+from aptitude_resolver.resolution.validation import validate_resolution_graph
 
 
 def _node(slug: str, version: str) -> ResolvedSkillNode:

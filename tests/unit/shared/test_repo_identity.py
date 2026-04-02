@@ -33,4 +33,16 @@ def test_readme_includes_install_and_use_sections() -> None:
     assert "## How To Install" in readme
     assert "## How To Use" in readme
     assert "uv sync --extra dev" in readme
+    assert "uvx aptitude-resolver" in readme
     assert 'aptitude install "Postman Primary Skill"' in readme
+
+
+def test_pyproject_exposes_dual_console_scripts_and_runtime_package_name() -> None:
+    pyproject = _read("pyproject.toml")
+
+    assert 'name = "aptitude-resolver"' in pyproject
+    assert (
+        'aptitude-resolver = "aptitude_resolver.interfaces.cli.main:main"' in pyproject
+    )
+    assert 'aptitude = "aptitude_resolver.interfaces.cli.main:main"' in pyproject
+    assert 'module-name = "aptitude_resolver"' in pyproject

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.domain.models import DependencySpec
-from aptitude.registry.mappers import (
+from aptitude_resolver.domain.models import DependencySpec
+from aptitude_resolver.registry.mappers import (
     map_dependency_selector,
     map_direct_dependencies,
     map_metadata_response,
     map_skill_version_list_response,
     map_version_summary,
 )
-from aptitude.registry.transport_models import (
+from aptitude_resolver.registry.transport_models import (
     DependencySelector,
     DirectDependenciesResponse,
     MetadataResponse,

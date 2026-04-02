@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from aptitude.discovery.intent import parse_search_intent
-from aptitude.discovery.reranking import rerank_candidates
-from aptitude.domain.models import (
+from aptitude_resolver.discovery.intent import parse_search_intent
+from aptitude_resolver.discovery.reranking import rerank_candidates
+from aptitude_resolver.domain.models import (
     DiscoveryCandidate,
     SkillCoordinate,
     VersionSummary,
 )
-from aptitude.domain.policy import SelectionPreferences
+from aptitude_resolver.domain.policy import SelectionPreferences
 
 
 def _candidate(

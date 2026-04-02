@@ -11,7 +11,7 @@ from typing import Mapping, Sequence, TypedDict, cast
 
 from rich.console import Console
 
-from aptitude.application.dto import (
+from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
@@ -29,10 +29,10 @@ from aptitude.application.dto import (
     SyncResultDto,
     TraceEntryDto,
 )
-from aptitude.domain.errors import DiscoveryNoCandidatesError
-from aptitude.interfaces.cli import wizard as wizard_module
-from aptitude.interfaces.cli.wizard import CliWizard
-from aptitude.telemetry.metrics import StageTiming
+from aptitude_resolver.domain.errors import DiscoveryNoCandidatesError
+from aptitude_resolver.interfaces.cli import wizard as wizard_module
+from aptitude_resolver.interfaces.cli.wizard import CliWizard
+from aptitude_resolver.telemetry.metrics import StageTiming
 
 
 class WindowCall(TypedDict):

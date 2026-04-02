@@ -6,9 +6,9 @@ from dataclasses import dataclass
 import httpx
 import pytest
 
-from aptitude.domain.errors import InvalidCoordinateError, SkillNotFoundError
-from aptitude.registry.client import RegistryClient
-from aptitude.shared.config import Settings
+from aptitude_resolver.domain.errors import InvalidCoordinateError, SkillNotFoundError
+from aptitude_resolver.registry.client import RegistryClient
+from aptitude_resolver.shared.config import Settings
 from integration.registry.support import build_publish_payload, ensure_publish_ready
 
 

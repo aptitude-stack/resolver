@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aptitude.interfaces.cli import main as main_module
+from aptitude_resolver.interfaces.cli import main as main_module
 
 
 def test_main_launches_cli_wizard_when_invoked_without_subcommands(

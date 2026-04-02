@@ -37,7 +37,7 @@ Install the resolver and its development dependencies with `uv`:
 uv sync --extra dev
 ```
 
-This creates the local environment from `pyproject.toml` and makes the `aptitude` entrypoint available through `uv run` or an activated environment.
+This creates the local environment from `pyproject.toml` and makes the published CLI available through `uv run` or an activated environment.
 
 ## Packaging And Publishing
 
@@ -46,23 +46,23 @@ This project builds and publishes as a normal Python package. `uv` is the build 
 The packaging metadata lives in `pyproject.toml`:
 
 - `[project]` defines the package name, version, dependencies, and console entry point
-- `[project.scripts]` maps the installed `aptitude` command to `aptitude.interfaces.cli.main:main`
+- `[project.scripts]` exposes both `aptitude-resolver` and `aptitude`, both mapped to `aptitude_resolver.interfaces.cli.main:main`
 - `[build-system]` tells `uv` to build the package with `uv_build`
 
 Build the package artifacts locally:
 
 ```bash
-make package
+make build
 ```
 
-`make package` runs `uv build --no-sources` and creates:
+`make build` runs `uv build --no-sources` and creates:
 
 ```text
 dist/*.whl
 dist/*.tar.gz
 ```
 
-The wheel is the main installable artifact. It contains the `aptitude` package, its dependency metadata, and the `aptitude` console script.
+The wheel is the main installable artifact. It contains the `aptitude_resolver` package, its dependency metadata, and both console scripts.
 
 For a local manual publish with a PyPI API token:
 
@@ -88,8 +88,8 @@ make build-publish REPOSITORY=testpypi
 For the normal release path, publish to PyPI through GitHub Actions trusted publishing:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.1
+git push origin v0.0.1
 ```
 
 The release workflow lives at `.github/workflows/publish.yml` and:
@@ -105,22 +105,23 @@ The publish job uses the GitHub Environment `pypi`. That is not required by PyPI
 Install and run after publishing:
 
 ```bash
-uv tool install aptitude
+uv tool install aptitude-resolver
 aptitude --help
 ```
 
 For one-off execution without a persistent install:
 
 ```bash
-uvx aptitude --help
+uvx aptitude-resolver --help
 ```
 
 Use this mental model:
 
-- `make package` builds the distributable artifacts
+- `make build` builds the distributable artifacts
 - `make build-publish` performs a local token-based publish to PyPI or TestPyPI
 - pushing a `v*` tag triggers the trusted publishing workflow
-- `uv tool install aptitude` installs the published CLI
+- `uv tool install aptitude-resolver` installs the published package
+- `uvx aptitude-resolver ...` runs the published package ephemerally
 - `aptitude ...` is the command end users run after installation
 
 ## How To Use
@@ -128,14 +129,14 @@ Use this mental model:
 For repo-local development, typical usage starts with one of these commands:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main sync --lock aptitude.lock.json
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main manifest
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
 ```
 
-The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. The help text and examples still use the logical `aptitude` command name, but the verified repo-local entrypoint is the module invocation above.
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
 
 For published usage, prefer the installed CLI:
 
@@ -144,6 +145,14 @@ aptitude --help
 aptitude install "Postman Primary Skill"
 aptitude sync --lock aptitude.lock.json
 aptitude manifest
+```
+
+For one-off published usage without installation:
+
+```bash
+uvx aptitude-resolver
+uvx aptitude-resolver install "Postman Primary Skill"
+uvx aptitude-resolver sync
 ```
 
 ## What Works Today
@@ -238,13 +247,13 @@ aptitude sync --lock aptitude.lock.json
 Preview the resolved graph, lock, and execution plan without materializing:
 
 ```bash
-uv run python -m aptitude.interfaces.cli.main resolve "Postman Primary Skill"
+uv run python -m aptitude_resolver resolve "Postman Primary Skill"
 ```
 
 ## Current Package Map
 
 ```text
-src/aptitude/
+src/aptitude_resolver/
   application/
     dto/
     queries/
@@ -298,15 +307,15 @@ Requirements:
 Run the CLI:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
 ```
 
 Or via Python:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
 ```
 
 Developer workflow:

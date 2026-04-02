@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import pytest
 
-import aptitude.application.composition as composition
-from aptitude.application.use_cases import (
+import aptitude_resolver.application.composition as composition
+from aptitude_resolver.application.use_cases import (
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
     SyncFromLockUseCase,
 )
-from aptitude.domain.errors import InvalidResolverConfigurationError
-from aptitude.shared.config.aptitude_config import (
+from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
+from aptitude_resolver.shared.config.aptitude_config import (
     AptitudeConfig,
     PolicyConfig,
     SelectionConfig,
 )
-from aptitude.shared.config.settings import Settings
+from aptitude_resolver.shared.config.settings import Settings
 
 
 class FakeSettings:

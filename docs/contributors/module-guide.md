@@ -1,6 +1,6 @@
 # Module Guide
 
-This guide maps responsibilities to the current `src/aptitude/` tree.
+This guide maps responsibilities to the current `src/aptitude_resolver/` tree.
 
 ## Core Packages
 

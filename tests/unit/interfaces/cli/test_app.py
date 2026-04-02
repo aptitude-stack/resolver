@@ -6,8 +6,8 @@ from typing import Any
 
 from typer.testing import CliRunner
 
-from aptitude.application import composition
-from aptitude.application.dto import (
+from aptitude_resolver.application import composition
+from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
@@ -26,19 +26,19 @@ from aptitude.application.dto import (
     SyncResultDto,
     TraceEntryDto,
 )
-from aptitude.domain.errors import (
+from aptitude_resolver.domain.errors import (
     ContentChecksumMismatchError,
     InvalidResolverConfigurationError,
     InvalidLockfileError,
     SelectionSlugNotFoundError,
 )
-from aptitude.domain.models import (
+from aptitude_resolver.domain.models import (
     DiscoveryQuery,
     SkillCoordinate,
     VersionSummary,
 )
-from aptitude.interfaces.cli import app as app_module
-from aptitude.telemetry.metrics import StageTiming
+from aptitude_resolver.interfaces.cli import app as app_module
+from aptitude_resolver.telemetry.metrics import StageTiming
 
 
 runner = CliRunner()

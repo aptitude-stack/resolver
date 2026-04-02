@@ -59,8 +59,8 @@ wheels = [
 ]
 
 [[package]]
-name = "aptitude"
-version = "0.1.0"
+name = "aptitude-resolver"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "diskcache" },

@@ -56,7 +56,7 @@ Lock replay is intentionally shorter. Once a valid lock exists, discovery and de
 
 ## Package Boundaries
 
-The current package tree is rooted at `src/aptitude/`.
+The current package tree is rooted at `src/aptitude_resolver/`.
 
 - `application/`: orchestration and DTO boundaries
 - `cache/`: advisory caching helpers

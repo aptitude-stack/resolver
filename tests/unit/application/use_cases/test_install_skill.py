@@ -3,10 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 
-from aptitude.application.dto import InstallRequestDto
-from aptitude.application.use_cases import InstallSkillUseCase
-from aptitude.domain.errors import SkillNotFoundError
-from aptitude.domain.models import (
+from aptitude_resolver.application.dto import InstallRequestDto
+from aptitude_resolver.application.use_cases import InstallSkillUseCase
+from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.domain.models import (
     DependencySpec,
     DiscoveryQuery,
     SkillCoordinate,

@@ -6,10 +6,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from aptitude.cache import CacheStore
-from aptitude.domain.errors import RegistryUnavailableError, SkillNotFoundError
-from aptitude.registry.client import RegistryClient
-from aptitude.shared.config import Settings
+from aptitude_resolver.cache import CacheStore
+from aptitude_resolver.domain.errors import RegistryUnavailableError, SkillNotFoundError
+from aptitude_resolver.registry.client import RegistryClient
+from aptitude_resolver.shared.config import Settings
 
 
 def _settings() -> Settings:

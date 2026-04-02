@@ -8,7 +8,7 @@ from typing import NoReturn
 import httpx
 import pytest
 
-from aptitude.shared.config import Settings
+from aptitude_resolver.shared.config import Settings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

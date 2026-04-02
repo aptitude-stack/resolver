@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.application.dto import ResolveQueryRequestDto
-from aptitude.application.use_cases import ResolveSkillQueryUseCase
-from aptitude.domain.errors import (
+from aptitude_resolver.application.dto import ResolveQueryRequestDto
+from aptitude_resolver.application.use_cases import ResolveSkillQueryUseCase
+from aptitude_resolver.domain.errors import (
     DiscoveryNoCandidatesError,
     InteractiveSelectionUnavailableError,
     PolicyViolationError,
     SelectionSlugNotFoundError,
     SkillNotFoundError,
 )
-from aptitude.domain.models import (
+from aptitude_resolver.domain.models import (
     DependencySpec,
     DiscoveryQuery,
     SkillCoordinate,
@@ -19,8 +19,8 @@ from aptitude.domain.models import (
     SkillMetadata,
     VersionSummary,
 )
-from aptitude.domain.policy import PolicyContext
-from aptitude.domain.policy import SelectionPreferences
+from aptitude_resolver.domain.policy import PolicyContext
+from aptitude_resolver.domain.policy import SelectionPreferences
 
 
 class FakeRegistryClient:

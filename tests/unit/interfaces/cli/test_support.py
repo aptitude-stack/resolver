@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 from io import StringIO
 
-from aptitude.domain.errors import (
+from aptitude_resolver.domain.errors import (
     ContentChecksumMismatchError,
     InvalidResolverConfigurationError,
     InvalidLockfileError,
     SelectionSlugNotFoundError,
 )
-from aptitude.interfaces.cli import support
+from aptitude_resolver.interfaces.cli import support
 
 
 def test_build_workflow_options_parses_cli_override_values() -> None:
@@ -134,9 +134,17 @@ def test_format_unexpected_error_renders_generic_failures_without_traceback() ->
     assert "RuntimeError: boom" in rendered
 
 
+def test_resolve_cli_version_prefers_runtime_package_version_over_stale_metadata(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(support, "__version__", "0.1.0")
+
+    assert support.resolve_cli_version() == "0.1.0"
+
+
 def test_suppress_cli_telemetry_logs_hides_info_events_temporarily() -> None:
     stream = StringIO()
-    logger = logging.getLogger("aptitude.telemetry")
+    logger = logging.getLogger("aptitude_resolver.telemetry")
     handler = logging.StreamHandler(stream)
     original_level = logger.level
     original_handlers = list(logger.handlers)

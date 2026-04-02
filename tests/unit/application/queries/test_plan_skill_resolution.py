@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-import aptitude.application.queries.plan_skill_resolution as planning_module
-from aptitude.application.dto import ResolveQueryRequestDto
-from aptitude.application.queries import PlanSkillResolutionQuery
-from aptitude.domain.errors import PolicyViolationError, SkillNotFoundError
-from aptitude.domain.models import (
+import aptitude_resolver.application.queries.plan_skill_resolution as planning_module
+from aptitude_resolver.application.dto import ResolveQueryRequestDto
+from aptitude_resolver.application.queries import PlanSkillResolutionQuery
+from aptitude_resolver.domain.errors import PolicyViolationError, SkillNotFoundError
+from aptitude_resolver.domain.models import (
     DependencyEdge,
     DependencySpec,
     DiscoveryCandidate,
@@ -18,8 +18,8 @@ from aptitude.domain.models import (
     SkillMetadata,
     VersionSummary,
 )
-from aptitude.domain.policy import PolicyContext, SelectionPreferences
-from aptitude.domain.tracing import TraceEntry
+from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
+from aptitude_resolver.domain.tracing import TraceEntry
 
 
 class FakeRegistryClient:

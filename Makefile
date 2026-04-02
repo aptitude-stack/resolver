@@ -12,19 +12,19 @@ PUBLISH_URL := https://test.pypi.org/legacy/
 CHECK_URL := https://test.pypi.org/simple/
 endif
 
-.PHONY: run debug demo test test-cov lint format typecheck package publish build-publish
+.PHONY: run debug demo test test-cov lint format typecheck build build-publish
 
 run:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude\033[0m\n"
 	@printf "\033[0;36m  Mode:\033[0m  Interactive CLI wizard\n"
 	@printf "\033[0;36m  Stop:\033[0m  Ctrl+C\n\n"
-	@PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
+	@PYTHONPATH=src .venv/bin/python -m aptitude_resolver
 
 debug:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude in debug mode\033[0m\n"
 	@printf "\033[0;36m  Mode:\033[0m  Python dev mode\n"
 	@printf "\033[0;36m  Stop:\033[0m  Ctrl+C\n\n"
-	@PYTHONPATH=src PYTHONDEVMODE=1 .venv/bin/python -m aptitude.interfaces.cli.main
+	@PYTHONPATH=src PYTHONDEVMODE=1 .venv/bin/python -m aptitude_resolver
 
 demo:
 	@test -f .env || { \
@@ -37,13 +37,13 @@ demo:
 	@set -a; \
 	. ./.env; \
 	set +a; \
-	PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main
+	PYTHONPATH=src .venv/bin/python -m aptitude_resolver
 
 test:
 	$(UV) run --extra dev python -m pytest
 
 test-cov:
-	$(UV) run --extra dev python -m pytest --cov=src/aptitude --cov-branch --cov-report=term-missing
+	$(UV) run --extra dev python -m pytest --cov=src/aptitude_resolver --cov-branch --cov-report=term-missing
 
 lint:
 	$(UV) run --extra dev ruff check src tests
@@ -54,28 +54,30 @@ format:
 typecheck:
 	$(UV) run --extra dev python -m mypy src tests
 
-package:
+build:
 	$(UV) build --no-sources
 
-publish: build-publish
-
 build-publish:
-	@test -n "$(PYPI_API_TOKEN)" || { \
-		printf "\033[1;31merror:\033[0m missing PYPI_API_TOKEN environment variable.\n"; \
+	@set -a; \
+	if [ -f .env ]; then . ./.env; fi; \
+	set +a; \
+	: "$${PYPI_API_TOKEN:=$(PYPI_API_TOKEN)}"; \
+	test -n "$$PYPI_API_TOKEN" || { \
+		printf "\033[1;31merror:\033[0m missing PYPI_API_TOKEN environment variable. Set it in .env or export it in your shell.\n"; \
 		exit 1; \
-	}
-	@test -n "$(PUBLISH_URL)" || { \
+	}; \
+	test -n "$(PUBLISH_URL)" || { \
 		printf "\033[1;31merror:\033[0m unsupported REPOSITORY '%s'. Use 'pypi' or 'testpypi'.\n" "$(REPOSITORY)"; \
 		exit 1; \
-	}
-	@printf "\033[1;36m==>\033[0m \033[1mBuilding Aptitude distributions\033[0m\n"
-	@printf "\033[0;36m  Output:\033[0m %s\n" "$(PUBLISH_DIST_DIR)"
-	@printf "\033[0;36m  Target:\033[0m %s\n\n" "$(REPOSITORY)"
-	@$(UV) build --no-sources --clear --out-dir "$(PUBLISH_DIST_DIR)"
-	@printf "\033[1;36m==>\033[0m \033[1mPublishing Aptitude distributions\033[0m\n"
-	@printf "\033[0;36m  Upload:\033[0m %s\n" "$(PUBLISH_URL)"
-	@printf "\033[0;36m  Check:\033[0m  %s\n\n" "$(CHECK_URL)"
-	@UV_PUBLISH_TOKEN="$(PYPI_API_TOKEN)" \
+	}; \
+	printf "\033[1;36m==>\033[0m \033[1mBuilding Aptitude distributions\033[0m\n"; \
+	printf "\033[0;36m  Output:\033[0m %s\n" "$(PUBLISH_DIST_DIR)"; \
+	printf "\033[0;36m  Target:\033[0m %s\n\n" "$(REPOSITORY)"; \
+	$(UV) build --no-sources --clear --out-dir "$(PUBLISH_DIST_DIR)"; \
+	printf "\033[1;36m==>\033[0m \033[1mPublishing Aptitude distributions\033[0m\n"; \
+	printf "\033[0;36m  Upload:\033[0m %s\n" "$(PUBLISH_URL)"; \
+	printf "\033[0;36m  Check:\033[0m  %s\n\n" "$(CHECK_URL)"; \
+	UV_PUBLISH_TOKEN="$$PYPI_API_TOKEN" \
 	$(UV) publish \
 		--trusted-publishing never \
 		--publish-url "$(PUBLISH_URL)" \

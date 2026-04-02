@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.domain.errors import UnsupportedDependencyShapeError
-from aptitude.domain.models import DependencySpec, SkillCoordinate
-from aptitude.resolution.normalizer import normalize_dependency_selector
+from aptitude_resolver.domain.errors import UnsupportedDependencyShapeError
+from aptitude_resolver.domain.models import DependencySpec, SkillCoordinate
+from aptitude_resolver.resolution.normalizer import normalize_dependency_selector
 
 
 def test_normalize_dependency_selector_returns_exact_coordinate_when_version_is_present() -> (

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude.domain.policy import SelectionPreferences
+from aptitude_resolver.domain.policy import SelectionPreferences
 
 
 def test_selection_preferences_defaults_are_explicit() -> None:

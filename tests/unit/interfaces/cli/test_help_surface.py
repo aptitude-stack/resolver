@@ -5,14 +5,19 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from aptitude.interfaces.cli import app as app_module
+from aptitude_resolver.interfaces.cli import app as app_module
 
 
 runner = CliRunner()
 
 
+def _invoke(args: list[str], *, prog_name: str = "aptitude"):
+    app_module.configure_help_surfaces(prog_name)
+    return runner.invoke(app_module.app, args, prog_name=prog_name)
+
+
 def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
-    result = runner.invoke(app_module.app, ["--help"])
+    result = _invoke(["--help"])
 
     assert result.exit_code == 0
     assert "install" in result.stdout
@@ -29,7 +34,7 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
 
 
 def test_cli_install_help_exposes_selection_preference_flags() -> None:
-    result = runner.invoke(app_module.app, ["install", "--help"])
+    result = _invoke(["install", "--help"])
 
     assert result.exit_code == 0
     assert "--prefer" in result.stdout
@@ -49,7 +54,7 @@ def test_cli_install_help_exposes_selection_preference_flags() -> None:
 
 
 def test_cli_sync_help_explains_lock_replay_flow() -> None:
-    result = runner.invoke(app_module.app, ["sync", "--help"])
+    result = _invoke(["sync", "--help"])
 
     assert result.exit_code == 0
     assert "--lock" in result.stdout
@@ -62,7 +67,7 @@ def test_cli_sync_help_explains_lock_replay_flow() -> None:
 
 
 def test_hidden_resolve_help_is_rich_even_though_root_help_hides_it() -> None:
-    result = runner.invoke(app_module.app, ["resolve", "--help"])
+    result = _invoke(["resolve", "--help"])
 
     assert result.exit_code == 0
     assert "Fresh planning flow" in result.stdout
@@ -76,7 +81,7 @@ def test_hidden_resolve_help_is_rich_even_though_root_help_hides_it() -> None:
 
 
 def test_cli_manifest_lists_public_advanced_and_global_capabilities() -> None:
-    result = runner.invoke(app_module.app, ["manifest"])
+    result = _invoke(["manifest"])
 
     assert result.exit_code == 0
     assert (
@@ -97,11 +102,19 @@ def test_cli_manifest_lists_public_advanced_and_global_capabilities() -> None:
     assert "--show-completion" in result.stdout
 
 
-def test_cli_version_prints_package_version() -> None:
-    result = runner.invoke(app_module.app, ["--version"])
+def test_cli_root_help_can_render_uvx_alias_examples() -> None:
+    result = _invoke(["--help"], prog_name="aptitude-resolver")
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0"
+    assert 'aptitude-resolver install "Postman Primary Skill"' in result.stdout
+    assert "aptitude-resolver sync --lock aptitude.lock.json" in result.stdout
+
+
+def test_cli_version_prints_package_version() -> None:
+    result = _invoke(["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "0.0.1"
 
 
 def test_contributor_docs_describe_install_first_wizard_not_textual_tui() -> None:
@@ -126,7 +139,7 @@ def test_makefile_exposes_demo_target_that_sources_repo_env() -> None:
     assert "Running Aptitude demo CLI" in makefile
     assert "Suggest:" in makefile
     assert "Postman Primary Skill" in makefile
-    assert "PYTHONPATH=src .venv/bin/python -m aptitude.interfaces.cli.main" in makefile
+    assert "PYTHONPATH=src .venv/bin/python -m aptitude_resolver" in makefile
 
 
 def test_env_example_documents_required_registry_fields() -> None:

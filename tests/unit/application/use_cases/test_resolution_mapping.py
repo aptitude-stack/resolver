@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from aptitude.application.queries import ResolutionArtifact
-from aptitude.application.use_cases.resolution_mapping import (
+from aptitude_resolver.application.queries import ResolutionArtifact
+from aptitude_resolver.application.use_cases.resolution_mapping import (
     candidate_to_dto,
     execution_plan_to_dto,
     graph_to_dto,
@@ -10,7 +10,7 @@ from aptitude.application.use_cases.resolution_mapping import (
     selected_skill_to_dto,
     trace_to_dto,
 )
-from aptitude.domain.models import (
+from aptitude_resolver.domain.models import (
     ConflictRecord,
     DependencyEdge,
     DiscoveryCandidate,
@@ -19,10 +19,10 @@ from aptitude.domain.models import (
     SkillCoordinate,
     VersionSummary,
 )
-from aptitude.domain.policy import PolicyEvaluation
-from aptitude.domain.tracing import TraceEntry
-from aptitude.execution.plan import ExecutionPlan, ExecutionStep
-from aptitude.lockfile.model import (
+from aptitude_resolver.domain.policy import PolicyEvaluation
+from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.execution.plan import ExecutionPlan, ExecutionStep
+from aptitude_resolver.lockfile.model import (
     GovernanceSnapshotEntry,
     LockedEdge,
     LockedSkill,
