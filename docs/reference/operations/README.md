@@ -4,7 +4,7 @@ This section is the resolver-side operational entrypoint.
 
 Current operationally relevant areas in this repo:
 
-- running the CLI and TUI locally
+- running the CLI and wizard locally
 - verifying focused or full test suites
 - understanding the live registry boundary used by integration tests
 - validating docs and package identity after renames or boundary changes

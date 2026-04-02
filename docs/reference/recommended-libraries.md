@@ -11,7 +11,8 @@ These are already part of the resolver:
 - `pydantic`: DTOs and explicit serialization boundaries
 - `pydantic-settings`: typed configuration
 - `typer`: CLI surface
-- `textual`: TUI surface
+- `prompt-toolkit`: richer interactive CLI prompts and menus
+- `rich`: panels, progress indicators, and styled CLI output
 - `httpx`: registry transport
 - `packaging`: deterministic version comparison
 - `diskcache`: advisory caching

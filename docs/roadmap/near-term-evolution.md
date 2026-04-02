@@ -5,7 +5,7 @@
 - deterministic fresh planning through discovery, resolver, governance, lockfile, and execution
 - lock replay through `sync --lock`
 - workspace policy loading from `aptitude.toml`
-- cache, retry, telemetry, and richer CLI/TUI surfaces
+- cache, retry, telemetry, and richer CLI and wizard surfaces
 
 ## Planned
 

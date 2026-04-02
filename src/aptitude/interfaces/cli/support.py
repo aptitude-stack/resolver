@@ -121,6 +121,20 @@ def format_cli_telemetry_block(
     return "\n".join(lines)
 
 
+def format_cli_install_telemetry_line(stage_timings: list[StageTiming]) -> str | None:
+    """Render install telemetry on one line for compact completion output."""
+
+    if not stage_timings:
+        return None
+
+    segments = ["Install telemetry"]
+    segments.extend(
+        f"{_humanize_stage_label(timing.stage)} {timing.duration_ms:.1f}ms"
+        for timing in stage_timings
+    )
+    return " | ".join(segments)
+
+
 def format_cli_error(error: AptitudeResolverError) -> str:
     """Render one CLI-facing error payload."""
 

@@ -12,7 +12,7 @@ The current phase is hardening the existing local flows:
 - strict policy enforcement
 - lock replay
 - cache, retry, logging, and telemetry improvements
-- richer CLI/TUI ergonomics
+- richer CLI and wizard ergonomics
 
 ## Next Phases
 

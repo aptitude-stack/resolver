@@ -37,12 +37,38 @@
     "action": "discover_candidates",
     "message": "Fetched candidate slugs from the registry.",
     "data": {
-      "candidate_count": 3,
+      "candidate_count": 6,
       "slugs": [
+        "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
         "it.discovery.3f4319a75561486ab71be5adaa49f1c2",
         "it.dep.3718838baebf4ee38e942a45b698c8f2",
+        "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
+        "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
         "it.primary.3718838baebf4ee38e942a45b698c8f2"
       ]
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "select_candidate_version",
+    "message": "Selected preferred version 1.0.0 for candidate it.discovery.b68250ba7d2f43699e63118b090cfb9b.",
+    "data": {
+      "slug": "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
+      "version": "1.0.0",
+      "selection_source": "preferred_version",
+      "version_count": 1,
+      "intent_terms": [
+        "integration"
+      ]
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "enrich_candidate_version",
+    "message": "Enriched candidate it.discovery.b68250ba7d2f43699e63118b090cfb9b@1.0.0 with exact metadata.",
+    "data": {
+      "slug": "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
+      "version": "1.0.0"
     }
   },
   {
@@ -94,6 +120,52 @@
   {
     "stage": "resolver",
     "action": "select_candidate_version",
+    "message": "Selected preferred version 1.0.0 for candidate it.primary.9aeacb0af4f44b98a387b81299ee7b0d.",
+    "data": {
+      "slug": "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "selection_source": "preferred_version",
+      "version_count": 1,
+      "intent_terms": [
+        "integration"
+      ]
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "enrich_candidate_version",
+    "message": "Enriched candidate it.primary.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 with exact metadata.",
+    "data": {
+      "slug": "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "select_candidate_version",
+    "message": "Selected preferred version 1.0.0 for candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "selection_source": "preferred_version",
+      "version_count": 1,
+      "intent_terms": [
+        "integration"
+      ]
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "enrich_candidate_version",
+    "message": "Enriched candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 with exact metadata.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "select_candidate_version",
     "message": "Selected preferred version 1.0.0 for candidate it.primary.3718838baebf4ee38e942a45b698c8f2.",
     "data": {
       "slug": "it.primary.3718838baebf4ee38e942a45b698c8f2",
@@ -119,10 +191,25 @@
     "action": "apply_selection_preferences",
     "message": "Applied effective selection preferences for candidate ranking and ambiguity handling.",
     "data": {
-      "profile": "balanced",
+      "profile": "high-trust",
       "interaction_mode": "auto",
       "profile_source": "cli_override",
       "interaction_mode_source": "cli_override"
+    }
+  },
+  {
+    "stage": "governance",
+    "action": "candidate_policy_pass",
+    "message": "Candidate it.discovery.b68250ba7d2f43699e63118b090cfb9b@1.0.0 passed candidate policy.",
+    "data": {
+      "slug": "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
+      "version": "1.0.0",
+      "applied_rules": [
+        "allowed_lifecycle_status",
+        "allowed_trust_tiers",
+        "max_token_estimate",
+        "max_content_size_bytes"
+      ]
     }
   },
   {
@@ -158,6 +245,36 @@
   {
     "stage": "governance",
     "action": "candidate_policy_pass",
+    "message": "Candidate it.primary.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 passed candidate policy.",
+    "data": {
+      "slug": "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "applied_rules": [
+        "allowed_lifecycle_status",
+        "allowed_trust_tiers",
+        "max_token_estimate",
+        "max_content_size_bytes"
+      ]
+    }
+  },
+  {
+    "stage": "governance",
+    "action": "candidate_policy_pass",
+    "message": "Candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 passed candidate policy.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "applied_rules": [
+        "allowed_lifecycle_status",
+        "allowed_trust_tiers",
+        "max_token_estimate",
+        "max_content_size_bytes"
+      ]
+    }
+  },
+  {
+    "stage": "governance",
+    "action": "candidate_policy_pass",
     "message": "Candidate it.primary.3718838baebf4ee38e942a45b698c8f2@1.0.0 passed candidate policy.",
     "data": {
       "slug": "it.primary.3718838baebf4ee38e942a45b698c8f2",
@@ -173,17 +290,17 @@
   {
     "stage": "governance",
     "action": "filter_candidate_policies",
-    "message": "Filtered 3 of 3 discovered candidates by policy.",
+    "message": "Filtered 6 of 6 discovered candidates by policy.",
     "data": {
-      "input_count": 3,
-      "compliant_count": 3,
+      "input_count": 6,
+      "compliant_count": 6,
       "rejected_count": 0
     }
   },
   {
     "stage": "reranking",
     "action": "rank_candidate",
-    "message": "Ranked candidate it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Ranked candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
       "ranking_position": 1,
       "matched_labels": [
@@ -197,7 +314,7 @@
   {
     "stage": "reranking",
     "action": "rank_candidate",
-    "message": "Ranked candidate it.discovery.3f4319a75561486ab71be5adaa49f1c2@1.0.0.",
+    "message": "Ranked candidate it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
     "data": {
       "ranking_position": 2,
       "matched_labels": [
@@ -211,7 +328,7 @@
   {
     "stage": "reranking",
     "action": "rank_candidate",
-    "message": "Ranked candidate it.primary.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Ranked candidate it.discovery.b68250ba7d2f43699e63118b090cfb9b@1.0.0.",
     "data": {
       "ranking_position": 3,
       "matched_labels": [
@@ -223,11 +340,53 @@
     }
   },
   {
+    "stage": "reranking",
+    "action": "rank_candidate",
+    "message": "Ranked candidate it.discovery.3f4319a75561486ab71be5adaa49f1c2@1.0.0.",
+    "data": {
+      "ranking_position": 4,
+      "matched_labels": [
+        "integration"
+      ],
+      "match_reasons": [
+        "label_overlap"
+      ]
+    }
+  },
+  {
+    "stage": "reranking",
+    "action": "rank_candidate",
+    "message": "Ranked candidate it.primary.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
+    "data": {
+      "ranking_position": 5,
+      "matched_labels": [
+        "integration"
+      ],
+      "match_reasons": [
+        "label_overlap"
+      ]
+    }
+  },
+  {
+    "stage": "reranking",
+    "action": "rank_candidate",
+    "message": "Ranked candidate it.primary.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "data": {
+      "ranking_position": 6,
+      "matched_labels": [
+        "integration"
+      ],
+      "match_reasons": [
+        "label_overlap"
+      ]
+    }
+  },
+  {
     "stage": "resolver",
     "action": "list_dependencies_received",
-    "message": "Received 0 direct dependencies for it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Received 0 direct dependencies for it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
-      "source_slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "source_slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "source_version": "1.0.0",
       "dependencies": []
     }
@@ -235,9 +394,9 @@
   {
     "stage": "resolver",
     "action": "list_dependencies_sorted",
-    "message": "Canonicalized dependency order for it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Canonicalized dependency order for it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
-      "source_slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "source_slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "source_version": "1.0.0",
       "dependencies": []
     }
@@ -245,7 +404,7 @@
   {
     "stage": "resolver",
     "action": "visit_node",
-    "message": "Resolved exact node it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Resolved exact node it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
       "dependency_count": 0
     }
@@ -253,7 +412,7 @@
   {
     "stage": "selection",
     "action": "finalize_selection",
-    "message": "Selected it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Selected it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
       "selection_mode": "explicit_slug"
     }
@@ -261,13 +420,13 @@
   {
     "stage": "selection",
     "action": "explain_final_selection",
-    "message": "Explained why it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0 won over it.discovery.3f4319a75561486ab71be5adaa49f1c2@1.0.0.",
+    "message": "Explained why it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 won over it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
     "data": {
-      "profile": "balanced",
+      "profile": "high-trust",
       "selection_mode": "explicit_slug",
-      "selected_slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "selected_slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "selected_version": "1.0.0",
-      "runner_up_slug": "it.discovery.3f4319a75561486ab71be5adaa49f1c2",
+      "runner_up_slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
       "runner_up_version": "1.0.0",
       "decisive_signals": [
         "explicit_slug"
@@ -280,7 +439,7 @@
     "message": "Built lockfile for 1 resolved skills.",
     "data": {
       "node_count": 1,
-      "root_node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "root_node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     }
   },
   {
@@ -289,16 +448,16 @@
     "message": "Built execution plan with 1 steps.",
     "data": {
       "step_count": 1,
-      "root_node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "root_node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     }
   },
   {
     "stage": "execution",
     "action": "materialize_locked_skill",
-    "message": "Materialized locked skill it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0.",
+    "message": "Materialized locked skill it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0",
-      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-u7uyj2l3/skills/it.dep.3718838baebf4ee38e942a45b698c8f2/1.0.0"
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0",
+      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-4bb6zfni/skills/it.dep.9aeacb0af4f44b98a387b81299ee7b0d/1.0.0"
     }
   }
 ]

@@ -4,7 +4,7 @@
     "passed": true,
     "message": "Lifecycle 'published' is allowed.",
     "coordinate": {
-      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0"
     }
   },
@@ -13,7 +13,7 @@
     "passed": true,
     "message": "Trust tier 'untrusted' is allowed.",
     "coordinate": {
-      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0"
     }
   },
@@ -22,7 +22,7 @@
     "passed": true,
     "message": "No token estimate ceiling is configured.",
     "coordinate": {
-      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0"
     }
   },
@@ -31,7 +31,7 @@
     "passed": true,
     "message": "No content size ceiling is configured.",
     "coordinate": {
-      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0"
     }
   },

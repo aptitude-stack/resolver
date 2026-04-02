@@ -167,7 +167,7 @@ def test_format_cli_telemetry_block_renders_one_operation_with_stage_lines() -> 
         [
             support.StageTiming(stage="discovery", duration_ms=95.679),
             support.StageTiming(stage="execution_planning", duration_ms=18.2),
-        ]
+        ],
     )
 
     assert rendered == "\n".join(
@@ -176,4 +176,17 @@ def test_format_cli_telemetry_block_renders_one_operation_with_stage_lines() -> 
             "  Discovery           95.7ms",
             "  Execution planning  18.2ms",
         ]
+    )
+
+
+def test_format_cli_install_telemetry_line_renders_pipe_separated_summary() -> None:
+    rendered = support.format_cli_install_telemetry_line(
+        [
+            support.StageTiming(stage="discovery", duration_ms=95.679),
+            support.StageTiming(stage="execution_planning", duration_ms=18.2),
+        ]
+    )
+
+    assert (
+        rendered == "Install telemetry | Discovery 95.7ms | Execution planning 18.2ms"
     )

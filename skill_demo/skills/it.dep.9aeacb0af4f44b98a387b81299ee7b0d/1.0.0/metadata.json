@@ -1,0 +1,22 @@
+{
+  "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+  "version": "1.0.0",
+  "name": "Integration Dependency Skill 9aeacb0af4f44b98a387b81299ee7b0d",
+  "description": "Dependency seed for registry adapter integration tests (9aeacb0af4f44b98a387b81299ee7b0d)",
+  "tags": [
+    "9aeacb0af4f44b98a387b81299ee7b0d",
+    "dependency",
+    "integration"
+  ],
+  "headers": {},
+  "rendered_summary": "Dependency seed for registry adapter integration tests (9aeacb0af4f44b98a387b81299ee7b0d)",
+  "lifecycle_status": "published",
+  "trust_tier": "untrusted",
+  "published_at": "2026-04-02T08:03:18.156828Z",
+  "artifact_ref": "/skills/it.dep.9aeacb0af4f44b98a387b81299ee7b0d/1.0.0/content",
+  "content_checksum": {
+    "algorithm": "sha256",
+    "digest": "30ed443ea9182aea6008770d50e39881ece8f28e767754f0a260e9078b636a20",
+    "size_bytes": 126
+  }
+}

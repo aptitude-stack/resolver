@@ -438,12 +438,12 @@ def render_wizard_manifest_panel() -> Panel:
         "--max-tokens N  --max-content-size N  --target PATH  --json",
     )
     body = Group(
+        Text("Public commands", style=THEME.text_subtle),
         Text('install  aptitude install "query" [flags]', style=THEME.text_primary),
         *[
             Text(f"  {line}", style=THEME.text_muted)
             for line in install_option_signatures
         ],
-        Text(""),
         Text(
             "sync     aptitude sync --lock aptitude.lock.json [--target PATH] [--json]",
             style=THEME.text_primary,
@@ -452,8 +452,32 @@ def render_wizard_manifest_panel() -> Panel:
             "manifest aptitude manifest",
             style=THEME.text_primary,
         ),
+        Text(""),
+        Text("Advanced/internal", style=THEME.text_subtle),
         Text(
-            "  Advanced capability map for public, internal, and framework-level surfaces.",
+            'resolve  aptitude resolve "query" [planning flags]',
+            style=THEME.text_primary,
+        ),
+        Text(
+            "  Advanced/internal preview flow. Plans only and prints stable JSON.",
+            style=THEME.text_muted,
+        ),
+        Text(""),
+        Text("Global / framework", style=THEME.text_subtle),
+        Text(
+            "--version",
+            style=THEME.text_primary,
+        ),
+        Text(
+            "--install-completion",
+            style=THEME.text_primary,
+        ),
+        Text(
+            "--show-completion",
+            style=THEME.text_primary,
+        ),
+        Text(
+            "  Shell/version helpers exposed by the Typer app runtime.",
             style=THEME.text_muted,
         ),
     )

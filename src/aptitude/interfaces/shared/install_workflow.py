@@ -1,4 +1,4 @@
-"""Shared orchestration helpers for CLI and TUI install flows."""
+"""Shared orchestration helpers for CLI and wizard flows."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ SyncBuilder = Callable[[], tuple[SyncWorkflowUseCase, Callable[[], None]]]
 
 @dataclass(frozen=True)
 class InstallWorkflowOptions:
-    """Optional CLI/TUI overrides for planning and install use cases."""
+    """Optional CLI and wizard overrides for planning and install use cases."""
 
     selection_profile: str | None = None
     interaction_mode: InteractionMode | None = None

@@ -39,6 +39,7 @@ from aptitude.interfaces.cli.support import (
     build_workflow_service as _shared_build_workflow_service,
     capture_cli_telemetry,
     format_cli_error,
+    format_cli_install_telemetry_line,
     format_cli_telemetry_block,
     format_unexpected_cli_error,
     is_interactive,
@@ -188,12 +189,18 @@ def _run_with_activity(
 def _render_operation_telemetry(
     operation_label: str,
     stage_timings,
+    *,
+    compact: bool = False,
 ) -> None:
     """Render one operation-scoped telemetry block for interactive human CLI runs."""
 
     if not _is_interactive():
         return
-    summary = format_cli_telemetry_block(operation_label, stage_timings)
+    summary = (
+        format_cli_install_telemetry_line(stage_timings)
+        if compact
+        else format_cli_telemetry_block(operation_label, stage_timings)
+    )
     if summary is None:
         return
     _ACTIVITY_CONSOLE.print(summary, style=THEME.text_subtle)
@@ -232,11 +239,15 @@ def _resolved_install_coordinates(result: InstallResultDto) -> list[tuple[str, s
     return []
 
 
-def _format_install_success(result: InstallResultDto) -> str:
+def _format_install_success(
+    result: InstallResultDto,
+    *,
+    telemetry_summary: str | None = None,
+) -> str:
     """Render a human-friendly install summary inspired by package managers."""
 
     lines = [
-        "Install summary",
+        "Installation Summary",
         HORIZONTAL_SEPARATOR,
         f"Collecting {result.requested_query}",
     ]
@@ -275,6 +286,10 @@ def _format_install_success(result: InstallResultDto) -> str:
     if result.materialized_root:
         lines.append(HORIZONTAL_SEPARATOR)
         lines.append(f"Installed to: {result.materialized_root}")
+
+    if telemetry_summary:
+        lines.append(HORIZONTAL_SEPARATOR)
+        lines.append(telemetry_summary)
 
     return "\n".join(lines)
 
@@ -638,13 +653,16 @@ def install(
         typer.echo(format_unexpected_cli_error(exc), err=True)
         raise typer.Exit(code=1) from exc
 
-    _render_operation_telemetry("Install", telemetry)
-
     if json_output or result.status != "installed":
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
         return
 
-    typer.echo(_format_install_success(result))
+    typer.echo(
+        _format_install_success(
+            result,
+            telemetry_summary=format_cli_install_telemetry_line(telemetry),
+        )
+    )
 
 
 @app.command(help=build_command_help("sync"))

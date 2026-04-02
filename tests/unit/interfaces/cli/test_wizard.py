@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import builtins
 import sys
+from collections.abc import Callable
+from contextlib import contextmanager
 from io import StringIO
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
-from typing import Mapping, Sequence, cast
+from typing import Mapping, Sequence, TypedDict, cast
 
 from rich.console import Console
 
@@ -28,9 +30,14 @@ from aptitude.application.dto import (
     TraceEntryDto,
 )
 from aptitude.domain.errors import DiscoveryNoCandidatesError
-from aptitude.interfaces.cli.catalog import HORIZONTAL_SEPARATOR
 from aptitude.interfaces.cli import wizard as wizard_module
 from aptitude.interfaces.cli.wizard import CliWizard
+from aptitude.telemetry.metrics import StageTiming
+
+
+class WindowCall(TypedDict):
+    args: tuple[list[tuple[str, str]], ...]
+    kwargs: dict[str, object]
 
 
 class FakeWorkflowService:
@@ -319,7 +326,64 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     assert service.resolve_calls[1]["select_slug"] == "js.lint"
     assert service.install_calls[0]["query"] == "lint"
     assert service.install_calls[0]["select_slug"] == "js.lint"
-    assert "Installed Skills" in transcript.getvalue()
+    assert "Installation Summary" in transcript.getvalue()
+
+
+def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    answers = iter(["python lint"])
+    selections = iter(["install", "balanced", "auto"])
+    confirmations = iter([True])
+
+    @contextmanager
+    def capture_install_telemetry():
+        yield [
+            StageTiming(stage="discovery", duration_ms=95.679),
+            StageTiming(stage="materialization", duration_ms=18.2),
+        ]
+
+    original_capture = wizard_module.capture_cli_telemetry
+    wizard_module.capture_cli_telemetry = capture_install_telemetry
+    try:
+        wizard = CliWizard(
+            workflow_service=service,
+            console=Console(file=transcript, force_terminal=False, color_system=None),
+            prompt_text=lambda *_, **__: next(answers),
+            select_one=lambda *_, **__: next(selections),
+            confirm=lambda *_, **__: next(confirmations),
+        )
+
+        wizard.run()
+    finally:
+        wizard_module.capture_cli_telemetry = original_capture
+
+    assert "Installation Summary" in transcript.getvalue()
+    assert (
+        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms"
+        in transcript.getvalue()
+    )
+
+
+def test_cli_wizard_prints_telemetry_with_leading_blank_line() -> None:
+    transcript = StringIO()
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "install",
+        confirm=lambda *_, **__: False,
+    )
+
+    wizard._print_operation_telemetry(  # type: ignore[attr-defined]
+        "Resolve query",
+        [StageTiming(stage="discovery", duration_ms=84.8)],
+    )
+
+    assert transcript.getvalue().startswith("\nResolve query telemetry")
 
 
 def test_cli_wizard_header_uses_filled_aptitude_wordmark() -> None:
@@ -420,8 +484,23 @@ def test_render_choice_line_appends_active_description_inline() -> None:
 def test_render_wordmark_supports_alternate_banner_style() -> None:
     rendered = wizard_module._render_wordmark(style="block")
 
-    assert "█████████" in rendered
+    assert "░▒▓██████▓▒░" in rendered
     assert "Aptitud" not in rendered
+
+
+def test_format_plan_summary_row_aligns_one_label_value_pair() -> None:
+    assert (
+        wizard_module._format_plan_summary_row(
+            ("Runtime", "unknown"),
+        )
+        == "Runtime     : unknown"
+    )
+    assert (
+        wizard_module._format_plan_summary_row(
+            ("Interaction", "auto"),
+        )
+        == "Interaction : auto"
+    )
 
 
 def test_cli_wizard_help_shows_capability_map_only_on_demand() -> None:
@@ -440,6 +519,13 @@ def test_cli_wizard_help_shows_capability_map_only_on_demand() -> None:
 
     output = transcript.getvalue()
     assert "Capability Map" in output
+    assert "Public commands" in output
+    assert "Advanced/internal" in output
+    assert "Global / framework" in output
+    assert 'resolve  aptitude resolve "query" [planning flags]' in output
+    assert "--version" in output
+    assert "--install-completion" in output
+    assert "--show-completion" in output
     assert "aptitude manifest" in output
 
 
@@ -650,7 +736,7 @@ def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> No
     hsplit_calls: list[dict[str, object]] = []
     vsplit_calls: list[dict[str, object]] = []
     binding_calls: list[tuple[object, ...]] = []
-    window_calls: list[dict[str, object]] = []
+    window_calls: list[WindowCall] = []
 
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
@@ -705,15 +791,18 @@ def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> No
         return SimpleNamespace(children=children, kwargs=kwargs)
 
     setattr(containers_module, "VSplit", fake_vsplit)
-    setattr(
-        containers_module,
-        "Window",
-        lambda *args, **kwargs: window_calls.append({"args": args, "kwargs": kwargs})
-        or SimpleNamespace(
+
+    def fake_window(
+        *args: list[tuple[str, str]],
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        window_calls.append({"args": args, "kwargs": kwargs})
+        return SimpleNamespace(
             args=args,
             kwargs=kwargs,
-        ),
-    )
+        )
+
+    setattr(containers_module, "Window", fake_window)
 
     dimension_module = ModuleType("prompt_toolkit.layout.dimension")
 
@@ -786,9 +875,97 @@ def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> No
     assert "width" not in hsplit_calls[0]
     assert ("c-s",) in binding_calls
     assert ("c-a",) in binding_calls
-    header_fragments = cast(list[tuple[str, str]], window_calls[0]["args"][0])
-    footer_fragments = cast(list[tuple[str, str]], window_calls[1]["args"][0])
+    footer_fragments = window_calls[1]["args"][0]
     assert "[Ctrl+S] submit  [Ctrl+A] cancel" in footer_fragments[0][1]
+
+
+def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
+
+    prompt_toolkit_application = ModuleType("prompt_toolkit.application")
+    captured: dict[str, object] = {}
+
+    class FakeApplication:
+        def __init__(self, **kwargs) -> None:
+            captured["application_kwargs"] = kwargs
+
+        def run(self) -> str:
+            return "auto"
+
+    setattr(prompt_toolkit_application, "Application", FakeApplication)
+
+    prompt_toolkit_key_binding = ModuleType("prompt_toolkit.key_binding")
+
+    class FakeKeyBindings:
+        def add(self, *_keys):
+            def decorator(func):
+                return func
+
+            return decorator
+
+    setattr(prompt_toolkit_key_binding, "KeyBindings", FakeKeyBindings)
+
+    prompt_toolkit_layout = ModuleType("prompt_toolkit.layout")
+    setattr(prompt_toolkit_layout, "Layout", lambda container, **_: container)
+
+    prompt_toolkit_containers = ModuleType("prompt_toolkit.layout.containers")
+    setattr(prompt_toolkit_containers, "HSplit", lambda children, **_: children)
+    setattr(prompt_toolkit_containers, "Window", lambda control, **_: control)
+
+    prompt_toolkit_controls = ModuleType("prompt_toolkit.layout.controls")
+
+    def fake_formatted_text_control(render_menu, **kwargs):
+        captured["control"] = render_menu
+        return render_menu
+
+    setattr(
+        prompt_toolkit_controls,
+        "FormattedTextControl",
+        fake_formatted_text_control,
+    )
+
+    prompt_toolkit_styles = ModuleType("prompt_toolkit.styles")
+    setattr(
+        prompt_toolkit_styles,
+        "Style",
+        SimpleNamespace(from_dict=lambda style_map: style_map),
+    )
+
+    monkeypatch.setitem(
+        sys.modules, "prompt_toolkit.application", prompt_toolkit_application
+    )
+    monkeypatch.setitem(
+        sys.modules, "prompt_toolkit.key_binding", prompt_toolkit_key_binding
+    )
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.layout", prompt_toolkit_layout)
+    monkeypatch.setitem(
+        sys.modules,
+        "prompt_toolkit.layout.containers",
+        prompt_toolkit_containers,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "prompt_toolkit.layout.controls",
+        prompt_toolkit_controls,
+    )
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", prompt_toolkit_styles)
+
+    result = wizard_module._default_select_one(
+        "Interaction mode",
+        [("Auto", "auto"), ("Always ask", "always")],
+        "Choose how ambiguity should be handled.",
+    )
+
+    render_menu = cast(Callable[[], list[tuple[str, str]]], captured["control"])
+    fragments = render_menu()
+    assert result == "auto"
+    assert fragments[-1] == (
+        "class:hint",
+        "\n\n[↑↓] move  [enter] confirm  [q] cancel\n",
+    )
 
 
 def test_use_rounded_prompt_border_sets_and_restores_corners(monkeypatch) -> None:

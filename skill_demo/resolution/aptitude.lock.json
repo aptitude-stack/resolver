@@ -1,44 +1,44 @@
 {
   "version": 1,
-  "generated_at": "2026-04-01T19:08:56.483514Z",
+  "generated_at": "2026-04-02T08:03:18.156828Z",
   "client_version": null,
   "root": {
     "request": "Integration",
     "requested_version": null,
-    "selected_node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0",
+    "selected_node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0",
     "selection_mode": "explicit_slug"
   },
   "nodes": [
     {
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0",
-      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0",
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0",
-      "artifact_ref": "/skills/it.dep.3718838baebf4ee38e942a45b698c8f2/1.0.0/content",
-      "name": "Integration Dependency Skill 3718838baebf4ee38e942a45b698c8f2",
-      "description": "Dependency seed for registry adapter integration tests (3718838baebf4ee38e942a45b698c8f2)",
+      "artifact_ref": "/skills/it.dep.9aeacb0af4f44b98a387b81299ee7b0d/1.0.0/content",
+      "name": "Integration Dependency Skill 9aeacb0af4f44b98a387b81299ee7b0d",
+      "description": "Dependency seed for registry adapter integration tests (9aeacb0af4f44b98a387b81299ee7b0d)",
       "tags": [
-        "3718838baebf4ee38e942a45b698c8f2",
+        "9aeacb0af4f44b98a387b81299ee7b0d",
         "dependency",
         "integration"
       ],
       "headers": {},
-      "rendered_summary": "Dependency seed for registry adapter integration tests (3718838baebf4ee38e942a45b698c8f2)",
+      "rendered_summary": "Dependency seed for registry adapter integration tests (9aeacb0af4f44b98a387b81299ee7b0d)",
       "lifecycle_status": "published",
       "trust_tier": "untrusted",
-      "published_at": "2026-04-01T19:08:56.483514Z",
+      "published_at": "2026-04-02T08:03:18.156828Z",
       "content_checksum": {
         "algorithm": "sha256",
-        "digest": "5817c8288782ea2efccd94dc23cc84b4339462636d2fb73ba4708e13242d9eaa",
+        "digest": "30ed443ea9182aea6008770d50e39881ece8f28e767754f0a260e9078b636a20",
         "size_bytes": 126
       }
     }
   ],
   "edges": [],
   "install_order": [
-    "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+    "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
   ],
   "selection": {
-    "profile": "balanced",
+    "profile": "high-trust",
     "interaction_mode": "auto",
     "profile_source": "cli_override",
     "interaction_mode_source": "cli_override"
@@ -66,25 +66,25 @@
       "rule": "allowed_lifecycle_status",
       "passed": true,
       "message": "Lifecycle 'published' is allowed.",
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     },
     {
       "rule": "allowed_trust_tiers",
       "passed": true,
       "message": "Trust tier 'untrusted' is allowed.",
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     },
     {
       "rule": "max_content_size_bytes",
       "passed": true,
       "message": "No content size ceiling is configured.",
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     },
     {
       "rule": "max_token_estimate",
       "passed": true,
       "message": "No token estimate ceiling is configured.",
-      "node_id": "it.dep.3718838baebf4ee38e942a45b698c8f2@1.0.0"
+      "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0"
     },
     {
       "rule": "max_total_content_size_bytes",

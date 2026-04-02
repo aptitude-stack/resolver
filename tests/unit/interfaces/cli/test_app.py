@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,7 @@ from aptitude.domain.models import (
     VersionSummary,
 )
 from aptitude.interfaces.cli import app as app_module
+from aptitude.telemetry.metrics import StageTiming
 
 
 runner = CliRunner()
@@ -589,6 +591,7 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
     assert "Collecting python lint" in result.stdout
+    assert "Installation Summary" in result.stdout
     assert "Using resolver candidate python.lint (1.2.3)" in result.stdout
     assert "Collecting dependency dep.core (0.9.0)" in result.stdout
     assert (
@@ -596,6 +599,41 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     )
     assert "Successfully installed dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
+
+
+def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+
+    @contextmanager
+    def capture_install_telemetry():
+        yield [
+            StageTiming(stage="discovery", duration_ms=95.679),
+            StageTiming(stage="materialization", duration_ms=18.2),
+        ]
+
+    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "capture_cli_telemetry", capture_install_telemetry)
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda: (use_case, lambda: None),
+    )
+
+    result = runner.invoke(
+        app_module.app, ["install", "python lint", "--target", str(target)]
+    )
+
+    assert result.exit_code == 0
+    assert (
+        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms" in result.stdout
+    )
+    assert (
+        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms"
+        not in result.stderr
+    )
 
 
 def test_cli_install_json_flag_preserves_structured_output(

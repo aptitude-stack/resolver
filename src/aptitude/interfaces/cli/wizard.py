@@ -38,7 +38,6 @@ from aptitude.domain.errors import (
     DiscoveryNoCandidatesError,
 )
 from aptitude.interfaces.cli.catalog import (
-    HORIZONTAL_SEPARATOR,
     THEME,
     render_wizard_manifest_panel,
 )
@@ -47,6 +46,7 @@ from aptitude.interfaces.cli.support import (
     build_workflow_service as _shared_build_workflow_service,
     capture_cli_telemetry,
     format_cli_error,
+    format_cli_install_telemetry_line,
     format_cli_telemetry_block,
     format_unexpected_cli_error,
 )
@@ -91,6 +91,7 @@ T = TypeVar("T")
 BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
+PLAN_SUMMARY_LABEL_WIDTH = len("Interaction")
 
 WORDMARKS: dict[BannerStyle, str] = {
     "classic": (
@@ -105,17 +106,15 @@ WORDMARKS: dict[BannerStyle, str] = {
         "                \\/_/           \n\n"
     ),
     "block": (
-        "      █████████              █████     ███   █████                   █████         \n"
-        "     ███░░░░░███            ░░███     ░░░   ░░███                   ░░███          \n"
-        "    ░███    ░███  ████████  ███████   ████  ███████   █████ ████  ███████   ██████ \n"
-        "    ░███████████ ░░███░░███░░░███░   ░░███ ░░░███░   ░░███ ░███  ███░░███  ███░░███\n"
-        "    ░███░░░░░███  ░███ ░███  ░███     ░███   ░███     ░███ ░███ ░███ ░███ ░███████ \n"
-        "    ░███    ░███  ░███ ░███  ░███ ███ ░███   ░███ ███ ░███ ░███ ░███ ░███ ░███░░░  \n"
-        "    █████   █████ ░███████   ░░█████  █████  ░░█████  ░░████████░░████████░░██████ \n"
-        "   ░░░░░   ░░░░░  ░███░░░     ░░░░░  ░░░░░    ░░░░░    ░░░░░░░░  ░░░░░░░░  ░░░░░░  \n"
-        "                  ░███                                                             \n"
-        "                  █████                                                            \n"
-        "                 ░░░░░                                                             \n\n"
+        "       ░▒▓██████▓▒░░▒▓███████▓▒░▒▓████████▓▒░    \n"
+        "      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        \n"
+        "      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        \n"
+        "      ░▒▓████████▓▒░▒▓███████▓▒░  ░▒▓█▓▒░        \n"
+        "      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░        ░▒▓█▓▒░        \n"
+        "      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░        ░▒▓█▓▒░▒▓██▓▒░ \n"
+        "      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░        ░▒▓█▓▒░▒▓██▓▒░ \n"
+        "                                                 \n"
+        "                                                 \n\n"
     ),
 }
 
@@ -227,7 +226,7 @@ def _with_return_option(
 
 
 def _render_cli_manifest() -> Panel:
-    """Render a compact summary of supported command flags."""
+    """Render a compact summary of public, advanced, and framework CLI surfaces."""
 
     return render_wizard_manifest_panel()
 
@@ -245,6 +244,14 @@ def _active_menu_description(
     return descriptions.get(options[index][1])
 
 
+def _format_plan_summary_row(*items: tuple[str, object]) -> str:
+    """Render one aligned plan summary row."""
+
+    return "\n".join(
+        f"{label:<{PLAN_SUMMARY_LABEL_WIDTH}} : {value}" for label, value in items
+    )
+
+
 def _render_plan_panel(
     result: ResolveQueryResultDto,
     *,
@@ -260,15 +267,46 @@ def _render_plan_panel(
     skill = result.selected_skill
 
     body = Group(
-        Text(f"Selected  {selected.slug}@{selected.version}", style=THEME.text_primary),
         Text(
-            f"Runtime  {skill.runtime if skill and skill.runtime else 'unknown'}    "
-            f"Trust  {skill.trust_tier if skill else 'unknown'}    "
-            f"Lifecycle  {skill.lifecycle_status if skill else 'unknown'}",
+            _format_plan_summary_row(
+                ("Selected", f"{selected.slug}@{selected.version}"),
+            ),
+            style=THEME.text_primary,
+        ),
+        Text(
+            _format_plan_summary_row(
+                ("Runtime", skill.runtime if skill and skill.runtime else "unknown"),
+            ),
             style=THEME.text_detail,
         ),
         Text(
-            f"Profile  {selection_profile}    Interaction  {interaction_mode}    Target  {target}",
+            _format_plan_summary_row(
+                ("Trust", skill.trust_tier if skill else "unknown"),
+            ),
+            style=THEME.text_detail,
+        ),
+        Text(
+            _format_plan_summary_row(
+                ("Lifecycle", skill.lifecycle_status if skill else "unknown"),
+            ),
+            style=THEME.text_detail,
+        ),
+        Text(
+            _format_plan_summary_row(
+                ("Profile", selection_profile),
+            ),
+            style=THEME.text_muted,
+        ),
+        Text(
+            _format_plan_summary_row(
+                ("Interaction", interaction_mode),
+            ),
+            style=THEME.text_muted,
+        ),
+        Text(
+            _format_plan_summary_row(
+                ("Target", target),
+            ),
             style=THEME.text_muted,
         ),
         Text(""),
@@ -290,8 +328,13 @@ def _render_plan_panel(
     )
 
 
-def _render_install_panel(result: InstallResultDto | SyncResultDto) -> Panel:
-    """Render one compact install result box."""
+def _render_materialization_panel(
+    result: InstallResultDto | SyncResultDto,
+    *,
+    title: str = "Installed Skills",
+    footer: str | None = None,
+) -> Panel:
+    """Render one compact materialization result box."""
 
     installed = (
         "\n".join(
@@ -300,9 +343,11 @@ def _render_install_panel(result: InstallResultDto | SyncResultDto) -> Panel:
         )
         or "No skills materialized."
     )
+    if footer:
+        installed = f"{installed}\n\n{footer}"
     return Panel(
         Text(installed, style=THEME.text_body),
-        title="Installed Skills",
+        title=title,
         border_style=THEME.border_secondary,
         box=box.ROUNDED,
         padding=(1, 1),
@@ -504,6 +549,7 @@ def _fallback_select_one(
             )
         lines.append("")
         lines.append("[↑↓] move  [enter] confirm  [q] cancel")
+        lines.append("")
         return lines
 
     def draw(lines: list[str]) -> None:
@@ -592,7 +638,7 @@ def _default_select_one(
             if is_active and active_description:
                 fragments.append(("class:detail", f" - {active_description}"))
             fragments.append(("", "\n"))
-        fragments.append(("class:hint", "\n[↑↓] move  [enter] confirm  [q] cancel"))
+        fragments.append(("class:hint", "\n\n[↑↓] move  [enter] confirm  [q] cancel\n"))
         return fragments
 
     control = FormattedTextControl(render_menu, focusable=True)
@@ -718,15 +764,22 @@ class CliWizard:
                     self._print_step_separator()
                     sync_result = self._run_sync_flow()
                     self._print_step_separator()
-                    self._console.print(_render_install_panel(sync_result))
+                    self._console.print(_render_materialization_panel(sync_result))
                     return
 
                 self._print_step_separator()
-                install_result = self._run_install_flow()
-                if install_result is None:
+                install_outcome = self._run_install_flow()
+                if install_outcome is None:
                     return
+                install_result, telemetry_summary = install_outcome
                 self._print_step_separator()
-                self._console.print(_render_install_panel(install_result))
+                self._console.print(
+                    _render_materialization_panel(
+                        install_result,
+                        title="Installation Summary",
+                        footer=telemetry_summary,
+                    )
+                )
                 return
         except (AptitudeResolverError,) as exc:
             self._console.print(_format_error(exc), style="red")
@@ -738,7 +791,7 @@ class CliWizard:
             self._console.print(format_unexpected_cli_error(exc), style="red")
             return
 
-    def _run_install_flow(self) -> InstallResultDto | None:
+    def _run_install_flow(self) -> tuple[InstallResultDto, str | None] | None:
         """Run the guided install flow after the user selects it."""
 
         query = self._prompt_install_query()
@@ -836,13 +889,19 @@ class CliWizard:
         self,
         operation_label: str,
         stage_timings,
+        *,
+        compact: bool = False,
     ) -> None:
         """Render one operation-scoped telemetry block inside the wizard flow."""
 
-        summary = format_cli_telemetry_block(operation_label, stage_timings)
+        summary = (
+            format_cli_install_telemetry_line(stage_timings)
+            if compact
+            else format_cli_telemetry_block(operation_label, stage_timings)
+        )
         if summary is None:
             return
-        self._console.print(Text(summary, style=THEME.text_subtle))
+        self._console.print(Text(f"\n{summary}", style=THEME.text_subtle))
 
     def _run_sync_flow(self) -> SyncResultDto:
         """Run the guided sync flow after the user selects it."""
@@ -948,7 +1007,7 @@ class CliWizard:
         query: str,
         select_slug: str | None,
         options: InstallWorkflowOptions,
-    ) -> InstallResultDto:
+    ) -> tuple[InstallResultDto, str | None]:
         """Install one resolved selection."""
 
         telemetry = []
@@ -979,10 +1038,9 @@ class CliWizard:
                     )
                 progress.advance(task, 80)
         except Exception:
-            self._print_operation_telemetry("Install", telemetry)
+            self._print_operation_telemetry("Install", telemetry, compact=True)
             raise
-        self._print_operation_telemetry("Install", telemetry)
-        return result
+        return result, format_cli_install_telemetry_line(telemetry)
 
     def _render_header(self, *, initial_flow: WizardEntryFlow | None = None) -> None:
         """Print the wizard header."""

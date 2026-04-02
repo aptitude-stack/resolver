@@ -16,7 +16,7 @@ You must:
 
 Do not:
 
-- put business logic in CLI or TUI handlers
+- put business logic in CLI or wizard handlers
 - put solver logic in `application/`
 - let `discovery/` perform final root selection
 - let `execution/` re-resolve dependencies
