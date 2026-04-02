@@ -368,7 +368,7 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
     )
 
 
-def test_cli_wizard_prints_telemetry_with_leading_blank_line() -> None:
+def test_cli_wizard_prints_telemetry_with_trailing_blank_line() -> None:
     transcript = StringIO()
     wizard = CliWizard(
         workflow_service=FakeWorkflowService(),
@@ -383,7 +383,9 @@ def test_cli_wizard_prints_telemetry_with_leading_blank_line() -> None:
         [StageTiming(stage="discovery", duration_ms=84.8)],
     )
 
-    assert transcript.getvalue().startswith("\nResolve query telemetry")
+    output = transcript.getvalue()
+    assert output.startswith("Resolve query telemetry")
+    assert output.endswith("\n\n")
 
 
 def test_cli_wizard_header_uses_filled_aptitude_wordmark() -> None:
@@ -964,7 +966,7 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
     assert result == "auto"
     assert fragments[-1] == (
         "class:hint",
-        "\n\n[↑↓] move  [enter] confirm  [q] cancel\n",
+        "\n[↑↓] move  [enter] confirm  [q] cancel\n\n",
     )
 
 

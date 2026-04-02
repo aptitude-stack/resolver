@@ -638,7 +638,7 @@ def _default_select_one(
             if is_active and active_description:
                 fragments.append(("class:detail", f" - {active_description}"))
             fragments.append(("", "\n"))
-        fragments.append(("class:hint", "\n\n[↑↓] move  [enter] confirm  [q] cancel\n"))
+        fragments.append(("class:hint", "\n[↑↓] move  [enter] confirm  [q] cancel\n\n"))
         return fragments
 
     control = FormattedTextControl(render_menu, focusable=True)
@@ -901,7 +901,7 @@ class CliWizard:
         )
         if summary is None:
             return
-        self._console.print(Text(f"\n{summary}", style=THEME.text_subtle))
+        self._console.print(Text(summary, style=THEME.text_subtle), end="\n\n")
 
     def _run_sync_flow(self) -> SyncResultDto:
         """Run the guided sync flow after the user selects it."""
