@@ -777,7 +777,10 @@ class CliWizard:
                     self._console.print(_render_materialization_panel(sync_result))
                     return
 
-                install_outcome = self._run_install_flow(initial_query=initial_query)
+                install_outcome = self._run_install_flow(
+                    initial_query=initial_query,
+                    direct_install_entry=initial_flow == "install",
+                )
                 if install_outcome is None:
                     return
                 install_result, telemetry_summary = install_outcome
@@ -804,10 +807,12 @@ class CliWizard:
         self,
         *,
         initial_query: str | None = None,
+        direct_install_entry: bool = False,
     ) -> tuple[InstallResultDto, str | None] | None:
         """Run the guided install flow after the user selects it."""
 
         query = initial_query.strip() if initial_query is not None else None
+        skip_initial_separator = direct_install_entry and query is not None
         if query is None:
             self._print_step_separator()
             query = self._prompt_install_query()
@@ -816,7 +821,10 @@ class CliWizard:
             return None
 
         while True:
-            self._print_step_separator()
+            if skip_initial_separator:
+                skip_initial_separator = False
+            else:
+                self._print_step_separator()
             selection_profile = self._select(
                 "Selection profile",
                 _with_return_option(PROFILE_OPTIONS),
@@ -1075,7 +1083,7 @@ class CliWizard:
             )
         )
         self._write_separator()
-        if initial_flow is None:
+        if initial_flow is None or initial_flow == "install":
             return
 
         self._console.print(Text(f"guided {initial_flow} flow", style=THEME.text_muted))

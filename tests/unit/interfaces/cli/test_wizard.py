@@ -625,6 +625,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
 
     output = transcript.getvalue()
     assert "Choose a flow" not in output
+    assert "guided install flow" not in output
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
@@ -668,7 +669,7 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_direct_install_flow_prints_one_separator_before_selection_profile() -> (
+def test_cli_wizard_direct_install_flow_starts_at_selection_profile_without_separator() -> (
     None
 ):
     service = FakeWorkflowService(
@@ -693,7 +694,7 @@ def test_cli_wizard_direct_install_flow_prints_one_separator_before_selection_pr
 
     wizard.run(initial_flow="install", initial_query="postman primary skill")
 
-    assert events[:2] == ["separator", "select:Selection profile"]
+    assert events[0] == "select:Selection profile"
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
