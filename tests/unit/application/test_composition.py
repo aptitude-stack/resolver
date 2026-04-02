@@ -4,8 +4,10 @@ import pytest
 
 from aptitude_client.application import composition
 from aptitude_client.application.use_cases import (
+    InspectSkillUseCase,
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
+    SearchSkillsUseCase,
     SyncFromLockUseCase,
 )
 from aptitude_client.domain.errors import InvalidClientConfigurationError
@@ -52,6 +54,38 @@ def test_build_install_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
     use_case, close = composition.build_install_use_case()
 
     assert isinstance(use_case, InstallSkillUseCase)
+    assert len(FakeRegistryClient.instances) == 1
+    assert isinstance(FakeRegistryClient.instances[0].settings, FakeSettings)
+
+    close()
+
+    assert FakeRegistryClient.instances[0].closed is True
+
+
+def test_build_search_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
+    FakeRegistryClient.instances = []
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+
+    use_case, close = composition.build_search_use_case()
+
+    assert isinstance(use_case, SearchSkillsUseCase)
+    assert len(FakeRegistryClient.instances) == 1
+    assert isinstance(FakeRegistryClient.instances[0].settings, FakeSettings)
+
+    close()
+
+    assert FakeRegistryClient.instances[0].closed is True
+
+
+def test_build_inspect_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
+    FakeRegistryClient.instances = []
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+
+    use_case, close = composition.build_inspect_use_case()
+
+    assert isinstance(use_case, InspectSkillUseCase)
     assert len(FakeRegistryClient.instances) == 1
     assert isinstance(FakeRegistryClient.instances[0].settings, FakeSettings)
 

@@ -17,6 +17,7 @@ from aptitude_client.cache import (
     version_list_key,
 )
 from aptitude_client.domain.errors import (
+    AptitudeClientError,
     InvalidCoordinateError,
     RegistryAccessError,
     RegistryUnavailableError,
@@ -77,9 +78,10 @@ class RegistryClient:
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
         """Fetch exact immutable metadata for one skill coordinate."""
 
-        payload = self._get_json_with_cache(
+        payload = self._get_json_with_fallback_paths(
             metadata_key(slug, version),
-            f"/skills/{slug}/{version}",
+            primary_path=f"/skills/{slug}/versions/{version}",
+            fallback_paths=[f"/skills/{slug}/{version}"],
             expire=METADATA_CACHE_TTL_SECONDS,
         )
         try:
@@ -93,9 +95,10 @@ class RegistryClient:
     def list_skill_versions(self, slug: str) -> list[VersionSummary]:
         """List immutable versions for one skill identity."""
 
-        payload = self._get_json_with_cache(
+        payload = self._get_json_with_fallback_paths(
             version_list_key(slug),
-            f"/skills/{slug}",
+            primary_path=f"/skills/{slug}/versions",
+            fallback_paths=[f"/skills/{slug}"],
             expire=VERSION_LIST_CACHE_TTL_SECONDS,
         )
         try:
@@ -186,7 +189,10 @@ class RegistryClient:
         if isinstance(cached, str):
             return cached
 
-        content = self._get_text(f"/skills/{slug}/{version}/content")
+        content = self._get_text_with_fallback_paths(
+            primary_path=f"/skills/{slug}/versions/{version}/content",
+            fallback_paths=[f"/skills/{slug}/{version}/content"],
+        )
         self._cache_store.set(cache_key, content, expire=None)
         return content
 
@@ -216,6 +222,28 @@ class RegistryClient:
             return dict(cached)
 
         payload = self._get_json(path)
+        self._cache_store.set(cache_key, payload, expire=expire)
+        return payload
+
+    def _get_json_with_fallback_paths(
+        self,
+        cache_key: str,
+        *,
+        primary_path: str,
+        fallback_paths: list[str],
+        expire: int | None,
+    ) -> dict[str, Any]:
+        """Fetch JSON from a primary path with legacy runtime fallbacks."""
+
+        cached = self._cache_store.get(cache_key)
+        if isinstance(cached, dict):
+            return dict(cached)
+
+        payload = self._request_json_with_fallback_paths(
+            "GET",
+            primary_path=primary_path,
+            fallback_paths=fallback_paths,
+        )
         self._cache_store.set(cache_key, payload, expire=expire)
         return payload
 
@@ -256,9 +284,51 @@ class RegistryClient:
             )
         return payload
 
+    def _request_json_with_fallback_paths(
+        self,
+        method: str,
+        *,
+        primary_path: str,
+        fallback_paths: list[str],
+        body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Try one JSON path and fall back to legacy runtime paths on contract mismatch."""
+
+        paths = [primary_path, *fallback_paths]
+        last_error: AptitudeClientError | None = None
+        for index, path in enumerate(paths):
+            try:
+                return self._request_json(method, path, body)
+            except (InvalidCoordinateError, UnexpectedRegistryResponseError) as exc:
+                last_error = exc
+                if index == len(paths) - 1:
+                    raise
+        assert last_error is not None
+        raise last_error
+
     def _get_text(self, path: str) -> str:
         response = self._request("GET", path)
         return response.text
+
+    def _get_text_with_fallback_paths(
+        self,
+        *,
+        primary_path: str,
+        fallback_paths: list[str],
+    ) -> str:
+        """Try one text path and fall back to legacy runtime paths on contract mismatch."""
+
+        paths = [primary_path, *fallback_paths]
+        last_error: AptitudeClientError | None = None
+        for index, path in enumerate(paths):
+            try:
+                return self._get_text(path)
+            except (InvalidCoordinateError, UnexpectedRegistryResponseError) as exc:
+                last_error = exc
+                if index == len(paths) - 1:
+                    raise
+        assert last_error is not None
+        raise last_error
 
     def _request(
         self,

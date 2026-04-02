@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 from aptitude_client.application.dto import (
+    ExportedSkillDto,
     InstallRequestDto,
     InstallResultDto,
     InstalledSkillDto,
@@ -21,7 +22,12 @@ from aptitude_client.application.use_cases.resolution_mapping import (
     trace_to_dto,
 )
 from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
-from aptitude_client.execution import materialize_lockfile, write_install_debug_artifacts
+from aptitude_client.execution import (
+    export_materialized_skills_to_agent_root,
+    materialize_lockfile,
+    write_install_debug_artifacts,
+)
+from aptitude_client.shared.config import resolve_agent_install_root
 from aptitude_client.telemetry import TelemetryCollector, emit_stage_timings
 
 
@@ -102,6 +108,21 @@ class InstallSkillUseCase:
                     trace=trace,
                     policy_evaluations=plan.policy_evaluations,
                 )
+            export_result = None
+            if request.export_agent is not None and request.export_scope is not None:
+                export_destination = request.export_destination or resolve_agent_install_root(
+                    agent=request.export_agent,
+                    scope=request.export_scope,
+                )
+                with telemetry.measure("agent_export"):
+                    export_result = export_materialized_skills_to_agent_root(
+                        materialized_root=Path(materialization.materialized_root),
+                        lockfile=plan.lockfile,
+                        destination_root=export_destination,
+                        agent=request.export_agent,
+                        scope=request.export_scope,
+                    )
+                trace.extend(export_result.trace)
             return InstallResultDto(
                 requested_query=plan.requested_query,
                 requested_version=plan.requested_version,
@@ -122,7 +143,22 @@ class InstallSkillUseCase:
                     )
                     for item in materialization.installed_skills
                 ],
+                exported_skills=[
+                    ExportedSkillDto(
+                        agent=item.agent,
+                        scope=item.scope,
+                        slug=item.slug,
+                        version=item.version,
+                        destination_path=item.destination_path,
+                        skill_markdown_path=item.skill_markdown_path,
+                        metadata_path=item.metadata_path,
+                    )
+                    for item in (
+                        export_result.exported_skills if export_result is not None else []
+                    )
+                ],
                 materialized_root=materialization.materialized_root,
+                export_root=export_result.destination_root if export_result is not None else None,
                 trace=[trace_to_dto(item) for item in trace],
                 policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
             )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -48,6 +49,13 @@ def emit_stage_timings(
 ) -> None:
     """Emit one structured log event per recorded stage timing."""
 
+    if logger is None and os.getenv("APTITUDE_EMIT_TELEMETRY", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
     bound_logger = logger or structlog.stdlib.get_logger("aptitude_client.telemetry")
     for timing in collector.snapshot():
         bound_logger.info(

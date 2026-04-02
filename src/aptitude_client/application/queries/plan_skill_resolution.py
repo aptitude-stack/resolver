@@ -9,10 +9,8 @@ from packaging.version import Version
 
 from aptitude_client.application.dto import ResolveQueryRequestDto
 from aptitude_client.discovery import (
-    DiscoverSkillCandidatesQuery,
     RegistryCandidatePort,
 )
-from aptitude_client.discovery.reranking import rerank_candidates
 from aptitude_client.domain.errors import (
     DiscoveryNoCandidatesError,
     PolicyViolationError,
@@ -29,13 +27,12 @@ from aptitude_client.domain.tracing import TraceEntry
 from aptitude_client.execution import ExecutionPlan, build_execution_plan
 from aptitude_client.governance import (
     evaluate_resolution_graph,
-    filter_policy_compliant_candidates,
 )
+from aptitude_client.application.queries.rank_skill_candidates import RankSkillCandidatesQuery
 from aptitude_client.lockfile import Lockfile, build_lockfile
 from aptitude_client.resolver.graph import resolve_recursive_graph
 from aptitude_client.resolver.solver import (
     RegistryCandidateVersionPort,
-    resolve_candidate_versions,
     select_final_candidate,
 )
 from aptitude_client.resolver.validation import validate_resolution_graph
@@ -85,9 +82,13 @@ class PlanSkillResolutionQuery:
         selection_preferences: SelectionPreferences | None = None,
     ) -> None:
         self._registry_client = registry_client
-        self._discover_candidates = DiscoverSkillCandidatesQuery(registry_client)
         self._policy_context = policy_context or PolicyContext()
         self._selection_preferences = selection_preferences or SelectionPreferences()
+        self._rank_candidates = RankSkillCandidatesQuery(
+            registry_client,
+            policy_context=self._policy_context,
+            selection_preferences=self._selection_preferences,
+        )
 
     def execute(
         self,
@@ -95,77 +96,28 @@ class PlanSkillResolutionQuery:
     ) -> SelectionRequiredResult | ResolutionArtifact:
         telemetry = TelemetryCollector()
         try:
-            with telemetry.measure("discovery"):
-                discovery_result = self._discover_candidates.execute(request.query)
+            effective_interaction_mode = request.interaction_mode
+            with telemetry.measure("candidate_ranking"):
+                ranked = self._rank_candidates.execute(
+                    query=request.query,
+                    version=request.version,
+                    interaction_mode=request.interaction_mode,
+                )
             effective_interaction_mode = (
                 request.interaction_mode or self._selection_preferences.interaction_mode
             )
-            trace = list(discovery_result.trace)
-            with telemetry.measure("resolution"):
-                candidates, version_trace = resolve_candidate_versions(
-                    discovery_result.intent,
-                    discovery_result.matches,
-                    self._registry_client,
-                    version=request.version,
-                )
-            trace.extend(version_trace)
-            trace.append(
-                TraceEntry(
-                    stage="selection",
-                    action="apply_selection_preferences",
-                    message="Applied effective selection preferences for candidate ranking and ambiguity handling.",
-                    data={
-                        "profile": self._selection_preferences.profile,
-                        "interaction_mode": effective_interaction_mode,
-                        "profile_source": self._selection_preferences.profile_source,
-                        "interaction_mode_source": (
-                            "request"
-                            if request.interaction_mode is not None
-                            else self._selection_preferences.interaction_mode_source
-                        ),
-                    },
-                )
-            )
-            if not candidates:
-                raise DiscoveryNoCandidatesError(request.query)
+            trace = list(ranked.trace)
+            candidates = list(ranked.candidates)
 
-            with telemetry.measure("governance"):
-                candidates, governance_trace = filter_policy_compliant_candidates(
-                    candidates,
-                    self._policy_context,
-                )
-            trace.extend(governance_trace)
-            if not candidates:
-                raise PolicyViolationError("All discovered candidates were rejected by policy.")
-
-            with telemetry.measure("resolution"):
-                ranked_candidates = rerank_candidates(
-                    discovery_result.intent,
-                    candidates,
-                    self._selection_preferences,
-                )
+            with telemetry.measure("selection"):
                 selection = select_final_candidate(
                     query=request.query,
-                    candidates=ranked_candidates,
+                    candidates=candidates,
                     select_slug=request.select_slug,
                     interaction_mode=effective_interaction_mode,
                     prompt_capable=request.prompt_capable,
                     selection_source=request.selection_source,
                 )
-            for candidate in ranked_candidates:
-                trace.append(
-                    TraceEntry(
-                        stage="reranking",
-                        action="rank_candidate",
-                        message=f"Ranked candidate {candidate.slug}@{candidate.selected_coordinate.version}.",
-                        data={
-                            "ranking_position": candidate.ranking_position,
-                            "matched_labels": list(candidate.matched_labels),
-                            "match_reasons": list(candidate.match_reasons),
-                        },
-                    )
-                )
-            candidates = ranked_candidates
             trace.extend(selection.trace)
             if selection.selected_candidate is None or selection.selection_mode is None:
                 return SelectionRequiredResult(
