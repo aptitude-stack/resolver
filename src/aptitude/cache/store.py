@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from diskcache import Cache
+from diskcache import Cache, JSONDisk
 
 
 def default_cache_dir(
@@ -45,7 +45,7 @@ class CacheStore:
     def __init__(self, cache_dir: Path | None = None) -> None:
         self._cache_dir = (cache_dir or default_cache_dir()).resolve()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
-        self._cache = Cache(str(self._cache_dir))
+        self._cache = Cache(str(self._cache_dir), disk=JSONDisk)
 
     @property
     def cache_dir(self) -> Path:

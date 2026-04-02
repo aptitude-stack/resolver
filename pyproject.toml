@@ -1,6 +1,6 @@
 [project]
 name = "aptitude"
-version = "0.1.0"
+version = "0.0.1"
 description = "Deterministic package-manager-style resolver for AI skills"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "rich>=13.0",
+    "ruff==0.15.9",
     "structlog>=25.0",
     "tenacity>=9.0",
     "tomli>=2.0; python_version < '3.11'",

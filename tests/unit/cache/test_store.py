@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from diskcache import JSONDisk
+
 from aptitude.cache import (
     CacheStore,
     content_key,
@@ -16,6 +18,15 @@ def test_cache_store_round_trips_values(tmp_path) -> None:
     try:
         cache.set("example", {"value": 42}, expire=60)
         assert cache.get("example") == {"value": 42}
+    finally:
+        cache.close()
+
+
+def test_cache_store_uses_json_disk_serializer(tmp_path) -> None:
+    cache = CacheStore(tmp_path / "cache")
+
+    try:
+        assert isinstance(cache._cache.disk, JSONDisk)
     finally:
         cache.close()
 
