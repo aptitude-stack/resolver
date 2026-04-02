@@ -1,6 +1,6 @@
 [project]
 name = "aptitude-resolver"
-version = "0.0.5"
+version = "0.0.6"
 description = "Deterministic package-manager-style resolver for AI skills"
 readme = "README.md"
 requires-python = ">=3.9"
