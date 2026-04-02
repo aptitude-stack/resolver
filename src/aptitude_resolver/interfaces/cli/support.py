@@ -334,10 +334,22 @@ def parse_interaction_mode(value: str | None) -> InteractionMode | None:
     return cast(InteractionMode, value)
 
 
-def is_interactive() -> bool:
-    """Return whether the CLI can safely prompt the user."""
+def can_prompt_user() -> bool:
+    """Return whether the CLI can read interactive user input."""
 
-    return sys.stdin.isatty() and sys.stdout.isatty()
+    return sys.stdin.isatty()
+
+
+def has_interactive_output() -> bool:
+    """Return whether stdout supports transient terminal presentation."""
+
+    return sys.stdout.isatty()
+
+
+def is_interactive() -> bool:
+    """Return whether the CLI supports both prompting and rich terminal output."""
+
+    return can_prompt_user() and has_interactive_output()
 
 
 def resolve_cli_version() -> str:

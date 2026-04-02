@@ -470,7 +470,7 @@ def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
 
     def build_resolve_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -509,7 +509,7 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
     )
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
@@ -546,7 +546,7 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     )
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
@@ -571,7 +571,8 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
 
     def build_install_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -614,7 +615,8 @@ def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
             StageTiming(stage="materialization", duration_ms=18.2),
         ]
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
     monkeypatch.setattr(app_module, "capture_cli_telemetry", capture_install_telemetry)
     monkeypatch.setattr(
         app_module,
@@ -652,7 +654,7 @@ def test_cli_install_json_flag_preserves_structured_output(
     use_case = QueueUseCase(responses=[installed_result])
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module,
         "build_install_use_case",
@@ -679,7 +681,7 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
 
     def build_install_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -725,7 +727,7 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(
 def test_cli_install_reports_missing_environment_variables_cleanly(
     monkeypatch, tmp_path
 ) -> None:
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module, "build_install_use_case", composition.build_install_use_case
     )
@@ -752,7 +754,7 @@ def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> Non
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
 
     def build_resolve_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -789,7 +791,7 @@ def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> Non
 def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     close_calls: list[str] = []
 
     def build_resolve_use_case(**kwargs):
@@ -869,7 +871,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
     monkeypatch.setattr(
         composition, "read_env_selection_overrides", lambda env=None: None
     )
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module, "build_resolve_use_case", composition.build_resolve_use_case
     )
@@ -980,11 +982,12 @@ def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> 
     assert calls == [{"initial_flow": "install", "target": Path("skill_demo")}]
 
 
-def test_cli_install_with_only_query_launches_wizard_at_plan_step(
+def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting_is_available(
     monkeypatch,
 ) -> None:
     calls: list[dict[str, object]] = []
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
 
     monkeypatch.setattr(
         app_module,
@@ -1002,6 +1005,45 @@ def test_cli_install_with_only_query_launches_wizard_at_plan_step(
             "target": Path("skill_demo"),
         }
     ]
+
+
+def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        [
+            "install",
+            "python lint",
+            "--target",
+            str(target),
+            "--prefer",
+            "low-cost",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
 
 
 def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
@@ -1043,7 +1085,7 @@ def test_cli_sync_renders_unexpected_errors_without_tracebacks(monkeypatch) -> N
 def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",

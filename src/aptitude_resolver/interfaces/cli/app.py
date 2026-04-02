@@ -37,12 +37,13 @@ from aptitude_resolver.interfaces.cli.wizard import run_cli_wizard
 from aptitude_resolver.interfaces.cli.support import (
     build_workflow_options,
     build_workflow_service as _shared_build_workflow_service,
+    can_prompt_user,
     capture_cli_telemetry,
     format_cli_error,
     format_cli_install_telemetry_line,
     format_cli_telemetry_block,
     format_unexpected_cli_error,
-    is_interactive,
+    has_interactive_output,
     parse_csv_option,
     parse_interaction_mode,
     parse_missing_environment_variables,
@@ -148,10 +149,16 @@ def _parse_interaction_mode(value: str | None) -> InteractionMode | None:
     return parse_interaction_mode(value)
 
 
-def _is_interactive() -> bool:
-    """Backwards-compatible wrapper for shared TTY detection."""
+def _can_prompt_user() -> bool:
+    """Backwards-compatible wrapper for prompt capability detection."""
 
-    return is_interactive()
+    return can_prompt_user()
+
+
+def _has_interactive_output() -> bool:
+    """Backwards-compatible wrapper for rich output capability detection."""
+
+    return has_interactive_output()
 
 
 def _render_candidate(index: int, candidate: DiscoveryCandidateDto) -> str:
@@ -179,7 +186,7 @@ def _run_with_activity(
 ) -> T:
     """Run one CLI operation with transient progress in interactive sessions."""
 
-    if not _is_interactive():
+    if not _has_interactive_output():
         return operation()
 
     if show_bar:
@@ -215,7 +222,7 @@ def _render_operation_telemetry(
 ) -> None:
     """Render one operation-scoped telemetry block for interactive human CLI runs."""
 
-    if not _is_interactive():
+    if not _has_interactive_output():
         return
     summary = (
         format_cli_install_telemetry_line(stage_timings)
@@ -352,7 +359,7 @@ def _resolve_query_result(
 ) -> ResolveQueryResultDto:
     """Execute resolve and, if needed, complete interactive candidate selection."""
 
-    prompt_capable = _is_interactive()
+    prompt_capable = _can_prompt_user()
     use_case, close = workflow_service.prepare_resolve(options=options)
     try:
         with capture_cli_telemetry():
@@ -394,7 +401,7 @@ def _install_result(
 ) -> InstallResultDto:
     """Execute install and, if needed, complete interactive candidate selection."""
 
-    prompt_capable = _is_interactive()
+    prompt_capable = _can_prompt_user()
     use_case, close = workflow_service.prepare_install(options=options)
     try:
         result = workflow_service.execute_install(
@@ -634,7 +641,7 @@ def install(
         max_content_size=max_content_size,
         json_output=json_output,
     ):
-        if query is None or _is_interactive():
+        if query is None or _can_prompt_user():
             if query is None:
                 run_cli_wizard(initial_flow="install", target=target)
             else:

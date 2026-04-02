@@ -557,13 +557,14 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_can_start_directly_at_install_plan_with_initial_query() -> None:
+def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
     prompt_calls: list[tuple[str, str | None, bool]] = []
+    select_calls: list[str] = []
     confirmations = iter([True])
 
     def prompt_text(
@@ -579,8 +580,8 @@ def test_cli_wizard_can_start_directly_at_install_plan_with_initial_query() -> N
         workflow_service=service,
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=prompt_text,
-        select_one=lambda *_, **__: (_ for _ in ()).throw(
-            AssertionError("selection menus should be skipped")
+        select_one=lambda title, *_, **__: (
+            select_calls.append(title) or ("balanced" if title == "Selection profile" else "auto")
         ),
         confirm=lambda *_, **__: next(confirmations),
     )
@@ -590,7 +591,10 @@ def test_cli_wizard_can_start_directly_at_install_plan_with_initial_query() -> N
     output = transcript.getvalue()
     assert "Choose a flow" not in output
     assert prompt_calls == []
+    assert select_calls[:2] == ["Selection profile", "Interaction mode"]
     assert service.resolve_calls[0]["query"] == "postman primary skill"
+    assert service.resolve_calls[0]["options"].selection_profile == "balanced"
+    assert service.resolve_calls[0]["options"].interaction_mode == "auto"
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 

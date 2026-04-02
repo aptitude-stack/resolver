@@ -97,7 +97,7 @@ PLAN_SUMMARY_LABEL_WIDTH = len("Interaction")
 
 WORDMARKS: dict[BannerStyle, str] = {
     "classic": (
-        "   ______          __          \n"
+        "   ______          __          \n\n"
         "  /\\  _  \\        /\\ \\__       \n"
         "  \\ \\ \\L\\ \\  _____\\ \\ ,_\\      \n"
         "   \\ \\  __ \\/\\ '__`\\ \\ \\/      \n"
@@ -805,10 +805,9 @@ class CliWizard:
     ) -> tuple[InstallResultDto, str | None] | None:
         """Run the guided install flow after the user selects it."""
 
-        if initial_query is not None:
-            return self._run_install_flow_from_plan(query=initial_query.strip())
-
-        query = self._prompt_install_query()
+        query = initial_query.strip() if initial_query is not None else None
+        if query is None:
+            query = self._prompt_install_query()
         if not query:
             self._console.print("No query entered. Exiting.", style="yellow")
             return None
@@ -893,67 +892,6 @@ class CliWizard:
 
             if retry_query:
                 continue
-
-    def _run_install_flow_from_plan(
-        self,
-        *,
-        query: str,
-    ) -> tuple[InstallResultDto, str | None] | None:
-        """Run the install flow from the plan step using default wizard options."""
-
-        if not query:
-            self._console.print("No query entered. Exiting.", style="yellow")
-            return None
-
-        selection_profile = DEFAULT_INSTALL_SELECTION_PROFILE
-        interaction_mode = DEFAULT_INSTALL_INTERACTION_MODE
-        options = build_workflow_options(
-            prefer=selection_profile,
-            interaction_mode=interaction_mode,
-        )
-
-        while True:
-            try:
-                resolve_result = self._resolve(query=query, options=options)
-            except DiscoveryNoCandidatesError as exc:
-                self._print_step_separator()
-                self._console.print(_format_error(exc), style="red")
-                self._print_step_separator()
-                query = self._prompt_install_query()
-                if not query:
-                    self._console.print("No query entered. Exiting.", style="yellow")
-                    return None
-                continue
-
-            if resolve_result is None:
-                self._print_step_separator()
-                query = self._prompt_install_query()
-                if not query:
-                    self._console.print("No query entered. Exiting.", style="yellow")
-                    return None
-                continue
-
-            self._print_step_separator()
-            self._console.print(
-                _render_plan_panel(
-                    resolve_result,
-                    selection_profile=selection_profile,
-                    interaction_mode=interaction_mode,
-                    target=self._target,
-                )
-            )
-            self._print_step_separator()
-            if not self._confirm("Proceed with installation?", True):
-                self._console.print("Installation cancelled.", style="yellow")
-                return None
-
-            return self._install(
-                query=query,
-                select_slug=resolve_result.selected_coordinate.slug
-                if resolve_result.selected_coordinate is not None
-                else None,
-                options=options,
-            )
 
     def _prompt_install_query(self) -> str:
         """Prompt for one install query using the larger free-text surface."""
