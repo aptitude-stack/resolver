@@ -1134,10 +1134,6 @@ class CliWizard:
         )
         self._write_separator()
         if initial_flow is None:
-            self._console.print(Text("wizard launcher", style=THEME.text_muted))
-            self._console.print(
-                Text("[enter] confirm  [↑↓] move  [q] quit", style=THEME.text_subtle)
-            )
             return
 
         self._console.print(Text(f"guided {initial_flow} flow", style=THEME.text_muted))

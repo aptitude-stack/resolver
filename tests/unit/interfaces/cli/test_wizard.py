@@ -405,7 +405,8 @@ def test_cli_wizard_header_uses_filled_aptitude_wordmark() -> None:
         "Aptitude - Review-first CLI for discovering and installing skills." in output
     )
     assert "   ______          __" in output
-    assert "wizard launcher" in output
+    assert "wizard launcher" not in output
+    assert "[enter] confirm  [↑↓] move  [q] quit" not in output
     assert "Choose a flow" not in output
     assert "Capability Map" not in output
 
