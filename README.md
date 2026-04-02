@@ -88,8 +88,9 @@ make build-publish REPOSITORY=testpypi
 For the normal release path, publish to PyPI through GitHub Actions trusted publishing:
 
 ```bash
-git tag v0.0.1
-git push origin v0.0.1
+uv version --bump patch
+git tag v$(uv version --short)
+git push origin v$(uv version --short)
 ```
 
 The release workflow lives at `.github/workflows/publish.yml` and:

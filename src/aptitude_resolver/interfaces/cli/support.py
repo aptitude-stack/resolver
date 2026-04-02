@@ -11,7 +11,7 @@ from typing import cast
 
 import typer
 
-from aptitude_resolver import __version__
+from aptitude_resolver import resolve_package_version
 from aptitude_resolver.domain.errors import (
     AptitudeResolverError,
     ContentChecksumMismatchError,
@@ -343,7 +343,7 @@ def is_interactive() -> bool:
 def resolve_cli_version() -> str:
     """Return the Aptitude version for the code currently running."""
 
-    return __version__
+    return resolve_package_version()
 
 
 def format_unexpected_cli_error(error: Exception) -> str:

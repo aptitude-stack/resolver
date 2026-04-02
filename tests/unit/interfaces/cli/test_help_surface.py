@@ -5,6 +5,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from aptitude_resolver import resolve_package_version
 from aptitude_resolver.interfaces.cli import app as app_module
 
 
@@ -114,7 +115,7 @@ def test_cli_version_prints_package_version() -> None:
     result = _invoke(["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.0.1"
+    assert result.stdout.strip() == resolve_package_version()
 
 
 def test_contributor_docs_describe_install_first_wizard_not_textual_tui() -> None:

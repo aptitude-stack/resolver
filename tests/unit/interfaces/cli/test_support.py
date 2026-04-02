@@ -134,10 +134,8 @@ def test_format_unexpected_error_renders_generic_failures_without_traceback() ->
     assert "RuntimeError: boom" in rendered
 
 
-def test_resolve_cli_version_prefers_runtime_package_version_over_stale_metadata(
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(support, "__version__", "0.1.0")
+def test_resolve_cli_version_reads_package_resolver(monkeypatch) -> None:
+    monkeypatch.setattr(support, "resolve_package_version", lambda: "0.1.0")
 
     assert support.resolve_cli_version() == "0.1.0"
 
