@@ -40,10 +40,10 @@
       "candidate_count": 6,
       "slugs": [
         "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
+        "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
         "it.discovery.3f4319a75561486ab71be5adaa49f1c2",
         "it.dep.3718838baebf4ee38e942a45b698c8f2",
         "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
-        "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
         "it.primary.3718838baebf4ee38e942a45b698c8f2"
       ]
     }
@@ -68,6 +68,29 @@
     "message": "Enriched candidate it.discovery.b68250ba7d2f43699e63118b090cfb9b@1.0.0 with exact metadata.",
     "data": {
       "slug": "it.discovery.b68250ba7d2f43699e63118b090cfb9b",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "select_candidate_version",
+    "message": "Selected preferred version 1.0.0 for candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "selection_source": "preferred_version",
+      "version_count": 1,
+      "intent_terms": [
+        "integration"
+      ]
+    }
+  },
+  {
+    "stage": "resolver",
+    "action": "enrich_candidate_version",
+    "message": "Enriched candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 with exact metadata.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0"
     }
   },
@@ -143,29 +166,6 @@
   {
     "stage": "resolver",
     "action": "select_candidate_version",
-    "message": "Selected preferred version 1.0.0 for candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d.",
-    "data": {
-      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
-      "version": "1.0.0",
-      "selection_source": "preferred_version",
-      "version_count": 1,
-      "intent_terms": [
-        "integration"
-      ]
-    }
-  },
-  {
-    "stage": "resolver",
-    "action": "enrich_candidate_version",
-    "message": "Enriched candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 with exact metadata.",
-    "data": {
-      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
-      "version": "1.0.0"
-    }
-  },
-  {
-    "stage": "resolver",
-    "action": "select_candidate_version",
     "message": "Selected preferred version 1.0.0 for candidate it.primary.3718838baebf4ee38e942a45b698c8f2.",
     "data": {
       "slug": "it.primary.3718838baebf4ee38e942a45b698c8f2",
@@ -215,6 +215,21 @@
   {
     "stage": "governance",
     "action": "candidate_policy_pass",
+    "message": "Candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 passed candidate policy.",
+    "data": {
+      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
+      "version": "1.0.0",
+      "applied_rules": [
+        "allowed_lifecycle_status",
+        "allowed_trust_tiers",
+        "max_token_estimate",
+        "max_content_size_bytes"
+      ]
+    }
+  },
+  {
+    "stage": "governance",
+    "action": "candidate_policy_pass",
     "message": "Candidate it.discovery.3f4319a75561486ab71be5adaa49f1c2@1.0.0 passed candidate policy.",
     "data": {
       "slug": "it.discovery.3f4319a75561486ab71be5adaa49f1c2",
@@ -248,21 +263,6 @@
     "message": "Candidate it.primary.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 passed candidate policy.",
     "data": {
       "slug": "it.primary.9aeacb0af4f44b98a387b81299ee7b0d",
-      "version": "1.0.0",
-      "applied_rules": [
-        "allowed_lifecycle_status",
-        "allowed_trust_tiers",
-        "max_token_estimate",
-        "max_content_size_bytes"
-      ]
-    }
-  },
-  {
-    "stage": "governance",
-    "action": "candidate_policy_pass",
-    "message": "Candidate it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0 passed candidate policy.",
-    "data": {
-      "slug": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d",
       "version": "1.0.0",
       "applied_rules": [
         "allowed_lifecycle_status",
@@ -457,7 +457,7 @@
     "message": "Materialized locked skill it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0.",
     "data": {
       "node_id": "it.dep.9aeacb0af4f44b98a387b81299ee7b0d@1.0.0",
-      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-4bb6zfni/skills/it.dep.9aeacb0af4f44b98a387b81299ee7b0d/1.0.0"
+      "install_path": "/Users/yonatan/Dev/Aptitude/resolver/.skill_demo-3b4c0_42/skills/it.dep.9aeacb0af4f44b98a387b81299ee7b0d/1.0.0"
     }
   }
 ]
