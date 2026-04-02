@@ -566,7 +566,8 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
 
     wizard.run()
 
-    assert transcript.getvalue().count(HORIZONTAL_SEPARATOR) >= 5
+    expected_separator = "─" * 80
+    assert transcript.getvalue().count(expected_separator) >= 5
 
 
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:
@@ -643,7 +644,7 @@ def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
     raise AssertionError("Expected WizardCancelled when entering q in fallback mode.")
 
 
-def test_default_prompt_text_uses_fixed_width_for_large_tty_prompt(monkeypatch) -> None:
+def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> None:
     frame_calls: list[dict[str, object]] = []
     text_area_calls: list[dict[str, object]] = []
     hsplit_calls: list[dict[str, object]] = []
@@ -735,6 +736,7 @@ def test_default_prompt_text_uses_fixed_width_for_large_tty_prompt(monkeypatch) 
     )
 
     widgets_module = ModuleType("prompt_toolkit.widgets")
+    widgets_base_module = ModuleType("prompt_toolkit.widgets.base")
 
     class FakeTextArea:
         def __init__(self, **kwargs) -> None:
@@ -742,12 +744,19 @@ def test_default_prompt_text_uses_fixed_width_for_large_tty_prompt(monkeypatch) 
             self.kwargs = kwargs
             self.text = kwargs.get("text", "")
 
+    class FakeBorder:
+        TOP_LEFT = "┌"
+        TOP_RIGHT = "┐"
+        BOTTOM_LEFT = "└"
+        BOTTOM_RIGHT = "┘"
+
     def fake_frame(body, **kwargs):
         frame_calls.append({"body": body, **kwargs})
         return SimpleNamespace(body=body, kwargs=kwargs)
 
     setattr(widgets_module, "Frame", fake_frame)
     setattr(widgets_module, "TextArea", FakeTextArea)
+    setattr(widgets_base_module, "Border", FakeBorder)
 
     monkeypatch.setitem(sys.modules, "prompt_toolkit", prompt_toolkit_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.application", application_module)
@@ -762,6 +771,7 @@ def test_default_prompt_text_uses_fixed_width_for_large_tty_prompt(monkeypatch) 
     monkeypatch.setitem(sys.modules, "prompt_toolkit.layout.controls", controls_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", styles_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets", widgets_module)
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets.base", widgets_base_module)
 
     result = wizard_module._default_prompt_text("Install query", None, large=True)
 
@@ -769,24 +779,40 @@ def test_default_prompt_text_uses_fixed_width_for_large_tty_prompt(monkeypatch) 
     assert len(frame_calls) == 1
     assert len(text_area_calls) == 1
     assert len(hsplit_calls) == 1
-    assert len(vsplit_calls) == 1
-    expected_width = len(HORIZONTAL_SEPARATOR) - 2
-    width = cast(FakeDimension, frame_calls[0]["width"])
-    assert width.preferred == expected_width
-    assert width.min == expected_width
-    assert width.max == expected_width
+    assert len(vsplit_calls) == 0
+    assert "width" not in frame_calls[0]
     assert "width" not in text_area_calls[0]
     assert text_area_calls[0].get("dont_extend_width", False) is False
-    stack_width = cast(FakeDimension, hsplit_calls[0]["width"])
-    assert stack_width.preferred == expected_width
-    assert vsplit_calls[0]["padding"] == 0
-    assert len(cast(list[object], vsplit_calls[0]["children"])) == 2
+    assert "width" not in hsplit_calls[0]
     assert ("c-s",) in binding_calls
     assert ("c-a",) in binding_calls
     header_fragments = cast(list[tuple[str, str]], window_calls[0]["args"][0])
     footer_fragments = cast(list[tuple[str, str]], window_calls[1]["args"][0])
-    assert "Press Ctrl+S to submit." in header_fragments[1][1]
     assert "[Ctrl+S] submit  [Ctrl+A] cancel" in footer_fragments[0][1]
+
+
+def test_use_rounded_prompt_border_sets_and_restores_corners(monkeypatch) -> None:
+    widgets_base_module = ModuleType("prompt_toolkit.widgets.base")
+
+    class FakeBorder:
+        TOP_LEFT = "┌"
+        TOP_RIGHT = "┐"
+        BOTTOM_LEFT = "└"
+        BOTTOM_RIGHT = "┘"
+
+    setattr(widgets_base_module, "Border", FakeBorder)
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets.base", widgets_base_module)
+
+    with wizard_module._use_rounded_prompt_border():
+        assert FakeBorder.TOP_LEFT == "╭"
+        assert FakeBorder.TOP_RIGHT == "╮"
+        assert FakeBorder.BOTTOM_LEFT == "╰"
+        assert FakeBorder.BOTTOM_RIGHT == "╯"
+
+    assert FakeBorder.TOP_LEFT == "┌"
+    assert FakeBorder.TOP_RIGHT == "┐"
+    assert FakeBorder.BOTTOM_LEFT == "└"
+    assert FakeBorder.BOTTOM_RIGHT == "┘"
 
 
 def test_render_choice_line_marks_active_option_with_filled_bullet() -> None:

@@ -39,7 +39,7 @@ from aptitude.interfaces.cli.support import (
     build_workflow_service as _shared_build_workflow_service,
     capture_cli_telemetry,
     format_cli_error,
-    format_folded_cli_telemetry,
+    format_cli_telemetry_block,
     format_unexpected_cli_error,
     is_interactive,
     parse_csv_option,
@@ -185,12 +185,15 @@ def _run_with_activity(
         return operation()
 
 
-def _render_folded_telemetry(stage_timings) -> None:
-    """Render one folded telemetry summary for interactive human CLI runs."""
+def _render_operation_telemetry(
+    operation_label: str,
+    stage_timings,
+) -> None:
+    """Render one operation-scoped telemetry block for interactive human CLI runs."""
 
     if not _is_interactive():
         return
-    summary = format_folded_cli_telemetry(stage_timings)
+    summary = format_cli_telemetry_block(operation_label, stage_timings)
     if summary is None:
         return
     _ACTIVITY_CONSOLE.print(summary, style=THEME.text_subtle)
@@ -635,7 +638,7 @@ def install(
         typer.echo(format_unexpected_cli_error(exc), err=True)
         raise typer.Exit(code=1) from exc
 
-    _render_folded_telemetry(telemetry)
+    _render_operation_telemetry("Install", telemetry)
 
     if json_output or result.status != "installed":
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
@@ -693,7 +696,7 @@ def sync(
         typer.echo(format_unexpected_cli_error(exc), err=True)
         raise typer.Exit(code=1) from exc
 
-    _render_folded_telemetry(telemetry)
+    _render_operation_telemetry("Sync", telemetry)
 
     if json_output:
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))

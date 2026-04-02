@@ -161,12 +161,19 @@ def test_suppress_cli_telemetry_logs_hides_info_events_temporarily() -> None:
     assert "after" in output
 
 
-def test_format_folded_cli_telemetry_compacts_stage_timings() -> None:
-    rendered = support.format_folded_cli_telemetry(
+def test_format_cli_telemetry_block_renders_one_operation_with_stage_lines() -> None:
+    rendered = support.format_cli_telemetry_block(
+        "Resolve query",
         [
             support.StageTiming(stage="discovery", duration_ms=95.679),
-            support.StageTiming(stage="resolution", duration_ms=18.2),
+            support.StageTiming(stage="execution_planning", duration_ms=18.2),
         ]
     )
 
-    assert rendered == "telemetry  discovery 95.7ms | resolution 18.2ms"
+    assert rendered == "\n".join(
+        [
+            "Resolve query telemetry",
+            "  Discovery           95.7ms",
+            "  Execution planning  18.2ms",
+        ]
+    )

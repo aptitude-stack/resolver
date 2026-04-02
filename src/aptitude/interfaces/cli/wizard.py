@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import termios
 import tty
+from contextlib import contextmanager
 from pathlib import Path
 from typing import (
     Generic,
@@ -46,7 +47,7 @@ from aptitude.interfaces.cli.support import (
     build_workflow_service as _shared_build_workflow_service,
     capture_cli_telemetry,
     format_cli_error,
-    format_folded_cli_telemetry,
+    format_cli_telemetry_block,
     format_unexpected_cli_error,
 )
 from aptitude.interfaces.shared import (
@@ -89,7 +90,6 @@ INTERACTION_OPTIONS: list[tuple[str, InteractionMode]] = [
 T = TypeVar("T")
 BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
-LARGE_TEXT_PROMPT_WIDTH = len(HORIZONTAL_SEPARATOR) - 2
 LARGE_TEXT_PROMPT_HEIGHT = 6
 
 WORDMARKS: dict[BannerStyle, str] = {
@@ -309,10 +309,39 @@ def _render_install_panel(result: InstallResultDto | SyncResultDto) -> Panel:
     )
 
 
-def _render_step_separator() -> str:
+def _render_step_separator(width: int) -> str:
     """Render the shared long separator used between wizard steps."""
 
-    return HORIZONTAL_SEPARATOR
+    return "─" * max(1, width)
+
+
+@contextmanager
+def _use_rounded_prompt_border():
+    """Temporarily switch prompt_toolkit frame corners to rounded glyphs."""
+
+    widgets_base = sys.modules.get("prompt_toolkit.widgets.base")
+    if widgets_base is None:
+        import prompt_toolkit.widgets.base as widgets_base
+
+    original_corners = (
+        widgets_base.Border.TOP_LEFT,
+        widgets_base.Border.TOP_RIGHT,
+        widgets_base.Border.BOTTOM_LEFT,
+        widgets_base.Border.BOTTOM_RIGHT,
+    )
+    widgets_base.Border.TOP_LEFT = "╭"
+    widgets_base.Border.TOP_RIGHT = "╮"
+    widgets_base.Border.BOTTOM_LEFT = "╰"
+    widgets_base.Border.BOTTOM_RIGHT = "╯"
+    try:
+        yield
+    finally:
+        (
+            widgets_base.Border.TOP_LEFT,
+            widgets_base.Border.TOP_RIGHT,
+            widgets_base.Border.BOTTOM_LEFT,
+            widgets_base.Border.BOTTOM_RIGHT,
+        ) = original_corners
 
 
 def _default_prompt_text(
@@ -333,7 +362,7 @@ def _default_prompt_text(
         from prompt_toolkit.application import Application
         from prompt_toolkit.key_binding import KeyBindings
         from prompt_toolkit.layout import Layout
-        from prompt_toolkit.layout.containers import HSplit, VSplit, Window
+        from prompt_toolkit.layout.containers import HSplit, Window
         from prompt_toolkit.layout.dimension import Dimension
         from prompt_toolkit.layout.controls import FormattedTextControl
         from prompt_toolkit.styles import Style
@@ -344,11 +373,6 @@ def _default_prompt_text(
         return response or default or ""
 
     if large:
-        frame_dimension = Dimension(
-            preferred=LARGE_TEXT_PROMPT_WIDTH,
-            min=LARGE_TEXT_PROMPT_WIDTH,
-            max=LARGE_TEXT_PROMPT_WIDTH,
-        )
         text_area = TextArea(
             text=default or "",
             multiline=True,
@@ -378,8 +402,7 @@ def _default_prompt_text(
                     ("class:title", f"{label}\n"),
                     (
                         "class:hint",
-                        "Paste or type a longer search query. "
-                        "Press Ctrl+S to submit.\n",
+                        "Paste or type a longer search query.\n",
                     ),
                 ]
             ),
@@ -391,28 +414,21 @@ def _default_prompt_text(
             height=1,
             always_hide_cursor=True,
         )
+        with _use_rounded_prompt_border():
+            prompt_frame = Frame(
+                text_area,
+                style="class:border",
+            )
         prompt_stack = HSplit(
             [
                 header,
-                Frame(
-                    text_area,
-                    width=frame_dimension,
-                    style="class:border",
-                ),
+                prompt_frame,
                 footer,
             ],
-            width=frame_dimension,
-        )
-        root_container = VSplit(
-            [
-                prompt_stack,
-                Window(),
-            ],
-            padding=0,
         )
         application: Application[str] = Application(
             layout=Layout(
-                root_container,
+                prompt_stack,
                 focused_element=text_area,
             ),
             key_bindings=bindings,
@@ -816,10 +832,14 @@ class CliWizard:
 
         return self._prompt_text("Install query", None, large=True).strip()
 
-    def _print_folded_telemetry(self, stage_timings) -> None:
-        """Render one dim folded telemetry line inside the wizard flow."""
+    def _print_operation_telemetry(
+        self,
+        operation_label: str,
+        stage_timings,
+    ) -> None:
+        """Render one operation-scoped telemetry block inside the wizard flow."""
 
-        summary = format_folded_cli_telemetry(stage_timings)
+        summary = format_cli_telemetry_block(operation_label, stage_timings)
         if summary is None:
             return
         self._console.print(Text(summary, style=THEME.text_subtle))
@@ -848,9 +868,9 @@ class CliWizard:
                         target=target,
                     )
         except Exception:
-            self._print_folded_telemetry(telemetry)
+            self._print_operation_telemetry("Sync", telemetry)
             raise
-        self._print_folded_telemetry(telemetry)
+        self._print_operation_telemetry("Sync", telemetry)
         return result
 
     def _resolve(
@@ -877,9 +897,9 @@ class CliWizard:
                         options=options,
                     )
         except Exception:
-            self._print_folded_telemetry(telemetry)
+            self._print_operation_telemetry("Resolve query", telemetry)
             raise
-        self._print_folded_telemetry(telemetry)
+        self._print_operation_telemetry("Resolve query", telemetry)
 
         if result.status != "selection_required":
             return result
@@ -917,9 +937,9 @@ class CliWizard:
                         options=options,
                     )
         except Exception:
-            self._print_folded_telemetry(telemetry)
+            self._print_operation_telemetry("Apply candidate", telemetry)
             raise
-        self._print_folded_telemetry(telemetry)
+        self._print_operation_telemetry("Apply candidate", telemetry)
         return result
 
     def _install(
@@ -959,9 +979,9 @@ class CliWizard:
                     )
                 progress.advance(task, 80)
         except Exception:
-            self._print_folded_telemetry(telemetry)
+            self._print_operation_telemetry("Install", telemetry)
             raise
-        self._print_folded_telemetry(telemetry)
+        self._print_operation_telemetry("Install", telemetry)
         return result
 
     def _render_header(self, *, initial_flow: WizardEntryFlow | None = None) -> None:
@@ -1004,7 +1024,9 @@ class CliWizard:
 
         prefix = "\n" if prefix_newline else ""
         suffix = "\n\n" if suffix_newline else "\n"
-        self._console.file.write(f"{prefix}{_render_step_separator()}{suffix}")
+        self._console.file.write(
+            f"{prefix}{_render_step_separator(self._console.size.width)}{suffix}"
+        )
         flush = getattr(self._console.file, "flush", None)
         if callable(flush):
             flush()

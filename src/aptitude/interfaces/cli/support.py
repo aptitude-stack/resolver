@@ -102,14 +102,23 @@ def capture_cli_telemetry() -> Iterator[list[StageTiming]]:
         logger.setLevel(original_level)
 
 
-def format_folded_cli_telemetry(stage_timings: list[StageTiming]) -> str | None:
-    """Render one compact folded telemetry summary for human-facing CLI output."""
+def format_cli_telemetry_block(
+    operation_label: str,
+    stage_timings: list[StageTiming],
+) -> str | None:
+    """Render one operation-scoped telemetry block for human-facing CLI output."""
 
     if not stage_timings:
         return None
 
-    parts = [f"{timing.stage} {timing.duration_ms:.1f}ms" for timing in stage_timings]
-    return "telemetry  " + " | ".join(parts)
+    stage_labels = [_humanize_stage_label(timing.stage) for timing in stage_timings]
+    stage_width = max(len(label) for label in stage_labels)
+    lines = [f"{operation_label} telemetry"]
+    lines.extend(
+        f"  {label:<{stage_width}}  {timing.duration_ms:.1f}ms"
+        for label, timing in zip(stage_labels, stage_timings)
+    )
+    return "\n".join(lines)
 
 
 def format_cli_error(error: AptitudeResolverError) -> str:
@@ -362,3 +371,9 @@ def humanize_payload_key(key: str) -> str:
     """Render one payload key as a human-friendly label."""
 
     return key.replace("_", " ").capitalize()
+
+
+def _humanize_stage_label(stage: str) -> str:
+    """Render one telemetry stage name as a human-friendly label."""
+
+    return stage.replace("_", " ").capitalize()

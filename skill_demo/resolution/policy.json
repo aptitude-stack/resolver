@@ -1,0 +1,50 @@
+[
+  {
+    "rule": "allowed_lifecycle_status",
+    "passed": true,
+    "message": "Lifecycle 'published' is allowed.",
+    "coordinate": {
+      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "rule": "allowed_trust_tiers",
+    "passed": true,
+    "message": "Trust tier 'untrusted' is allowed.",
+    "coordinate": {
+      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "rule": "max_token_estimate",
+    "passed": true,
+    "message": "No token estimate ceiling is configured.",
+    "coordinate": {
+      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "rule": "max_content_size_bytes",
+    "passed": true,
+    "message": "No content size ceiling is configured.",
+    "coordinate": {
+      "slug": "it.dep.3718838baebf4ee38e942a45b698c8f2",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "rule": "max_total_token_estimate",
+    "passed": true,
+    "message": "No aggregate token estimate ceiling is configured.",
+    "coordinate": null
+  },
+  {
+    "rule": "max_total_content_size_bytes",
+    "passed": true,
+    "message": "No aggregate content size ceiling is configured.",
+    "coordinate": null
+  }
+]
