@@ -436,11 +436,34 @@ def _default_prompt_text(
         )
         bindings = KeyBindings()
 
-        @bindings.add("c-s")
+        submit_hint = "[Shift+Enter] submit  [Ctrl+C] cancel"
+        submit_candidates: list[tuple[tuple[str, ...], str]] = [
+            (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
+            (("escape", "enter"), "[Esc, Enter] submit  [Ctrl+C] cancel"),
+        ]
+        if sys.platform == "darwin":
+            # macOS terminals generally can't expose Command directly to prompt_toolkit.
+            submit_candidates = [
+                (("escape", "enter"), "[Cmd+Return] submit  [Ctrl+C] cancel"),
+                (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
+            ]
+
+        submit_binding = None
+        for keys, hint in submit_candidates:
+            try:
+                submit_binding = bindings.add(*keys)
+                submit_hint = hint
+                break
+            except ValueError:
+                continue
+        if submit_binding is None:
+            raise ValueError("No valid key binding available for wizard submit.")
+
+        @submit_binding
         def _accept(event) -> None:
             event.app.exit(result=text_area.text.strip())
 
-        @bindings.add("c-a")
+        @bindings.add("c-c")
         def _abort(event) -> None:
             event.app.exit(exception=KeyboardInterrupt())
 
@@ -458,7 +481,7 @@ def _default_prompt_text(
             always_hide_cursor=True,
         )
         footer = Window(
-            FormattedTextControl([("class:hint", "[Ctrl+S] submit  [Ctrl+A] cancel")]),
+            FormattedTextControl([("class:hint", submit_hint)]),
             height=1,
             always_hide_cursor=True,
         )
