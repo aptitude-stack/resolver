@@ -15,7 +15,7 @@
 ### Task 1: Redirect the no-args entrypoint to the new CLI wizard
 
 **Files:**
-- Modify: `src/aptitude/interfaces/cli/main.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/main.py`
 - Modify: `tests/unit/interfaces/cli/test_main.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -28,7 +28,7 @@
 ### Task 2: Add an inline keyboard-driven wizard module
 
 **Files:**
-- Create: `src/aptitude/interfaces/cli/wizard.py`
+- Create: `src/aptitude_resolver/interfaces/cli/wizard.py`
 - Create: `tests/unit/interfaces/cli/test_wizard.py`
 
 - [ ] **Step 1: Write failing tests for the wizard orchestration using injected prompt/select/confirm callbacks**
@@ -42,7 +42,7 @@
 ### Task 3: Preserve install semantics while improving interactivity
 
 **Files:**
-- Create: `src/aptitude/interfaces/cli/wizard.py`
+- Create: `src/aptitude_resolver/interfaces/cli/wizard.py`
 - Test: `tests/unit/interfaces/cli/test_wizard.py`
 
 - [ ] **Step 1: Ensure candidate selection re-resolves with the chosen slug**
@@ -52,7 +52,7 @@
 ### Task 4: Lock the visual direction so it is inspired by `skills.sh`, not a copy
 
 **Files:**
-- Create: `src/aptitude/interfaces/cli/wizard.py`
+- Create: `src/aptitude_resolver/interfaces/cli/wizard.py`
 - Test: `tests/unit/interfaces/cli/test_wizard.py`
 
 - [ ] **Step 1: Keep the top header Aptitude-branded rather than reproducing the reference branding**
@@ -67,8 +67,8 @@
 **Files:**
 - Modify: `pyproject.toml`
 - Modify: `tests/unit/shared/test_imports.py`
-- Delete: `src/aptitude/interfaces/tui/__init__.py`
-- Delete: `src/aptitude/interfaces/tui/app.py`
+- Delete: `src/aptitude_resolver/interfaces/tui/__init__.py`
+- Delete: `src/aptitude_resolver/interfaces/tui/app.py`
 - Delete: `tests/unit/interfaces/tui/test_textual_app.py`
 
 - [ ] **Step 1: Remove `textual` from dependencies**
@@ -81,14 +81,14 @@
 ### Task 6: Clean up all TUI-era leftovers after the Rich CLI replacement
 
 **Files:**
-- Modify: `src/aptitude/interfaces/cli/main.py`
-- Modify: `src/aptitude/interfaces/cli/wizard.py`
-- Modify: `src/aptitude/interfaces/cli/app.py`
-- Modify: `src/aptitude/interfaces/cli/__init__.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/main.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/wizard.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/app.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/__init__.py`
 - Modify: `tests/unit/interfaces/cli/test_main.py`
 - Modify: `tests/unit/shared/test_imports.py`
-- Delete if unused: `src/aptitude/interfaces/tui/__init__.py`
-- Delete if unused: `src/aptitude/interfaces/tui/app.py`
+- Delete if unused: `src/aptitude_resolver/interfaces/tui/__init__.py`
+- Delete if unused: `src/aptitude_resolver/interfaces/tui/app.py`
 - Delete if unused: `tests/unit/interfaces/tui/test_textual_app.py`
 
 - [ ] **Step 1: Remove stale names and comments that still describe the default flow as a TUI**
@@ -102,13 +102,13 @@
 ### Task 7: Verify the replacement end to end
 
 **Files:**
-- Modify: `src/aptitude/interfaces/cli/main.py`
-- Create: `src/aptitude/interfaces/cli/wizard.py`
+- Modify: `src/aptitude_resolver/interfaces/cli/main.py`
+- Create: `src/aptitude_resolver/interfaces/cli/wizard.py`
 - Modify: `tests/unit/interfaces/cli/test_main.py`
 - Create: `tests/unit/interfaces/cli/test_wizard.py`
 - Modify: `tests/unit/shared/test_imports.py`
 - Modify: `pyproject.toml`
 
 - [ ] **Step 1: Run `UV_CACHE_DIR=.uv-cache uv run --extra dev pytest tests/unit/interfaces/cli/test_main.py tests/unit/interfaces/cli/test_wizard.py tests/unit/shared/test_imports.py -q`**
-- [ ] **Step 2: Run `UV_CACHE_DIR=.uv-cache uv run --extra dev ruff check src/aptitude/interfaces/cli tests/unit/interfaces/cli/test_main.py tests/unit/interfaces/cli/test_wizard.py tests/unit/shared/test_imports.py`**
+- [ ] **Step 2: Run `UV_CACHE_DIR=.uv-cache uv run --extra dev ruff check src/aptitude_resolver/interfaces/cli tests/unit/interfaces/cli/test_main.py tests/unit/interfaces/cli/test_wizard.py tests/unit/shared/test_imports.py`**
 - [ ] **Step 3: Review `git status --short` and confirm unrelated `skill_demo/` deletions remain untouched**

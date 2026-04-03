@@ -26,7 +26,7 @@ def test_cache_store_uses_json_disk_serializer(tmp_path) -> None:
     cache = CacheStore(tmp_path / "cache")
 
     try:
-        assert isinstance(cache._cache.disk, JSONDisk)
+        assert cache.disk_type is JSONDisk
     finally:
         cache.close()
 
