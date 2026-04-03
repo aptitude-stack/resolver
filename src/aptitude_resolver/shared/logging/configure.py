@@ -1,4 +1,4 @@
-"""Logging bootstrap helpers for the Aptitude aptitude."""
+"""Logging bootstrap helpers for the Aptitude Resolver."""
 
 from __future__ import annotations
 
@@ -23,5 +23,5 @@ def configure_logging(level: int | str = logging.INFO) -> structlog.stdlib.Bound
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    logging.getLogger("resolver").setLevel(level)
-    return structlog.stdlib.get_logger("resolver")
+    logging.getLogger("aptitude_resolver").setLevel(level)
+    return structlog.stdlib.get_logger("aptitude_resolver")

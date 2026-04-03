@@ -34,7 +34,7 @@ class PolicyConfig(BaseModel):
 
 
 class AptitudeConfig(BaseModel):
-    """Raw workspace or user config loaded from aptitude_resolver.toml."""
+    """Raw workspace or user config loaded from aptitude.toml."""
 
     selection: SelectionConfig | None = None
     policy: PolicyConfig | None = None
