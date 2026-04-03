@@ -1,6 +1,7 @@
 """Application DTO package."""
 
 from aptitude_resolver.application.dto.install_dto import (
+    ExportedSkillDto,
     InstallRequestDto,
     InstallResultDto,
     InstalledSkillDto,
@@ -29,12 +30,21 @@ from aptitude_resolver.application.dto.resolve_result_dto import (
     ResolveSkillSummaryDto,
     TraceEntryDto,
 )
+from aptitude_client.application.dto.search_inspect_dto import (
+    InspectSkillRequestDto,
+    InspectSkillResultDto,
+    InspectSkillSummaryDto,
+    InspectVersionDto,
+    SearchSkillsRequestDto,
+    SearchSkillsResultDto,
+)
 
 __all__ = [
     "ConflictDto",
     "DiscoveryCandidateDto",
     "ExecutionPlanDto",
     "ExecutionStepDto",
+    "ExportedSkillDto",
     "GovernanceSnapshotDto",
     "InstallRequestDto",
     "InstallResultDto",
@@ -46,6 +56,10 @@ __all__ = [
     "PolicySnapshotDto",
     "SelectionSnapshotDto",
     "PolicyEvaluationDto",
+    "InspectSkillRequestDto",
+    "InspectSkillResultDto",
+    "InspectSkillSummaryDto",
+    "InspectVersionDto",
     "ResolvedEdgeDto",
     "ResolvedGraphDto",
     "ResolvedSkillNodeDto",
@@ -53,6 +67,8 @@ __all__ = [
     "ResolveQueryRequestDto",
     "ResolveQueryResultDto",
     "ResolveSkillSummaryDto",
+    "SearchSkillsRequestDto",
+    "SearchSkillsResultDto",
     "SyncRequestDto",
     "SyncResultDto",
     "TraceEntryDto",

@@ -8,8 +8,10 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from aptitude_resolver.application.use_cases import (
+    InspectSkillUseCase,
     InstallSkillUseCase,
     ResolveSkillQueryUseCase,
+    SearchSkillsUseCase,
     SyncFromLockUseCase,
 )
 from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
@@ -316,6 +318,72 @@ def build_install_use_case(
     registry_client, close = build_registry_client()
     return (
         InstallSkillUseCase(
+            registry_client,
+            policy_context=_effective_policy_context(
+                allowed_trust_tiers_override=allowed_trust_tiers_override,
+                allowed_lifecycle_statuses_override=allowed_lifecycle_statuses_override,
+                max_token_estimate_override=max_token_estimate_override,
+                max_content_size_bytes_override=max_content_size_bytes_override,
+                cwd=cwd,
+            ),
+            selection_preferences=_effective_selection_preferences(
+                selection_profile_override=selection_profile_override,
+                interaction_mode_override=interaction_mode_override,
+                cwd=cwd,
+            ),
+        ),
+        close,
+    )
+
+
+def build_search_use_case(
+    *,
+    selection_profile_override: str | None = None,
+    interaction_mode_override: str | None = None,
+    allowed_trust_tiers_override: list[str] | None = None,
+    allowed_lifecycle_statuses_override: list[str] | None = None,
+    max_token_estimate_override: int | None = None,
+    max_content_size_bytes_override: int | None = None,
+    cwd: Path | None = None,
+) -> tuple[SearchSkillsUseCase, Callable[[], None]]:
+    """Create the search use case and its cleanup hook."""
+
+    registry_client, close = build_registry_client()
+    return (
+        SearchSkillsUseCase(
+            registry_client,
+            policy_context=_effective_policy_context(
+                allowed_trust_tiers_override=allowed_trust_tiers_override,
+                allowed_lifecycle_statuses_override=allowed_lifecycle_statuses_override,
+                max_token_estimate_override=max_token_estimate_override,
+                max_content_size_bytes_override=max_content_size_bytes_override,
+                cwd=cwd,
+            ),
+            selection_preferences=_effective_selection_preferences(
+                selection_profile_override=selection_profile_override,
+                interaction_mode_override=interaction_mode_override,
+                cwd=cwd,
+            ),
+        ),
+        close,
+    )
+
+
+def build_inspect_use_case(
+    *,
+    selection_profile_override: str | None = None,
+    interaction_mode_override: str | None = None,
+    allowed_trust_tiers_override: list[str] | None = None,
+    allowed_lifecycle_statuses_override: list[str] | None = None,
+    max_token_estimate_override: int | None = None,
+    max_content_size_bytes_override: int | None = None,
+    cwd: Path | None = None,
+) -> tuple[InspectSkillUseCase, Callable[[], None]]:
+    """Create the inspect use case and its cleanup hook."""
+
+    registry_client, close = build_registry_client()
+    return (
+        InspectSkillUseCase(
             registry_client,
             policy_context=_effective_policy_context(
                 allowed_trust_tiers_override=allowed_trust_tiers_override,

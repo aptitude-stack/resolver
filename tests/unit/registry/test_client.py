@@ -31,10 +31,10 @@ def _client(handler, *, cache_dir=None) -> RegistryClient:
     )
 
 
-def test_list_skill_versions_reads_live_contract_from_skills_slug_endpoint() -> None:
+def test_list_skill_versions_reads_live_contract_from_versions_endpoint() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706"
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions"
         return httpx.Response(
             200,
             json={
@@ -70,7 +70,7 @@ def test_list_skill_versions_reads_live_contract_from_skills_slug_endpoint() -> 
 def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706"
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions"
         return httpx.Response(
             200,
             json={
@@ -103,7 +103,7 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
 ):
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0"
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions/1.0.0"
         return httpx.Response(
             200,
             json={
@@ -152,6 +152,111 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
 def test_fetch_skill_content_uses_live_content_path() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content"
+        return httpx.Response(200, text="# Postman Primary Skill v1\n")
+
+    client = _client(handler)
+
+    content = client.fetch_skill_content("postman.primary.1774130709214-55706", "1.0.0")
+
+    assert content == "# Postman Primary Skill v1\n"
+
+
+def test_list_skill_versions_falls_back_to_legacy_skill_identity_endpoint_when_canonical_path_is_rejected() -> None:
+    request_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_paths.append(request.url.path)
+        if request.url.path == "/skills/postman.primary.1774130709214-55706/versions":
+            return httpx.Response(
+                422,
+                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+            )
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706"
+        return httpx.Response(
+            200,
+            json={
+                "slug": "postman.primary.1774130709214-55706",
+                "versions": [
+                    {
+                        "version": "1.0.0",
+                        "lifecycle_status": "published",
+                        "trust_tier": "internal",
+                        "published_at": "2026-03-21T22:05:11.334228Z",
+                        "is_current_default": True,
+                    }
+                ],
+            },
+        )
+
+    client = _client(handler)
+
+    versions = client.list_skill_versions("postman.primary.1774130709214-55706")
+
+    assert [item.coordinate.version for item in versions] == ["1.0.0"]
+    assert request_paths == [
+        "/skills/postman.primary.1774130709214-55706/versions",
+        "/skills/postman.primary.1774130709214-55706",
+    ]
+
+
+def test_fetch_skill_metadata_falls_back_to_legacy_exact_metadata_endpoint_when_needed() -> None:
+    request_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_paths.append(request.url.path)
+        if request.url.path == "/skills/postman.primary.1774130709214-55706/versions/1.0.0":
+            return httpx.Response(
+                422,
+                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+            )
+        assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0"
+        return httpx.Response(
+            200,
+            json={
+                "slug": "postman.primary.1774130709214-55706",
+                "version": "1.0.0",
+                "content": {
+                    "checksum": {
+                        "algorithm": "sha256",
+                        "digest": "a98906f17fa4fce41b159b35aa848de2bb4f4049a7318764e437abb630c94d18",
+                    },
+                    "size_bytes": 79,
+                },
+                "metadata": {
+                    "name": "Postman Primary Skill",
+                    "description": "Primary sanity skill for collection coverage",
+                    "tags": ["postman", "sanity", "primary"],
+                    "headers": {"runtime": "python"},
+                },
+                "lifecycle_status": "published",
+                "trust_tier": "internal",
+                "published_at": "2026-03-21T22:05:11.334228Z",
+            },
+        )
+
+    client = _client(handler)
+
+    metadata = client.fetch_skill_metadata("postman.primary.1774130709214-55706", "1.0.0")
+
+    assert metadata.coordinate.version == "1.0.0"
+    assert metadata.name == "Postman Primary Skill"
+    assert request_paths == [
+        "/skills/postman.primary.1774130709214-55706/versions/1.0.0",
+        "/skills/postman.primary.1774130709214-55706/1.0.0",
+    ]
+
+
+def test_fetch_skill_content_falls_back_to_legacy_content_endpoint_when_needed() -> None:
+    request_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_paths.append(request.url.path)
+        if request.url.path == "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content":
+            return httpx.Response(
+                422,
+                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+            )
         assert (
             request.url.path
             == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
@@ -163,6 +268,10 @@ def test_fetch_skill_content_uses_live_content_path() -> None:
     content = client.fetch_skill_content("postman.primary.1774130709214-55706", "1.0.0")
 
     assert content == "# Postman Primary Skill v1\n"
+    assert request_paths == [
+        "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content",
+        "/skills/postman.primary.1774130709214-55706/1.0.0/content",
+    ]
 
 
 def test_list_skill_versions_uses_advisory_cache_for_repeat_reads(tmp_path) -> None:

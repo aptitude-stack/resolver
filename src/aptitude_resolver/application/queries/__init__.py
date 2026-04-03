@@ -5,9 +5,15 @@ from aptitude_resolver.application.queries.plan_skill_resolution import (
     ResolutionArtifact,
     SelectionRequiredResult,
 )
+from aptitude_client.application.queries.rank_skill_candidates import (
+    RankSkillCandidatesQuery,
+    RankedCandidatesArtifact,
+)
 
 __all__ = [
     "PlanSkillResolutionQuery",
+    "RankSkillCandidatesQuery",
+    "RankedCandidatesArtifact",
     "ResolutionArtifact",
     "SelectionRequiredResult",
 ]

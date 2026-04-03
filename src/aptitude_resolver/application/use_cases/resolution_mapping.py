@@ -7,6 +7,8 @@ from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
+    InspectSkillSummaryDto,
+    InspectVersionDto,
     GovernanceSnapshotDto,
     LockedEdgeDto,
     LockedSkillDto,
@@ -26,7 +28,7 @@ from aptitude_resolver.execution import ExecutionPlan
 from aptitude_resolver.application.queries.plan_skill_resolution import (
     ResolutionArtifact,
 )
-from aptitude_resolver.domain.models import DiscoveryCandidate, ResolutionGraph
+from aptitude_resolver.domain.models import DiscoveryCandidate, ResolutionGraph, SkillMetadata, VersionSummary
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.lockfile import Lockfile
@@ -54,6 +56,43 @@ def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
         ranking_position=candidate.ranking_position or 0,
         selection_details=list(candidate.selection_details),
         selection_reason=candidate.selection_reason,
+    )
+
+
+def metadata_to_dto(metadata: SkillMetadata) -> InspectSkillSummaryDto:
+    """Map exact metadata into an inspection summary DTO."""
+
+    return InspectSkillSummaryDto(
+        name=metadata.name,
+        description=metadata.description,
+        tags=list(metadata.tags),
+        runtime=metadata.headers.get("runtime"),
+        rendered_summary=metadata.rendered_summary,
+        lifecycle_status=metadata.lifecycle_status,
+        trust_tier=metadata.trust_tier,
+        published_at=metadata.published_at,
+        token_estimate=metadata.token_estimate,
+        content_size_bytes=metadata.content_size_bytes,
+        maturity_score=metadata.maturity_score,
+        security_score=metadata.security_score,
+        content_checksum_algorithm=metadata.content_checksum_algorithm,
+        content_checksum_digest=metadata.content_checksum_digest,
+        headers=dict(metadata.headers),
+    )
+
+
+def version_to_inspect_dto(version: VersionSummary) -> InspectVersionDto:
+    """Map one version summary into an inspect-facing DTO."""
+
+    return InspectVersionDto(
+        version=version.coordinate.version,
+        lifecycle_status=version.lifecycle_status,
+        trust_tier=version.trust_tier,
+        published_at=version.published_at,
+        is_current_default=version.is_current_default,
+        token_estimate=version.token_estimate,
+        content_size_bytes=version.content_size_bytes,
+        rendered_summary=version.rendered_summary or None,
     )
 
 
