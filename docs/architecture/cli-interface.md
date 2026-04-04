@@ -65,6 +65,15 @@ The CLI currently routes requests with these rules:
 
 The CLI therefore supports both discovery-oriented use and automation-oriented use without maintaining two separate products.
 
+For published one-off usage without a persistent install, the promoted entry examples are:
+
+```bash
+uvx aptitude-resolver@latest
+uvx aptitude-resolver@latest install
+uvx aptitude-resolver@latest install "<query text>"
+uvx aptitude-resolver@latest sync
+```
+
 ## Command Surface
 
 ### Public Commands

@@ -151,9 +151,10 @@ aptitude manifest
 For one-off published usage without installation:
 
 ```bash
-uvx aptitude-resolver
-uvx aptitude-resolver install "Postman Primary Skill"
-uvx aptitude-resolver sync
+uvx aptitude-resolver@latest
+uvx aptitude-resolver@latest install
+uvx aptitude-resolver@latest install "Postman Primary Skill"
+uvx aptitude-resolver@latest sync
 ```
 
 ## What Works Today
