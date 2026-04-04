@@ -94,7 +94,6 @@ BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
 PLAN_SUMMARY_LABEL_WIDTH = len("Interaction")
-
 WORDMARKS: dict[BannerStyle, str] = {
     "classic": (
         "\n"
@@ -148,6 +147,17 @@ class SelectPrompt(Protocol, Generic[T]):
         help_text: str | None = None,
         descriptions: Mapping[T, str] | None = None,
     ) -> T: ...
+
+
+class _PromptToolkitBorderModule(Protocol):
+    TOP_LEFT: str
+    TOP_RIGHT: str
+    BOTTOM_LEFT: str
+    BOTTOM_RIGHT: str
+
+
+class _PromptToolkitWidgetsBaseModule(Protocol):
+    Border: _PromptToolkitBorderModule
 
 
 class WorkflowServicePort(Protocol):
@@ -370,25 +380,26 @@ def _use_rounded_prompt_border():
     widgets_base = sys.modules.get("prompt_toolkit.widgets.base")
     if widgets_base is None:
         import prompt_toolkit.widgets.base as widgets_base
+    widgets_base_module = cast(_PromptToolkitWidgetsBaseModule, widgets_base)
 
     original_corners = (
-        widgets_base.Border.TOP_LEFT,
-        widgets_base.Border.TOP_RIGHT,
-        widgets_base.Border.BOTTOM_LEFT,
-        widgets_base.Border.BOTTOM_RIGHT,
+        widgets_base_module.Border.TOP_LEFT,
+        widgets_base_module.Border.TOP_RIGHT,
+        widgets_base_module.Border.BOTTOM_LEFT,
+        widgets_base_module.Border.BOTTOM_RIGHT,
     )
-    widgets_base.Border.TOP_LEFT = "╭"
-    widgets_base.Border.TOP_RIGHT = "╮"
-    widgets_base.Border.BOTTOM_LEFT = "╰"
-    widgets_base.Border.BOTTOM_RIGHT = "╯"
+    widgets_base_module.Border.TOP_LEFT = "╭"
+    widgets_base_module.Border.TOP_RIGHT = "╮"
+    widgets_base_module.Border.BOTTOM_LEFT = "╰"
+    widgets_base_module.Border.BOTTOM_RIGHT = "╯"
     try:
         yield
     finally:
         (
-            widgets_base.Border.TOP_LEFT,
-            widgets_base.Border.TOP_RIGHT,
-            widgets_base.Border.BOTTOM_LEFT,
-            widgets_base.Border.BOTTOM_RIGHT,
+            widgets_base_module.Border.TOP_LEFT,
+            widgets_base_module.Border.TOP_RIGHT,
+            widgets_base_module.Border.BOTTOM_LEFT,
+            widgets_base_module.Border.BOTTOM_RIGHT,
         ) = original_corners
 
 
@@ -436,30 +447,9 @@ def _default_prompt_text(
         )
         bindings = KeyBindings()
 
-        submit_hint = "[Shift+Enter] submit  [Ctrl+C] cancel"
-        submit_candidates: list[tuple[tuple[str, ...], str]] = [
-            (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
-            (("escape", "enter"), "[Esc, Enter] submit  [Ctrl+C] cancel"),
-        ]
-        if sys.platform == "darwin":
-            # macOS terminals generally can't expose Command directly to prompt_toolkit.
-            submit_candidates = [
-                (("escape", "enter"), "[Cmd+Return] submit  [Ctrl+C] cancel"),
-                (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
-            ]
+        submit_hint = "[Ctrl+S] submit  [Ctrl+C] cancel"
 
-        submit_binding = None
-        for keys, hint in submit_candidates:
-            try:
-                submit_binding = bindings.add(*keys)
-                submit_hint = hint
-                break
-            except ValueError:
-                continue
-        if submit_binding is None:
-            raise ValueError("No valid key binding available for wizard submit.")
-
-        @submit_binding
+        @bindings.add("c-s")
         def _accept(event) -> None:
             event.app.exit(result=text_area.text.strip())
 
@@ -664,7 +654,7 @@ def _default_select_one(
             if is_active and active_description:
                 fragments.append(("class:detail", f" - {active_description}"))
             fragments.append(("", "\n"))
-        fragments.append(("class:hint", "\n[↑↓] move  [enter] confirm  [q] cancel\n\n"))
+        fragments.append(("class:hint", "\n[↑↓] move  [enter] confirm  [q] cancel\n"))
         return fragments
 
     control = FormattedTextControl(render_menu, focusable=True)

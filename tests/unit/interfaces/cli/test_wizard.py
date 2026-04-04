@@ -898,7 +898,9 @@ def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
     raise AssertionError("Expected WizardCancelled when entering q in fallback mode.")
 
 
-def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> None:
+def test_default_prompt_text_uses_ctrl_s_submit_hint_by_default(
+    monkeypatch,
+) -> None:
     frame_calls: list[dict[str, object]] = []
     text_area_calls: list[dict[str, object]] = []
     hsplit_calls: list[dict[str, object]] = []
@@ -908,7 +910,9 @@ def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> No
 
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
-    monkeypatch.setattr(wizard_module.sys, "platform", "linux")
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.delenv("TERM_PROGRAM", raising=False)
+    monkeypatch.delenv("KITTY_WINDOW_ID", raising=False)
 
     prompt_toolkit_module = ModuleType("prompt_toolkit")
     setattr(prompt_toolkit_module, "prompt", lambda *_args, **_kwargs: "")
@@ -1042,20 +1046,38 @@ def test_default_prompt_text_uses_full_width_large_tty_prompt(monkeypatch) -> No
     assert "width" not in text_area_calls[0]
     assert text_area_calls[0].get("dont_extend_width", False) is False
     assert "width" not in hsplit_calls[0]
-    assert ("s-enter",) in binding_calls
+    assert ("c-s",) in binding_calls
     assert ("c-c",) in binding_calls
     footer_fragments = window_calls[1]["args"][0]
-    assert "[Shift+Enter] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
+    assert "[Ctrl+S] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
 
 
-def test_default_prompt_text_falls_back_when_shift_enter_binding_is_unsupported(
+def test_default_prompt_text_uses_ctrl_s_submit_hint_on_supported_terminal(
     monkeypatch,
 ) -> None:
     binding_calls: list[tuple[object, ...]] = []
+    window_calls: list[WindowCall] = []
+
+    class FakeStdout:
+        def __init__(self) -> None:
+            self.writes: list[str] = []
+
+        def isatty(self) -> bool:
+            return True
+
+        def write(self, value: str) -> None:
+            self.writes.append(value)
+
+        def flush(self) -> None:
+            return None
+
+    fake_stdout = FakeStdout()
 
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
-    monkeypatch.setattr(wizard_module.sys, "platform", "linux")
+    monkeypatch.setattr(wizard_module.sys, "stdout", fake_stdout)
+    monkeypatch.setenv("TERM_PROGRAM", "WezTerm")
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.delenv("KITTY_WINDOW_ID", raising=False)
 
     prompt_toolkit_module = ModuleType("prompt_toolkit")
     setattr(prompt_toolkit_module, "prompt", lambda *_args, **_kwargs: "")
@@ -1075,8 +1097,6 @@ def test_default_prompt_text_falls_back_when_shift_enter_binding_is_unsupported(
 
     class FakeKeyBindings:
         def add(self, *keys):
-            if keys == ("s-enter",):
-                raise ValueError("Invalid key: s-enter")
             binding_calls.append(keys)
 
             def decorator(func):
@@ -1088,114 +1108,6 @@ def test_default_prompt_text_falls_back_when_shift_enter_binding_is_unsupported(
 
     layout_module = ModuleType("prompt_toolkit.layout")
     setattr(prompt_toolkit_module, "layout", layout_module)
-    setattr(
-        layout_module,
-        "Layout",
-        lambda container, focused_element=None: SimpleNamespace(
-            container=container,
-            focused_element=focused_element,
-        ),
-    )
-
-    containers_module = ModuleType("prompt_toolkit.layout.containers")
-    setattr(containers_module, "HSplit", lambda children, **_: children)
-    setattr(containers_module, "Window", lambda *args, **kwargs: (args, kwargs))
-
-    dimension_module = ModuleType("prompt_toolkit.layout.dimension")
-
-    class FakeDimension:
-        def __init__(self, *, preferred: int, min: int, max: int) -> None:
-            self.preferred = preferred
-            self.min = min
-            self.max = max
-
-    setattr(dimension_module, "Dimension", FakeDimension)
-
-    controls_module = ModuleType("prompt_toolkit.layout.controls")
-    setattr(controls_module, "FormattedTextControl", lambda fragments: fragments)
-
-    styles_module = ModuleType("prompt_toolkit.styles")
-    setattr(
-        styles_module,
-        "Style",
-        SimpleNamespace(from_dict=lambda style_map: style_map),
-    )
-
-    widgets_module = ModuleType("prompt_toolkit.widgets")
-    widgets_base_module = ModuleType("prompt_toolkit.widgets.base")
-
-    class FakeTextArea:
-        def __init__(self, **kwargs) -> None:
-            self.text = kwargs.get("text", "")
-
-    class FakeBorder:
-        TOP_LEFT = "┌"
-        TOP_RIGHT = "┐"
-        BOTTOM_LEFT = "└"
-        BOTTOM_RIGHT = "┘"
-
-    setattr(widgets_module, "Frame", lambda body, **kwargs: (body, kwargs))
-    setattr(widgets_module, "TextArea", FakeTextArea)
-    setattr(widgets_base_module, "Border", FakeBorder)
-
-    monkeypatch.setitem(sys.modules, "prompt_toolkit", prompt_toolkit_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.application", application_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.key_binding", key_binding_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.layout", layout_module)
-    monkeypatch.setitem(
-        sys.modules, "prompt_toolkit.layout.containers", containers_module
-    )
-    monkeypatch.setitem(
-        sys.modules, "prompt_toolkit.layout.dimension", dimension_module
-    )
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.layout.controls", controls_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", styles_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets", widgets_module)
-    monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets.base", widgets_base_module)
-
-    result = wizard_module._default_prompt_text("Install query", None, large=True)
-
-    assert result == "typed query"
-    assert ("escape", "enter") in binding_calls
-    assert ("c-c",) in binding_calls
-
-
-def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
-    binding_calls: list[tuple[object, ...]] = []
-    window_calls: list[WindowCall] = []
-
-    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
-    monkeypatch.setattr(wizard_module.sys, "platform", "darwin")
-
-    prompt_toolkit_module = ModuleType("prompt_toolkit")
-    setattr(prompt_toolkit_module, "prompt", lambda *_args, **_kwargs: "")
-
-    application_module = ModuleType("prompt_toolkit.application")
-
-    class FakeApplication:
-        def __init__(self, **_kwargs) -> None:
-            pass
-
-        def run(self) -> str:
-            return "typed query"
-
-    setattr(application_module, "Application", FakeApplication)
-
-    key_binding_module = ModuleType("prompt_toolkit.key_binding")
-
-    class FakeKeyBindings:
-        def add(self, *keys):
-            binding_calls.append(keys)
-
-            def decorator(func):
-                return func
-
-            return decorator
-
-    setattr(key_binding_module, "KeyBindings", FakeKeyBindings)
-
-    layout_module = ModuleType("prompt_toolkit.layout")
     setattr(
         layout_module,
         "Layout",
@@ -1254,6 +1166,19 @@ def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
     setattr(widgets_module, "TextArea", FakeTextArea)
     setattr(widgets_base_module, "Border", FakeBorder)
 
+    ansi_escape_sequences_module = ModuleType(
+        "prompt_toolkit.input.ansi_escape_sequences"
+    )
+    setattr(ansi_escape_sequences_module, "ANSI_SEQUENCES", {})
+
+    keys_module = ModuleType("prompt_toolkit.keys")
+
+    class FakeKeys:
+        Escape = "escape"
+        ControlM = "control-m"
+
+    setattr(keys_module, "Keys", FakeKeys)
+
     monkeypatch.setitem(sys.modules, "prompt_toolkit", prompt_toolkit_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.application", application_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.key_binding", key_binding_module)
@@ -1268,17 +1193,25 @@ def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", styles_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets", widgets_module)
     monkeypatch.setitem(sys.modules, "prompt_toolkit.widgets.base", widgets_base_module)
+    monkeypatch.setitem(
+        sys.modules,
+        "prompt_toolkit.input.ansi_escape_sequences",
+        ansi_escape_sequences_module,
+    )
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.keys", keys_module)
 
     result = wizard_module._default_prompt_text("Install query", None, large=True)
 
     assert result == "typed query"
-    assert ("escape", "enter") in binding_calls
+    assert ("c-s",) in binding_calls
     assert ("c-c",) in binding_calls
     footer_fragments = window_calls[1]["args"][0]
-    assert "[Cmd+Return] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
+    assert "[Ctrl+S] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
+    assert fake_stdout.writes == []
+    assert ansi_escape_sequences_module.ANSI_SEQUENCES == {}
 
 
-def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
+def test_default_select_one_prompt_toolkit_keeps_single_newline_after_key_hint(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
@@ -1363,7 +1296,7 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
     assert result == "auto"
     assert fragments[-1] == (
         "class:hint",
-        "\n[↑↓] move  [enter] confirm  [q] cancel\n\n",
+        "\n[↑↓] move  [enter] confirm  [q] cancel\n",
     )
 
 
