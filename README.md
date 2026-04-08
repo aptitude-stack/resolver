@@ -130,14 +130,14 @@ Use this mental model:
 For repo-local development, typical usage starts with one of these commands:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
+uv run python -m aptitude_resolver
+uv run python -m aptitude_resolver --help
+uv run python -m aptitude_resolver install "Postman Primary Skill"
+uv run python -m aptitude_resolver sync --lock aptitude.lock.json
+uv run python -m aptitude_resolver manifest
 ```
 
-The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `uv run python -m aptitude_resolver` is the canonical module entrypoint.
 
 For published usage, prefer the installed CLI:
 
@@ -274,6 +274,7 @@ src/aptitude_resolver/
   governance/
   interfaces/
     cli/
+    shared/
   lockfile/
   registry/
   resolution/
@@ -290,13 +291,15 @@ src/aptitude_resolver/
 
 ## Current Registry Contract Used By The Resolver
 
-The resolver currently talks to the live registry through `registry/` using these runtime paths:
+The resolver currently talks to the live registry through `registry/` using these primary runtime paths:
 
 - `POST /discovery`
-- `GET /skills/{slug}`
-- `GET /skills/{slug}/{version}`
+- `GET /skills/{slug}/versions`
+- `GET /skills/{slug}/versions/{version}`
 - `GET /resolution/{slug}/{version}`
-- `GET /skills/{slug}/{version}/content`
+- `GET /skills/{slug}/versions/{version}/content`
+
+For backward compatibility, the client still accepts legacy fallback paths for version metadata and content reads.
 
 The resolver treats the server as a source of immutable facts and candidate generation only. Final ranking, version choice, solving, policy enforcement, lock generation, and execution planning remain resolver-owned.
 
@@ -309,28 +312,26 @@ Requirements:
 Run the CLI:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
+uv run python -m aptitude_resolver --help
+uv run python -m aptitude_resolver install "Postman Primary Skill"
+uv run python -m aptitude_resolver sync --lock aptitude.lock.json
 ```
 
 Or via Python:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
+uv run python -m aptitude_resolver --help
 ```
 
 Developer workflow:
 
 ```bash
-make help
-make format
-make format-check
+make run
+make debug
 make lint
 make typecheck
 make test
 make test-cov
-make check
 ```
 
 ## Source Of Truth Docs
