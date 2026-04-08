@@ -30,6 +30,9 @@ class InstallRequestDto(BaseModel):
     interaction_mode: Literal["auto", "always", "never"] | None = None
     prompt_capable: bool = False
     selection_source: str | None = None
+    export_agent: str | None = None
+    export_scope: Literal["project", "global"] | None = None
+    export_destination: Path | None = None
 
 
 class SyncRequestDto(BaseModel):
@@ -51,6 +54,20 @@ class InstalledSkillDto(BaseModel):
     install_path: str
 
 
+class ExportedSkillDto(BaseModel):
+    """One agent-exported skill directory."""
+
+    model_config = ConfigDict(frozen=True)
+
+    agent: str
+    scope: str
+    slug: str
+    version: str
+    destination_path: str
+    skill_markdown_path: str
+    metadata_path: str
+
+
 class InstallResultDto(BaseModel):
     """Install command output."""
 
@@ -66,7 +83,9 @@ class InstallResultDto(BaseModel):
     lockfile: LockfileDto | None = None
     execution_plan: ExecutionPlanDto | None = None
     installed_skills: list[InstalledSkillDto] = Field(default_factory=list)
+    exported_skills: list[ExportedSkillDto] = Field(default_factory=list)
     materialized_root: str | None = None
+    export_root: str | None = None
     trace: list[TraceEntryDto] = Field(default_factory=list)
     policy_evaluations: list[PolicyEvaluationDto] = Field(default_factory=list)
 

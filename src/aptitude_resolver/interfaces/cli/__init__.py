@@ -1,5 +1,5 @@
 """CLI interface package."""
 
-from aptitude_resolver.interfaces.cli import app
+from . import app
 
 __all__ = ["app"]

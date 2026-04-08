@@ -58,3 +58,5 @@ htmlcov/
 /.uv-tools/
 /.codex/
 /skills-lock.json
+*.lock.json
+/skill_demo/

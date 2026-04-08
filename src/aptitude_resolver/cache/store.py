@@ -51,6 +51,11 @@ class CacheStore:
     def cache_dir(self) -> Path:
         return self._cache_dir
 
+    @property
+    def disk_type(self) -> type:
+        """Return the underlying disk serializer type."""
+        return type(self._cache.disk)
+
     def get(self, key: str) -> Any | None:
         return self._cache.get(key, default=None)
 

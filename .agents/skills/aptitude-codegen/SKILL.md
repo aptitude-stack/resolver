@@ -1,5 +1,5 @@
 ---
-name: apptitude-codegen
+name: aptitude-codegen
 description: Code generation rules and architectural constraints for the Aptitude Resolver repository.
 origin: Aptitude
 ---
