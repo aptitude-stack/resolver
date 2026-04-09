@@ -969,6 +969,7 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(
 
 def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
 
     monkeypatch.setattr(
         app_module,
@@ -986,6 +987,7 @@ def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting
     monkeypatch,
 ) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
     monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
 
@@ -1005,6 +1007,37 @@ def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting
             "target": Path("skill_demo"),
         }
     ]
+
+
+def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailable(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: False)
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["install", "python lint", "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
 
 
 def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
@@ -1048,6 +1081,7 @@ def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
 
 def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
 
     monkeypatch.setattr(
         app_module,

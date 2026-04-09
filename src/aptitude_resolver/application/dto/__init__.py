@@ -30,7 +30,7 @@ from aptitude_resolver.application.dto.resolve_result_dto import (
     ResolveSkillSummaryDto,
     TraceEntryDto,
 )
-from aptitude_client.application.dto.search_inspect_dto import (
+from aptitude_resolver.application.dto.search_inspect_dto import (
     InspectSkillRequestDto,
     InspectSkillResultDto,
     InspectSkillSummaryDto,

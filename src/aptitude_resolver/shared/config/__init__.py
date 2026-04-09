@@ -1,6 +1,6 @@
 """Shared configuration helpers."""
 
-from aptitude_client.shared.config.agent_targets import (
+from aptitude_resolver.shared.config.agent_targets import (
     AgentTargetPreset,
     detect_available_agent_targets,
     get_agent_target_preset,

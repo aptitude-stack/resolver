@@ -33,7 +33,10 @@ from aptitude_resolver.interfaces.cli.catalog import (
     build_manifest_text,
     build_root_help,
 )
-from aptitude_resolver.interfaces.cli.wizard import run_cli_wizard
+from aptitude_resolver.interfaces.cli.wizard import (
+    can_launch_cli_wizard,
+    run_cli_wizard,
+)
 from aptitude_resolver.interfaces.cli.support import (
     build_workflow_options,
     build_workflow_service as _shared_build_workflow_service,
@@ -641,7 +644,7 @@ def install(
         max_content_size=max_content_size,
         json_output=json_output,
     ):
-        if query is None or _can_prompt_user():
+        if can_launch_cli_wizard():
             if query is None:
                 run_cli_wizard(initial_flow="install", target=target)
             else:
@@ -721,8 +724,9 @@ def sync(
     """Materialize a locked system from an existing lockfile."""
 
     if _can_launch_sync_flow(lock_path=lock_path, json_output=json_output):
-        run_cli_wizard(initial_flow="sync", target=target)
-        return
+        if can_launch_cli_wizard():
+            run_cli_wizard(initial_flow="sync", target=target)
+            return
 
     if lock_path is None:
         _exit_for_missing_lock_option()

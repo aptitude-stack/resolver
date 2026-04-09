@@ -22,7 +22,7 @@ from aptitude_resolver.cache import (
     version_list_key,
 )
 from aptitude_resolver.domain.errors import (
-    AptitudeClientError,
+    AptitudeResolverError,
     InvalidCoordinateError,
     RegistryAccessError,
     RegistryUnavailableError,
@@ -310,7 +310,7 @@ class RegistryClient:
         """Try one JSON path and fall back to legacy runtime paths on contract mismatch."""
 
         paths = [primary_path, *fallback_paths]
-        last_error: AptitudeClientError | None = None
+        last_error: AptitudeResolverError | None = None
         for index, path in enumerate(paths):
             try:
                 return self._request_json(method, path, body)
@@ -334,7 +334,7 @@ class RegistryClient:
         """Try one text path and fall back to legacy runtime paths on contract mismatch."""
 
         paths = [primary_path, *fallback_paths]
-        last_error: AptitudeClientError | None = None
+        last_error: AptitudeResolverError | None = None
         for index, path in enumerate(paths):
             try:
                 return self._get_text(path)

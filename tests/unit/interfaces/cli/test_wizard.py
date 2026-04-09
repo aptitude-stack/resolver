@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import importlib.util
 import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -864,6 +865,43 @@ def test_default_prompt_text_falls_back_to_builtin_input(monkeypatch) -> None:
     )
 
 
+def test_wizard_module_imports_without_unix_terminal_modules(monkeypatch) -> None:
+    module_path = Path("src/aptitude_resolver/interfaces/cli/wizard.py")
+    spec = importlib.util.spec_from_file_location(
+        "wizard_without_unix_terminal_modules", module_path
+    )
+    assert spec is not None
+    assert spec.loader is not None
+
+    original_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name in {"termios", "tty"}:
+            raise ModuleNotFoundError(f"No module named '{name}'", name=name)
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.termios is None
+    assert module.tty is None
+
+
+def test_can_launch_cli_wizard_rejects_non_unicode_console_output(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(
+        wizard_module.sys,
+        "stdout",
+        SimpleNamespace(isatty=lambda: True, encoding="cp1255"),
+    )
+
+    assert wizard_module.can_launch_cli_wizard() is False
+
+
 def test_default_select_one_falls_back_to_number_prompt_when_not_a_tty(
     monkeypatch,
 ) -> None:
@@ -873,6 +911,25 @@ def test_default_select_one_falls_back_to_number_prompt_when_not_a_tty(
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
 
     result = wizard_module._default_select_one(
+        "Selection profile",
+        [("Balanced", "balanced"), ("High trust", "high-trust")],
+        "Choose how candidates should be ranked.",
+    )
+
+    assert result == "high-trust"
+
+
+def test_fallback_select_one_uses_number_prompt_when_raw_terminal_control_is_unavailable(
+    monkeypatch,
+) -> None:
+    responses = iter(["2"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(responses))
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module, "termios", None)
+    monkeypatch.setattr(wizard_module, "tty", None)
+
+    result = wizard_module._fallback_select_one(
         "Selection profile",
         [("Balanced", "balanced"), ("High trust", "high-trust")],
         "Choose how candidates should be ranked.",

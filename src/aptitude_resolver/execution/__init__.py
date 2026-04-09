@@ -1,6 +1,6 @@
 """Execution package."""
 
-from aptitude_client.execution.agent_export import (
+from aptitude_resolver.execution.agent_export import (
     APTITUDE_AGENT_SIDECAR,
     AgentExportResult,
     ExportedSkill,

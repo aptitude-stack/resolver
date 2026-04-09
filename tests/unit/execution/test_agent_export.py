@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from hashlib import sha256
 
-from aptitude_client.execution import (
+from aptitude_resolver.execution import (
     APTITUDE_AGENT_SIDECAR,
     export_materialized_skills_to_agent_root,
 )
-from aptitude_client.domain.models import ResolutionGraph, ResolvedSkillNode, SkillCoordinate
-from aptitude_client.lockfile import build_lockfile
+from aptitude_resolver.domain.models import ResolutionGraph, ResolvedSkillNode, SkillCoordinate
+from aptitude_resolver.lockfile import build_lockfile
 
 
 def _lockfile(content: str):
