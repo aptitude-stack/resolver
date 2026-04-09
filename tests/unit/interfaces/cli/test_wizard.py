@@ -498,7 +498,7 @@ def test_cli_wizard_header_separator_is_followed_by_blank_line() -> None:
 
     wizard.run()
 
-    separator = "─" * 80
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
     assert f"{separator}\n\nExited." in transcript.getvalue()
 
 
@@ -517,7 +517,7 @@ def test_cli_wizard_does_not_print_back_to_back_separators_before_launcher_menu(
 
     wizard.run()
 
-    separator = "─" * 80
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
     assert f"{separator}\n\n{separator}" not in transcript.getvalue()
 
 
@@ -821,7 +821,7 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
 
     wizard.run()
 
-    expected_separator = "─" * 80
+    expected_separator = wizard_module._render_step_separator(wizard._console.size.width)
     assert transcript.getvalue().count(expected_separator) >= 5
 
 
