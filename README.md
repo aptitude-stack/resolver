@@ -20,6 +20,7 @@ The system is intentionally split in two:
 Primary commands:
 
 - `aptitude install "<query>"`
+- `aptitude policy show`
 - `aptitude sync --lock aptitude.lock.json`
 - `aptitude manifest`
 
@@ -27,7 +28,7 @@ Internal preview command:
 
 - `aptitude resolve "<query>"`
 
-Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, while `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
+Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
 ## How To Install
 
@@ -133,17 +134,19 @@ For repo-local development, typical usage starts with one of these commands:
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver policy show
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
 ```
 
-The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
 
 For published usage, prefer the installed CLI:
 
 ```bash
 aptitude --help
 aptitude install "Postman Primary Skill"
+aptitude policy show
 aptitude sync --lock aptitude.lock.json
 aptitude manifest
 ```
@@ -153,6 +156,7 @@ For one-off published usage without installation:
 ```bash
 uvx aptitude-resolver
 uvx aptitude-resolver install "Postman Primary Skill"
+uvx aptitude-resolver policy show
 uvx aptitude-resolver sync
 ```
 
@@ -162,8 +166,9 @@ uvx aptitude-resolver sync
 - resolver-owned candidate version selection
 - deterministic recursive dependency graph resolution
 - candidate-policy filtering and graph governance before lock generation
-- workspace policy loading from `aptitude.toml`
+- system, user, and workspace policy loading from `aptitude.toml`
 - hard policy CLI overrides for fresh planning
+- `aptitude policy show` for effective policy and config-layer inspection
 - rich lockfile generation, serialization, parsing, and replay
 - lock-driven execution plan generation
 - local materialization from either a fresh plan or an existing lockfile
@@ -175,7 +180,7 @@ uvx aptitude-resolver sync
 
 ## What Is Still Incomplete
 
-- organization-managed policy loading is not implemented yet
+- remote or centrally managed policy services are not implemented
 - broader organization-specific rules are not implemented yet
 - winner-vs-runner-up explanation still derives from parallel explanation logic instead of directly from reranker output
 - `plugins/` extensibility is not implemented yet

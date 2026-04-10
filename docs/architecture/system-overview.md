@@ -54,6 +54,22 @@ This is the flow behind:
 
 Lock replay is intentionally shorter. Once a valid lock exists, discovery and dependency solving must not run again.
 
+### Config Inspection
+
+Use this when the input is a request to inspect the effective local client policy.
+
+```text
+policy/config request
+-> interface
+-> application
+-> config discovery + merge
+-> result rendering
+```
+
+This is the flow behind:
+
+- `aptitude policy show`
+
 ## Package Boundaries
 
 The current package tree is rooted at `src/aptitude_resolver/`.
@@ -84,14 +100,14 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 The active hardening areas are:
 
 - test hardening
-- strict policy overrides for fresh planning
+- layered client policy for fresh planning
 - cache and retry
 - observability
 - advanced governance
 
 The currently deferred areas are:
 
-- organization-managed policy sources
+- remote or centrally managed policy services
 - broader governance and explanation refinement
 - plugins
 - SDK surface
