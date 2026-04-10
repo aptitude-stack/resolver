@@ -596,11 +596,12 @@ def test_cli_wizard_help_shows_capability_map_only_on_demand() -> None:
     assert "Capability Map" in output
     assert "Public commands" in output
     assert "Advanced/internal" in output
-    assert "Global / framework" in output
+    assert "Global flags" in output
     assert 'resolve  aptitude resolve "query" [planning flags]' in output
     assert "--version" in output
-    assert "--install-completion" in output
-    assert "--show-completion" in output
+    assert "--help" in output
+    assert "--install-completion" not in output
+    assert "--show-completion" not in output
     assert "aptitude manifest" in output
 
 
