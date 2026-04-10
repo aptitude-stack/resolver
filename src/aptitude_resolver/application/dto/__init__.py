@@ -8,6 +8,13 @@ from aptitude_resolver.application.dto.install_dto import (
     SyncRequestDto,
     SyncResultDto,
 )
+from aptitude_resolver.application.dto.policy_config_dto import (
+    ConfigLayerDto,
+    EffectivePolicyReportDto,
+    PolicyConfigSnapshotDto,
+    PolicyMergeSemanticsDto,
+    SelectionConfigSnapshotDto,
+)
 from aptitude_resolver.application.dto.resolve_request_dto import ResolveQueryRequestDto
 from aptitude_resolver.application.dto.resolve_result_dto import (
     ConflictDto,
@@ -40,8 +47,10 @@ from aptitude_resolver.application.dto.search_inspect_dto import (
 )
 
 __all__ = [
+    "ConfigLayerDto",
     "ConflictDto",
     "DiscoveryCandidateDto",
+    "EffectivePolicyReportDto",
     "ExecutionPlanDto",
     "ExecutionStepDto",
     "ExportedSkillDto",
@@ -53,8 +62,10 @@ __all__ = [
     "LockedSkillDto",
     "LockfileDto",
     "LockRootDto",
+    "PolicyConfigSnapshotDto",
     "PolicySnapshotDto",
     "SelectionSnapshotDto",
+    "PolicyMergeSemanticsDto",
     "PolicyEvaluationDto",
     "InspectSkillRequestDto",
     "InspectSkillResultDto",
@@ -69,6 +80,7 @@ __all__ = [
     "ResolveSkillSummaryDto",
     "SearchSkillsRequestDto",
     "SearchSkillsResultDto",
+    "SelectionConfigSnapshotDto",
     "SyncRequestDto",
     "SyncResultDto",
     "TraceEntryDto",
