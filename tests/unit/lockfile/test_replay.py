@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.lockfile import replay_lockfile
-from aptitude_client.lockfile.model import LockRoot, Lockfile, LockedEdge, LockedSkill
+from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.lockfile import replay_lockfile
+from aptitude_resolver.lockfile.model import LockRoot, Lockfile, LockedEdge, LockedSkill
 
 
 def _node(node_id: str, slug: str, version: str) -> LockedSkill:
@@ -27,7 +27,9 @@ def _node(node_id: str, slug: str, version: str) -> LockedSkill:
     )
 
 
-def _lockfile(*, install_order: list[str], edges: list[LockedEdge] | None = None) -> Lockfile:
+def _lockfile(
+    *, install_order: list[str], edges: list[LockedEdge] | None = None
+) -> Lockfile:
     nodes = [
         _node("python.base@1.0.0", "python.base", "1.0.0"),
         _node("python.lint@1.2.3", "python.lint", "1.2.3"),

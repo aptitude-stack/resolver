@@ -1,1 +1,0 @@
-"""Aptitude Client package."""

@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.application.dto import InstallRequestDto, ResolveQueryRequestDto
-from aptitude_client.application.use_cases import InstallSkillUseCase, ResolveSkillQueryUseCase
-from aptitude_client.domain.errors import SkillNotFoundError
-from aptitude_client.domain.models import DiscoveryQuery, SkillIdentity, VersionSummary
+from aptitude_resolver.application.dto import InstallRequestDto, ResolveQueryRequestDto
+from aptitude_resolver.application.use_cases import (
+    InstallSkillUseCase,
+    ResolveSkillQueryUseCase,
+)
+from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SkillIdentity,
+    VersionSummary,
+)
 
 
 class FakeRegistryClient:
@@ -22,13 +29,19 @@ class FakeRegistryClient:
         raise SkillNotFoundError(f"Skill not found: {slug}")
 
     def list_skill_versions(self, slug: str) -> list[VersionSummary]:
-        raise AssertionError("list_skill_versions should not be called for a missing explicit dotted slug")
+        raise AssertionError(
+            "list_skill_versions should not be called for a missing explicit dotted slug"
+        )
 
     def fetch_skill_metadata(self, slug: str, version: str):
-        raise AssertionError("fetch_skill_metadata should not be called for a missing explicit dotted slug")
+        raise AssertionError(
+            "fetch_skill_metadata should not be called for a missing explicit dotted slug"
+        )
 
     def fetch_direct_dependencies(self, slug: str, version: str):
-        raise AssertionError("fetch_direct_dependencies should not be called for a missing explicit dotted slug")
+        raise AssertionError(
+            "fetch_direct_dependencies should not be called for a missing explicit dotted slug"
+        )
 
     def fetch_skill_content(
         self,
@@ -38,10 +51,14 @@ class FakeRegistryClient:
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
     ) -> str:
-        raise AssertionError("fetch_skill_content should not be called for a missing explicit dotted slug")
+        raise AssertionError(
+            "fetch_skill_content should not be called for a missing explicit dotted slug"
+        )
 
 
-def test_resolve_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug() -> None:
+def test_resolve_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug() -> (
+    None
+):
     registry_client = FakeRegistryClient()
 
     with pytest.raises(
@@ -56,7 +73,9 @@ def test_resolve_use_case_raises_skill_not_found_for_missing_explicit_dotted_slu
     assert registry_client.discovery_calls == []
 
 
-def test_install_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug(tmp_path) -> None:
+def test_install_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug(
+    tmp_path,
+) -> None:
     registry_client = FakeRegistryClient()
 
     with pytest.raises(

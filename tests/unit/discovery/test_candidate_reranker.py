@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from aptitude_client.discovery.intent import parse_search_intent
-from aptitude_client.discovery.reranking import rerank_candidates
-from aptitude_client.domain.models import DiscoveryCandidate, SkillCoordinate, VersionSummary
-from aptitude_client.domain.policy import SelectionPreferences
-
+from aptitude_resolver.discovery.intent import parse_search_intent
+from aptitude_resolver.discovery.reranking import rerank_candidates
+from aptitude_resolver.domain.models import (
+    DiscoveryCandidate,
+    SkillCoordinate,
+    VersionSummary,
+)
+from aptitude_resolver.domain.policy import SelectionPreferences
 
 
 def _candidate(
@@ -42,7 +45,6 @@ def _candidate(
         matched_labels=[],
         match_reasons=["server_candidate"],
     )
-
 
 
 def test_rerank_candidates_prefers_exact_name_runtime_and_tags() -> None:
@@ -98,8 +100,12 @@ def test_rerank_candidates_prefers_lower_cost_under_low_cost_profile() -> None:
         ),
     ]
 
-    balanced = rerank_candidates(intent, candidates, SelectionPreferences(profile="balanced"))
-    low_cost = rerank_candidates(intent, candidates, SelectionPreferences(profile="low-cost"))
+    balanced = rerank_candidates(
+        intent, candidates, SelectionPreferences(profile="balanced")
+    )
+    low_cost = rerank_candidates(
+        intent, candidates, SelectionPreferences(profile="low-cost")
+    )
 
     assert [item.slug for item in balanced] == ["trusted.lint", "cheap.lint"]
     assert [item.slug for item in low_cost] == ["cheap.lint", "trusted.lint"]
@@ -130,6 +136,8 @@ def test_rerank_candidates_low_cost_profile_keeps_relevance_ahead_of_cost() -> N
         ),
     ]
 
-    low_cost = rerank_candidates(intent, candidates, SelectionPreferences(profile="low-cost"))
+    low_cost = rerank_candidates(
+        intent, candidates, SelectionPreferences(profile="low-cost")
+    )
 
     assert [item.slug for item in low_cost] == ["python.lint", "cheap.tool"]

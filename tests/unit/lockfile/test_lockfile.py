@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.domain.errors import InvalidLockfileError
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.domain.models import (
     DependencySpec,
     DependencyEdge,
     ResolutionGraph,
@@ -11,9 +11,14 @@ from aptitude_client.domain.models import (
     SkillMetadata,
     SkillCoordinate,
 )
-from aptitude_client.domain.policy import PolicyEvaluation, SelectionPreferences
-from aptitude_client.lockfile import build_lockfile, parse_lockfile, replay_lockfile, serialize_lockfile
-from aptitude_client.resolver.graph import resolve_recursive_graph
+from aptitude_resolver.domain.policy import PolicyEvaluation, SelectionPreferences
+from aptitude_resolver.lockfile import (
+    build_lockfile,
+    parse_lockfile,
+    replay_lockfile,
+    serialize_lockfile,
+)
+from aptitude_resolver.resolution.graph import resolve_recursive_graph
 
 
 def _node(slug: str, version: str, *, published_at: str) -> ResolvedSkillNode:
@@ -39,12 +44,16 @@ def _node(slug: str, version: str, *, published_at: str) -> ResolvedSkillNode:
 class FakeRegistryClient:
     def __init__(self) -> None:
         self.metadata_by_coordinate: dict[tuple[str, str], SkillMetadata] = {}
-        self.dependencies_by_coordinate: dict[tuple[str, str], list[DependencySpec]] = {}
+        self.dependencies_by_coordinate: dict[
+            tuple[str, str], list[DependencySpec]
+        ] = {}
 
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
         return self.metadata_by_coordinate[(slug, version)]
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]:
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]:
         return list(self.dependencies_by_coordinate.get((slug, version), []))
 
 
@@ -77,7 +86,9 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
         root=root,
         nodes=[
             _node(root.slug, root.version, published_at="2026-03-18T00:00:00Z"),
-            _node(dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"),
+            _node(
+                dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency, markers=["linux"])],
         install_order=[dependency, root],
@@ -140,7 +151,9 @@ def test_replay_lockfile_uses_only_locked_nodes_edges_and_install_order() -> Non
         root=root,
         nodes=[
             _node(root.slug, root.version, published_at="2026-03-18T00:00:00Z"),
-            _node(dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"),
+            _node(
+                dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency)],
         install_order=[dependency, root],
@@ -173,7 +186,9 @@ def test_replay_lockfile_rejects_missing_install_order_nodes() -> None:
         root=root,
         nodes=[
             _node(root.slug, root.version, published_at="2026-03-18T00:00:00Z"),
-            _node(dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"),
+            _node(
+                dependency.slug, dependency.version, published_at="2026-03-17T00:00:00Z"
+            ),
         ],
         edges=[DependencyEdge(source=root, target=dependency)],
         install_order=[root],
@@ -191,7 +206,9 @@ def test_replay_lockfile_rejects_missing_install_order_nodes() -> None:
         replay_lockfile(lockfile)
 
 
-def test_lockfile_bytes_are_identical_across_reordered_registry_dependency_inputs() -> None:
+def test_lockfile_bytes_are_identical_across_reordered_registry_dependency_inputs() -> (
+    None
+):
     first_registry = FakeRegistryClient()
     second_registry = FakeRegistryClient()
     root = SkillCoordinate(slug="root.skill", version="1.0.0")

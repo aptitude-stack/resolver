@@ -1,4 +1,4 @@
-# Plan 01 - Client Foundation and Runtime Skeleton
+# Plan 01 - Resolver Foundation and Runtime Skeleton
 
 ## Goal
 Turn the current repository from empty package scaffolding into an importable,

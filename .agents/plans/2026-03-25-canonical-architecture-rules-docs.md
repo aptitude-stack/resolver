@@ -49,7 +49,7 @@
 - Modify: `.agents/agent.md`
 - Modify: `.agents/memory/meta.md`
 - Modify: `.agents/rules/repo.md`
-- Modify: `.agents/skills/apptitude-codegen-skill/SKILL.md`
+- Modify: `.agents/skills/aptitude-codegen/SKILL.md`
 
 - [ ] **Step 1: Make the canonical architecture and rules docs the first references everywhere**
 - [ ] **Step 2: Remove or demote competing “source of truth” language elsewhere**

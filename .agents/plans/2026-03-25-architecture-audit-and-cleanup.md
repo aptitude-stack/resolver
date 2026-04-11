@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Audit the current code and documentation against the stated Aptitude Client architecture, surface concrete mismatches, and remove clearly obsolete files that no longer fit the implemented direction.
+**Goal:** Audit the current code and documentation against the stated Aptitude Resolver architecture, surface concrete mismatches, and remove clearly obsolete files that no longer fit the implemented direction.
 
 **Architecture:** Review the architecture source documents first, then map current runtime modules and legacy slices to those responsibilities. Only delete files that are demonstrably obsolete or disconnected from the current runtime path; otherwise report the mismatch first and preserve the artifact for a conscious follow-up decision.
 

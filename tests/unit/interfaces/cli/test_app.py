@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
-from aptitude_client.application import composition
-from aptitude_client.application.dto import (
+from aptitude_resolver.application import composition
+from aptitude_resolver.application.dto import (
+    ConfigLayerDto,
     DiscoveryCandidateDto,
+    EffectivePolicyReportDto,
     ExecutionPlanDto,
     ExecutionStepDto,
     InstalledSkillDto,
@@ -16,40 +20,49 @@ from aptitude_client.application.dto import (
     LockfileDto,
     LockRootDto,
     PolicyEvaluationDto,
+    PolicyConfigSnapshotDto,
+    PolicyMergeSemanticsDto,
     ResolvedGraphDto,
     ResolvedSkillNodeDto,
     ResolveCoordinateDto,
     ResolveQueryResultDto,
     ResolveSkillSummaryDto,
+    SelectionConfigSnapshotDto,
     SyncResultDto,
     TraceEntryDto,
 )
-from aptitude_client.domain.errors import (
+from aptitude_resolver.domain.errors import (
     ContentChecksumMismatchError,
-    InvalidClientConfigurationError,
+    InvalidResolverConfigurationError,
     InvalidLockfileError,
     SelectionSlugNotFoundError,
 )
-from aptitude_client.domain.models import DiscoveryQuery, SkillCoordinate, VersionSummary
-from aptitude_client.interfaces.cli import app as app_module
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SkillCoordinate,
+    VersionSummary,
+)
+from aptitude_resolver.interfaces.cli import app as app_module
+from aptitude_resolver.telemetry.metrics import StageTiming
 
 
 runner = CliRunner()
 
 
 class QueueUseCase:
-    def __init__(self, responses: list[object] | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self, responses: list[object] | None = None, error: Exception | None = None
+    ) -> None:
         self.responses = list(responses or [])
         self.error = error
-        self.requests: list[object] = []
+        self.requests: list[Any] = []
 
-    def execute(self, request):
+    def execute(self, request: Any) -> Any:
         self.requests.append(request)
         if self.error is not None:
             raise self.error
         assert self.responses
         return self.responses.pop(0)
-
 
 
 def _resolved_result(
@@ -110,7 +123,9 @@ def _resolved_result(
                     name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
-                    headers={"runtime": "python" if slug == "python.lint" else "javascript"},
+                    headers={
+                        "runtime": "python" if slug == "python.lint" else "javascript"
+                    },
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
                     trust_tier="internal",
@@ -154,7 +169,6 @@ def _resolved_result(
             )
         ],
     )
-
 
 
 def _selection_required_result() -> ResolveQueryResultDto:
@@ -219,8 +233,9 @@ def _selection_required_result() -> ResolveQueryResultDto:
     )
 
 
-
-def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> InstallResultDto:
+def _installed_result(
+    materialized_root: str = str(Path("skill_demo")),
+) -> InstallResultDto:
     return InstallResultDto(
         requested_query="python lint",
         status="installed",
@@ -316,12 +331,16 @@ def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> Insta
             InstalledSkillDto(
                 slug="dep.core",
                 version="0.9.0",
-                install_path=str(Path(materialized_root) / "skills" / "dep.core" / "0.9.0"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                ),
             ),
             InstalledSkillDto(
                 slug="python.lint",
                 version="1.2.3",
-                install_path=str(Path(materialized_root) / "skills" / "python.lint" / "1.2.3"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                ),
             ),
         ],
         materialized_root=materialized_root,
@@ -336,7 +355,9 @@ def _installed_result(materialized_root: str = str(Path("skill_demo"))) -> Insta
     )
 
 
-def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo"))) -> SyncResultDto:
+def _synced_result(
+    lock_path: str, materialized_root: str = str(Path("skill_demo"))
+) -> SyncResultDto:
     return SyncResultDto(
         lock_path=lock_path,
         requested_query="python lint",
@@ -423,12 +444,16 @@ def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo
             InstalledSkillDto(
                 slug="dep.core",
                 version="0.9.0",
-                install_path=str(Path(materialized_root) / "skills" / "dep.core" / "0.9.0"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                ),
             ),
             InstalledSkillDto(
                 slug="python.lint",
                 version="1.2.3",
-                install_path=str(Path(materialized_root) / "skills" / "python.lint" / "1.2.3"),
+                install_path=str(
+                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                ),
             ),
         ],
         materialized_root=materialized_root,
@@ -443,13 +468,15 @@ def _synced_result(lock_path: str, materialized_root: str = str(Path("skill_demo
     )
 
 
-
 def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
+    use_case = QueueUseCase(
+        responses=[_resolved_result(selection_mode="non_interactive_top_ranked")]
+    )
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+
     def build_resolve_use_case(**kwargs):
         builder_kwargs.update(kwargs)
         return use_case, lambda: close_calls.append("closed")
@@ -465,21 +492,29 @@ def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
     assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].select_slug is None
     assert close_calls == ["closed"]
-    assert result.stdout == (_resolved_result(selection_mode="non_interactive_top_ranked").model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        _resolved_result(selection_mode="non_interactive_top_ranked").model_dump_json(
+            indent=2, exclude_none=True
+        )
+        + "\n"
+    )
     assert result.stderr == ""
 
 
-
-def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypatch) -> None:
+def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
+    monkeypatch,
+) -> None:
     use_case = QueueUseCase(
         responses=[
             _selection_required_result(),
-            _resolved_result(slug="js.lint", version="2.1.0", selection_mode="interactive_choice"),
+            _resolved_result(
+                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+            ),
         ]
     )
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
@@ -491,7 +526,10 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
     assert result.exit_code == 0
     assert "Multiple matching skills were found:" in result.stdout
     assert "tokens=120 | size=256B | published=2026-03-18T00:00:00Z" in result.stdout
-    assert "why ranked here: ranked above js.lint@2.1.0: closer exact name match" in result.stdout
+    assert (
+        "why ranked here: ranked above js.lint@2.1.0: closer exact name match"
+        in result.stdout
+    )
     assert len(use_case.requests) == 2
     assert use_case.requests[0].interaction_mode is None
     assert use_case.requests[0].prompt_capable is True
@@ -503,19 +541,26 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(monkeypa
     assert close_calls == ["closed"]
 
 
-
 def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(slug="js.lint", version="2.1.0", selection_mode="explicit_slug")])
+    use_case = QueueUseCase(
+        responses=[
+            _resolved_result(
+                slug="js.lint", version="2.1.0", selection_mode="explicit_slug"
+            )
+        ]
+    )
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
         lambda: (use_case, lambda: close_calls.append("closed")),
     )
 
-    result = runner.invoke(app_module.app, ["resolve", "lint", "--select-slug", "js.lint"])
+    result = runner.invoke(
+        app_module.app, ["resolve", "lint", "--select-slug", "js.lint"]
+    )
 
     assert result.exit_code == 0
     assert len(use_case.requests) == 1
@@ -525,21 +570,24 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     assert close_calls == ["closed"]
 
 
-
 def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     target = tmp_path / "skill_demo"
     use_case = QueueUseCase(responses=[_installed_result(str(target))])
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
+
     def build_install_use_case(**kwargs):
         builder_kwargs.update(kwargs)
         return use_case, lambda: close_calls.append("closed")
 
     monkeypatch.setattr(app_module, "build_install_use_case", build_install_use_case)
 
-    result = runner.invoke(app_module.app, ["install", "python lint", "--target", str(target)])
+    result = runner.invoke(
+        app_module.app, ["install", "python lint", "--target", str(target)]
+    )
 
     assert result.exit_code == 0
     assert builder_kwargs == {}
@@ -549,21 +597,72 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
     assert "Collecting python lint" in result.stdout
-    assert "Using aptitude candidate python.lint (1.2.3)" in result.stdout
+    assert "Installation Summary" in result.stdout
+    assert "Using resolver candidate python.lint (1.2.3)" in result.stdout
     assert "Collecting dependency dep.core (0.9.0)" in result.stdout
-    assert "Installing collected aptitude skills: dep.core, python.lint" in result.stdout
+    assert (
+        "Installing collected resolver skills: dep.core, python.lint" in result.stdout
+    )
     assert "Successfully installed dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
 
 
+def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
 
-def test_cli_install_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
+    @contextmanager
+    def capture_install_telemetry():
+        yield [
+            StageTiming(stage="discovery", duration_ms=95.679),
+            StageTiming(stage="materialization", duration_ms=18.2),
+        ]
+
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+    monkeypatch.setattr(app_module, "capture_cli_telemetry", capture_install_telemetry)
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: None),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        [
+            "install",
+            "python lint",
+            "--target",
+            str(target),
+            "--interaction-mode",
+            "never",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Installed Skills" in result.stdout
+    assert "Installation Summary" in result.stdout
+    assert "dep.core" in result.stdout
+    assert (
+        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms" in result.stdout
+    )
+    assert (
+        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms"
+        not in result.stderr
+    )
+
+
+def test_cli_install_json_flag_preserves_structured_output(
+    monkeypatch, tmp_path
+) -> None:
     target = tmp_path / "skill_demo"
     installed_result = _installed_result(str(target))
     use_case = QueueUseCase(responses=[installed_result])
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module,
         "build_install_use_case",
@@ -577,16 +676,20 @@ def test_cli_install_json_flag_preserves_structured_output(monkeypatch, tmp_path
 
     assert result.exit_code == 0
     assert close_calls == ["closed"]
-    assert result.stdout == (installed_result.model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        installed_result.model_dump_json(indent=2, exclude_none=True) + "\n"
+    )
 
 
-def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp_path) -> None:
+def test_cli_install_passes_selection_flag_overrides_to_builder(
+    monkeypatch, tmp_path
+) -> None:
     target = tmp_path / "skill_demo"
     use_case = QueueUseCase(responses=[_installed_result(str(target))])
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
 
     def build_install_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -629,12 +732,37 @@ def test_cli_install_passes_selection_flag_overrides_to_builder(monkeypatch, tmp
     assert close_calls == ["closed"]
 
 
+def test_cli_install_reports_missing_environment_variables_cleanly(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(
+        app_module, "build_install_use_case", composition.build_install_use_case
+    )
+    monkeypatch.delenv("APTITUDE_SERVER_BASE_URL", raising=False)
+    monkeypatch.delenv("APTITUDE_READ_TOKEN", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app_module.app, ["install", "python lint"])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "Aptitude is not configured." in result.stderr
+    assert "APTITUDE_SERVER_BASE_URL" in result.stderr
+    assert "APTITUDE_READ_TOKEN" in result.stderr
+    assert ".env" in result.stderr
+    assert "InvalidResolverConfigurationError" not in result.stderr
+    assert "Traceback" not in result.stderr
+
+
 def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> None:
-    use_case = QueueUseCase(responses=[_resolved_result(selection_mode="non_interactive_top_ranked")])
+    use_case = QueueUseCase(
+        responses=[_resolved_result(selection_mode="non_interactive_top_ranked")]
+    )
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
 
     def build_resolve_use_case(**kwargs):
         builder_kwargs.update(kwargs)
@@ -668,12 +796,16 @@ def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> Non
     assert close_calls == ["closed"]
 
 
-def test_cli_resolve_prints_structured_error_for_invalid_policy_override(monkeypatch) -> None:
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+def test_cli_resolve_prints_structured_error_for_invalid_policy_override(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     close_calls: list[str] = []
 
     def build_resolve_use_case(**kwargs):
-        raise InvalidClientConfigurationError("CLI override", "allowed_trust_tiers contains unknown values: unknown-tier.")
+        raise InvalidResolverConfigurationError(
+            "CLI override", "allowed_trust_tiers contains unknown values: unknown-tier."
+        )
 
     monkeypatch.setattr(app_module, "build_resolve_use_case", build_resolve_use_case)
 
@@ -684,11 +816,13 @@ def test_cli_resolve_prints_structured_error_for_invalid_policy_override(monkeyp
 
     assert result.exit_code == 1
     assert close_calls == []
-    assert '"type": "InvalidClientConfigurationError"' in result.stderr
-    assert '"source": "CLI override"' in result.stderr
+    assert "Invalid CLI configuration." in result.stderr
+    assert "allowed_trust_tiers contains unknown values: unknown-tier." in result.stderr
 
 
-def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatch) -> None:
+def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
+    monkeypatch,
+) -> None:
     class FakeSettings:
         pass
 
@@ -703,7 +837,9 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatc
             return ["python.lint"]
 
         def fetch_skill_identity(self, slug: str):
-            raise AssertionError("slug identity lookup should not be used for this query")
+            raise AssertionError(
+                "slug identity lookup should not be used for this query"
+            )
 
         def list_skill_versions(self, slug: str) -> list[VersionSummary]:
             return [
@@ -727,18 +863,26 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatc
             ]
 
         def fetch_skill_metadata(self, slug: str, version: str):
-            raise AssertionError("metadata lookup should not happen after candidate policy rejection")
+            raise AssertionError(
+                "metadata lookup should not happen after candidate policy rejection"
+            )
 
         def fetch_direct_dependencies(self, slug: str, version: str) -> list[object]:
             return []
 
     monkeypatch.setattr(composition, "Settings", FakeSettings)
     monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
-    monkeypatch.setattr(composition, "load_workspace_aptitude_config", lambda cwd=None: None)
+    monkeypatch.setattr(
+        composition, "load_workspace_aptitude_config", lambda cwd=None: None
+    )
     monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
-    monkeypatch.setattr(composition, "read_env_selection_overrides", lambda env=None: None)
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
-    monkeypatch.setattr(app_module, "build_resolve_use_case", composition.build_resolve_use_case)
+    monkeypatch.setattr(
+        composition, "read_env_selection_overrides", lambda env=None: None
+    )
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+    monkeypatch.setattr(
+        app_module, "build_resolve_use_case", composition.build_resolve_use_case
+    )
 
     result = runner.invoke(
         app_module.app,
@@ -746,7 +890,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(monkeypatc
     )
 
     assert result.exit_code == 1
-    assert '"type": "PolicyViolationError"' in result.stderr
+    assert "Policy rejected the requested operation." in result.stderr
     assert "All discovered candidates were rejected by policy." in result.stderr
 
 
@@ -773,10 +917,34 @@ def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].lock_path == lock_path
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
-    assert f"Syncing locked aptitude skills from {lock_path.resolve()}" in result.stdout
-    assert "Installing locked aptitude skills: dep.core, python.lint" in result.stdout
+    assert f"Syncing locked resolver skills from {lock_path.resolve()}" in result.stdout
+    assert "Installing locked resolver skills: dep.core, python.lint" in result.stdout
     assert "Successfully synced dep.core-0.9.0 python.lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
+
+
+def test_cli_sync_interactive_uses_panels(monkeypatch, tmp_path) -> None:
+    lock_path = tmp_path / "aptitude.lock.json"
+    target = tmp_path / "skill_demo"
+    synced_result = _synced_result(str(lock_path.resolve()), str(target))
+    use_case = QueueUseCase(responses=[synced_result])
+
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+    monkeypatch.setattr(
+        app_module,
+        "build_sync_use_case",
+        lambda: (use_case, lambda: None),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["sync", "--lock", str(lock_path), "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert "Sync Summary" in result.stdout
+    assert "Installed Skills" in result.stdout
+    assert "python.lint" in result.stdout
 
 
 def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
@@ -799,10 +967,14 @@ def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -
 
     assert result.exit_code == 0
     assert close_calls == ["closed"]
-    assert result.stdout == (synced_result.model_dump_json(indent=2, exclude_none=True) + "\n")
+    assert result.stdout == (
+        synced_result.model_dump_json(indent=2, exclude_none=True) + "\n"
+    )
 
 
-def test_cli_sync_prints_structured_error_for_missing_lockfile(monkeypatch, tmp_path) -> None:
+def test_cli_sync_prints_structured_error_for_missing_lockfile(
+    monkeypatch, tmp_path
+) -> None:
     close_calls: list[str] = []
     missing_lock = tmp_path / "missing.lock.json"
 
@@ -810,7 +982,11 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(monkeypatch, tmp_
         app_module,
         "build_sync_use_case",
         lambda: (
-            QueueUseCase(error=InvalidLockfileError(f"Lockfile not found: {missing_lock.resolve()}")),
+            QueueUseCase(
+                error=InvalidLockfileError(
+                    f"Lockfile not found: {missing_lock.resolve()}"
+                )
+            ),
             lambda: close_calls.append("closed"),
         ),
     )
@@ -819,50 +995,386 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(monkeypatch, tmp_
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
-    assert '"type": "InvalidLockfileError"' in result.stderr
-    assert '"message": "Lockfile not found:' in result.stderr
+    assert "Lockfile not found." in result.stderr
+    assert f"Path: {missing_lock.resolve()}" in result.stderr
+    assert "replace it with an actual file path" in result.stderr
 
 
-def test_cli_sync_requires_lock_option() -> None:
+def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = runner.invoke(app_module.app, ["install"])
+
+    assert result.exit_code == 0
+    assert calls == [{"initial_flow": "install", "target": Path("skill_demo")}]
+
+
+def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting_is_available(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = runner.invoke(app_module.app, ["install", "python lint"])
+
+    assert result.exit_code == 0
+    assert calls == [
+        {
+            "initial_flow": "install",
+            "initial_query": "python lint",
+            "target": Path("skill_demo"),
+        }
+    ]
+
+
+def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailable(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: False)
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+
+def _policy_report() -> EffectivePolicyReportDto:
+    return EffectivePolicyReportDto(
+        cwd=str(Path("C:/Dev/apptitude-client/aptitude-client")),
+        effective_selection=SelectionConfigSnapshotDto(
+            profile="high-trust",
+            interaction_mode="never",
+            profile_source="user_config",
+            interaction_mode_source="workspace_config",
+        ),
+        effective_policy=PolicyConfigSnapshotDto(
+            source="workspace_config",
+            allowed_trust_tiers=["verified", "internal"],
+            allowed_lifecycle_statuses=["published"],
+            max_token_estimate=500,
+            max_content_size_bytes=2048,
+            max_total_token_estimate=None,
+            max_total_content_size_bytes=None,
+        ),
+        layers=[
+            ConfigLayerDto(
+                source="default",
+                label="default",
+                active=True,
+                selection=SelectionConfigSnapshotDto(
+                    profile="balanced",
+                    interaction_mode="auto",
+                ),
+                policy=PolicyConfigSnapshotDto(
+                    allowed_trust_tiers=["verified", "internal", "untrusted"],
+                    allowed_lifecycle_statuses=[
+                        "published",
+                        "deprecated",
+                        "archived",
+                    ],
+                ),
+            ),
+            ConfigLayerDto(
+                source="system_config",
+                label="system config",
+                path="C:/ProgramData/aptitude/aptitude.toml",
+                active=False,
+            ),
+            ConfigLayerDto(
+                source="user_config",
+                label="user config",
+                path="C:/Users/test/AppData/Roaming/aptitude/aptitude.toml",
+                active=True,
+                selection=SelectionConfigSnapshotDto(profile="high-trust"),
+            ),
+            ConfigLayerDto(
+                source="workspace_config",
+                label="workspace config",
+                path="C:/Dev/apptitude-client/aptitude-client/aptitude.toml",
+                active=True,
+                selection=SelectionConfigSnapshotDto(interaction_mode="never"),
+                policy=PolicyConfigSnapshotDto(
+                    allowed_trust_tiers=["verified", "internal"],
+                    allowed_lifecycle_statuses=["published"],
+                    max_token_estimate=500,
+                    max_content_size_bytes=2048,
+                ),
+            ),
+            ConfigLayerDto(
+                source="environment",
+                label="environment",
+                active=False,
+            ),
+            ConfigLayerDto(
+                source="cli_override",
+                label="CLI override",
+                active=False,
+            ),
+        ],
+        semantics=PolicyMergeSemanticsDto(
+            selection_precedence=[
+                "default",
+                "system_config",
+                "user_config",
+                "workspace_config",
+                "environment",
+                "cli_override",
+            ],
+            policy_application_order=[
+                "default",
+                "system_config",
+                "user_config",
+                "workspace_config",
+                "cli_override",
+            ],
+            selection_rule="last non-null value wins by precedence",
+            policy_rule=(
+                "restrictive-only: allowed lists intersect and numeric ceilings "
+                "take the minimum"
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["install", "python lint", "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
+
+
+def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        [
+            "install",
+            "python lint",
+            "--target",
+            str(target),
+            "--prefer",
+            "low-cost",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
+
+
+def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
     result = runner.invoke(app_module.app, ["sync"])
+
+    assert result.exit_code == 0
+    assert calls == [{"initial_flow": "sync", "target": Path("skill_demo")}]
+
+
+def test_cli_sync_with_json_still_requires_lock_option() -> None:
+    result = runner.invoke(app_module.app, ["sync", "--json"])
 
     assert result.exit_code == 2
     assert "Missing option '--lock'" in result.stderr
 
 
+def test_cli_sync_renders_unexpected_errors_without_tracebacks(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app_module,
+        "build_sync_use_case",
+        lambda: (_ for _ in ()).throw(RuntimeError("unable to open database file")),
+    )
+
+    result = runner.invoke(app_module.app, ["sync", "--lock", "aptitude.lock.json"])
+
+    assert result.exit_code == 1
+    assert "Aptitude could not open its local cache." in result.stderr
+    assert "Traceback" not in result.stderr
+
 
 def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     close_calls: list[str] = []
 
-    monkeypatch.setattr(app_module, "_is_interactive", lambda: False)
+    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
         lambda: (
             QueueUseCase(
-                error=SelectionSlugNotFoundError("lint", "missing.skill", ["python.lint"])
+                error=SelectionSlugNotFoundError(
+                    "lint", "missing.skill", ["python.lint"]
+                )
             ),
             lambda: close_calls.append("closed"),
         ),
     )
 
-    result = runner.invoke(app_module.app, ["resolve", "lint", "--select-slug", "missing.skill"])
+    result = runner.invoke(
+        app_module.app, ["resolve", "lint", "--select-slug", "missing.skill"]
+    )
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
-    assert '"type": "SelectionSlugNotFoundError"' in result.stderr
-    assert '"selected_slug": "missing.skill"' in result.stderr
+    assert "Requested selection is not available." in result.stderr
+    assert "Selected slug: missing.skill" in result.stderr
     assert result.stdout == ""
 
 
-def test_format_error_wraps_structured_payload_for_cli_output() -> None:
-    rendered = app_module._format_error(
-        InvalidClientConfigurationError("environment", "unsupported interaction mode")
+def test_cli_policy_show_renders_human_readable_report(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "build_effective_policy_report", _policy_report)
+
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 0
+    assert "Effective Selection" in result.stdout
+    assert "profile: high-trust (from: User config)" in result.stdout
+    assert "from: Workspace config" in result.stdout
+    assert "allowed trust tiers: verified, internal" in result.stdout
+    assert "System config: Not found" in result.stdout
+    assert "selection: more specific values win" in result.stdout
+    assert "install/resolve flags like --allow-trust are one-off policy overrides" in result.stdout
+
+
+def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "build_effective_policy_report", _policy_report)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 0
+    assert "Config Sources" in result.stdout
+    assert "How It Works" in result.stdout
+    assert "CLI override" in result.stdout
+    assert "Install/resolve flags like --allow-trust are one-off policy overrides." in result.stdout
+
+
+def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+
+    result = runner.invoke(app_module.app, ["manifest"])
+
+    assert result.exit_code == 0
+    assert "Public Commands" in result.stdout
+    assert "Advanced/Internal Commands" in result.stdout
+    assert "Global Flags" in result.stdout
+    assert "policy" in result.stdout
+    assert "show" in result.stdout
+    assert "--install-completion" not in result.stdout
+    assert "--show-completion" not in result.stdout
+
+
+def test_cli_policy_show_json_outputs_structured_report(monkeypatch) -> None:
+    report = _policy_report()
+    monkeypatch.setattr(app_module, "build_effective_policy_report", lambda: report)
+
+    result = runner.invoke(app_module.app, ["policy", "show", "--json"])
+
+    assert result.exit_code == 0
+    assert result.stdout == report.model_dump_json(indent=2, exclude_none=True) + "\n"
+
+
+def test_cli_policy_show_reports_invalid_system_configuration(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app_module,
+        "build_effective_policy_report",
+        lambda: (_ for _ in ()).throw(
+            InvalidResolverConfigurationError(
+                "system config",
+                "allowed_trust_tiers contains unknown values: partner.",
+            )
+        ),
     )
 
-    assert '"type": "InvalidClientConfigurationError"' in rendered
-    assert '"source": "environment"' in rendered
-    assert '"details": "unsupported interaction mode"' in rendered
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 1
+    assert "Invalid system configuration." in result.stderr
+    assert "allowed_trust_tiers contains unknown values: partner." in result.stderr
+
+
+def test_format_error_renders_environment_configuration_errors_for_humans() -> None:
+    rendered = app_module._format_error(
+        InvalidResolverConfigurationError(
+            "environment",
+            "Missing required environment variables: "
+            "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN.",
+        )
+    )
+
+    assert "Aptitude is not configured." in rendered
+    assert "APTITUDE_SERVER_BASE_URL" in rendered
+    assert "APTITUDE_READ_TOKEN" in rendered
+    assert ".env" in rendered
+    assert "InvalidResolverConfigurationError" not in rendered
+
+
+def test_format_error_keeps_structured_payload_for_non_environment_config_errors() -> (
+    None
+):
+    rendered = app_module._format_error(
+        InvalidResolverConfigurationError(
+            "CLI override", "unsupported interaction mode"
+        )
+    )
+
+    assert "Invalid CLI configuration." in rendered
+    assert "unsupported interaction mode" in rendered
+    assert "Review the supplied flags and try again." in rendered
 
 
 def test_format_error_includes_checksum_error_payload_details() -> None:
@@ -876,7 +1388,7 @@ def test_format_error_includes_checksum_error_payload_details() -> None:
         )
     )
 
-    assert '"type": "ContentChecksumMismatchError"' in rendered
-    assert '"slug": "python.lint"' in rendered
-    assert '"expected_digest": "expected"' in rendered
-    assert '"actual_digest": "actual"' in rendered
+    assert "Downloaded content failed integrity verification." in rendered
+    assert "Skill: python.lint@1.2.3" in rendered
+    assert "Expected digest: expected" in rendered
+    assert "Actual digest: actual" in rendered

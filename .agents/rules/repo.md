@@ -1,33 +1,25 @@
-# Repo Rules
+# Agent Repo Rules
 
-## Naming Convention
+This file is for agent workflow only. Canonical architecture and implementation rules live under `../docs/`.
 
-- Use `kebab-case` for new filenames, rule identifiers, and plan slugs unless a tool requires a different format.
+## Required Canonical Reads
 
-## Planning And Execution
+Before non-trivial implementation work, read:
 
-- Save plan files under `.agents/plans/`.
-- Use date-based or otherwise descriptive filenames; do not rely on the old `plan-XX-*` convention.
-- Treat historical plan files as work history, not as the current architecture source of truth.
+1. `../docs/architecture/system-overview.md`
+2. `../docs/architecture/decision-rules.md`
+3. `../docs/architecture/selection-and-governance.md` when the change touches planning, policy, governance, locking, or checksums
 
-## TDD Workflow
+## Agent-Specific Rules
 
-- Follow RED -> GREEN -> REFACTOR for non-trivial changes.
-- Write or update failing tests first for new behavior when practical.
-- Implement the minimal change to pass tests.
-- Refactor only with tests green and behavior preserved.
-- Include happy-path and failure-path coverage.
+- Treat `docs/` as canonical and `.agents/` as derivative.
+- Keep `.agents/memory/meta.md` brief and factual.
+- Do not treat `.agents/plans/` as current architecture.
+- Update agent docs in the same change when product identity, package layout, or doc entrypoints change.
 
-## Documentation Guidelines
+## Naming And Planning
 
-- Keep docs concise, concrete, and aligned with current behavior.
-- Before any non-trivial implementation, read:
-  - `docs/ARCHITECTURE.md`
-  - `docs/RULES.md`
-- Update these files when relevant behavior or boundaries change:
-  - `docs/ARCHITECTURE.md`
-  - `docs/RULES.md`
-  - `README.md`
-  - `.agents/memory/meta.md`
-- Historical milestone plans under `.agents/plans/` do not need retroactive rewrites unless they are being actively reused.
-- Document deterministic rules explicitly: ordering, tie-breakers, governance precedence, and lock-driven execution assumptions.
+- Use `kebab-case` for new filenames and plan slugs unless a tool requires something else.
+- Save new plan files under `.agents/plans/`.
+- Treat historical plans as history, not current guidance.
+- When planning Python changes, use [`$python-testing`](../skills/python-testing/SKILL.md) to ensure the plan includes adding or updating tests.

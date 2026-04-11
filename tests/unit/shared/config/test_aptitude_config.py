@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from aptitude_client.shared.config.aptitude_config import (
+from aptitude_resolver.shared.config.aptitude_config import (
     AptitudeConfig,
     PolicyConfig,
     SelectionConfig,
+    discover_system_config_path,
     discover_user_config_path,
     discover_workspace_config_path,
     load_aptitude_config,
     read_env_selection_overrides,
+    resolve_system_config_path,
+    resolve_user_config_path,
 )
 
 
@@ -91,6 +96,35 @@ def test_discover_user_config_path_uses_windows_appdata(tmp_path) -> None:
     )
 
     assert discovered == config_path
+
+
+def test_resolve_user_config_path_uses_unix_xdg_home(tmp_path) -> None:
+    resolved = resolve_user_config_path(
+        env={"XDG_CONFIG_HOME": str(tmp_path / ".xdg")},
+        os_name="posix",
+    )
+
+    assert resolved == tmp_path / ".xdg" / "aptitude" / "aptitude.toml"
+
+
+def test_discover_system_config_path_uses_windows_programdata(tmp_path) -> None:
+    config_dir = tmp_path / "ProgramData" / "aptitude"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "aptitude.toml"
+    config_path.write_text("", encoding="utf-8")
+
+    discovered = discover_system_config_path(
+        env={"PROGRAMDATA": str(tmp_path / "ProgramData")},
+        os_name="nt",
+    )
+
+    assert discovered == config_path
+
+
+def test_resolve_system_config_path_defaults_to_etc_on_unix() -> None:
+    resolved = resolve_system_config_path(os_name="posix")
+
+    assert resolved == Path("/etc/aptitude/aptitude.toml")
 
 
 def test_read_env_selection_overrides_reads_selection_fields() -> None:

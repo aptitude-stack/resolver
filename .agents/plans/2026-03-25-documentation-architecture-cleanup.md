@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring the repository documentation back in sync with the current Aptitude Client architecture, delete clearly obsolete documents, and preserve any architecture-relevant disagreements for human review instead of silently overwriting them.
+**Goal:** Bring the repository documentation back in sync with the current Aptitude Resolver architecture, delete clearly obsolete documents, and preserve any architecture-relevant disagreements for human review instead of silently overwriting them.
 
 **Architecture:** Audit every top-level project document against the current implementation, classify each document as keep/update, delete, or discuss, then apply the minimal doc edits needed to leave one coherent and current documentation set. Keep runtime and architecture truth aligned with the implemented lock-driven, client-owned decision pipeline.
 

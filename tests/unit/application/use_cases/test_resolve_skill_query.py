@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from aptitude_client.application.dto import ResolveQueryRequestDto
-from aptitude_client.application.use_cases import ResolveSkillQueryUseCase
-from aptitude_client.domain.errors import (
+from aptitude_resolver.application.dto import ResolveQueryRequestDto
+from aptitude_resolver.application.use_cases import ResolveSkillQueryUseCase
+from aptitude_resolver.domain.errors import (
     DiscoveryNoCandidatesError,
     InteractiveSelectionUnavailableError,
     PolicyViolationError,
     SelectionSlugNotFoundError,
     SkillNotFoundError,
 )
-from aptitude_client.domain.models import (
+from aptitude_resolver.domain.models import (
     DependencySpec,
     DiscoveryQuery,
     SkillCoordinate,
@@ -19,8 +19,8 @@ from aptitude_client.domain.models import (
     SkillMetadata,
     VersionSummary,
 )
-from aptitude_client.domain.policy import PolicyContext
-from aptitude_client.domain.policy import SelectionPreferences
+from aptitude_resolver.domain.policy import PolicyContext
+from aptitude_resolver.domain.policy import SelectionPreferences
 
 
 class FakeRegistryClient:
@@ -29,7 +29,9 @@ class FakeRegistryClient:
         self.identity_by_slug: dict[str, SkillIdentity] = {}
         self.versions_by_slug: dict[str, list[VersionSummary]] = {}
         self.metadata_by_coordinate: dict[tuple[str, str], SkillMetadata] = {}
-        self.dependencies_by_coordinate: dict[tuple[str, str], list[DependencySpec]] = {}
+        self.dependencies_by_coordinate: dict[
+            tuple[str, str], list[DependencySpec]
+        ] = {}
         self.discovery_calls: list[DiscoveryQuery] = []
         self.identity_calls: list[str] = []
         self.version_calls: list[str] = []
@@ -56,12 +58,15 @@ class FakeRegistryClient:
         try:
             return self.metadata_by_coordinate[(slug, version)]
         except KeyError as exc:
-            raise SkillNotFoundError(f"Skill version not found: {slug}@{version}") from exc
+            raise SkillNotFoundError(
+                f"Skill version not found: {slug}@{version}"
+            ) from exc
 
-    def fetch_direct_dependencies(self, slug: str, version: str) -> list[DependencySpec]:
+    def fetch_direct_dependencies(
+        self, slug: str, version: str
+    ) -> list[DependencySpec]:
         self.dependency_calls.append((slug, version))
         return list(self.dependencies_by_coordinate.get((slug, version), []))
-
 
 
 def _metadata(
@@ -94,7 +99,6 @@ def _metadata(
         trust_tier=trust_tier,
         published_at="2026-03-18T00:00:00Z",
     )
-
 
 
 def _version_summary(
@@ -130,7 +134,6 @@ def _version_summary(
     )
 
 
-
 def test_query_use_case_resolves_exact_slug_without_discovery() -> None:
     registry_client = FakeRegistryClient()
     registry_client.identity_by_slug["python.lint"] = SkillIdentity(
@@ -164,9 +167,10 @@ def test_query_use_case_resolves_exact_slug_without_discovery() -> None:
     assert result.lockfile is not None
     assert result.lockfile.root.selected_node_id == "python.lint@1.2.3"
     assert result.execution_plan is not None
-    assert [step.node_id for step in result.execution_plan.steps] == ["python.lint@1.2.3"]
+    assert [step.node_id for step in result.execution_plan.steps] == [
+        "python.lint@1.2.3"
+    ]
     assert any(item.action == "exact_slug_hit" for item in result.trace)
-
 
 
 def test_query_use_case_returns_selection_required_for_interactive_ambiguity() -> None:
@@ -204,7 +208,9 @@ def test_query_use_case_returns_selection_required_for_interactive_ambiguity() -
     assert registry_client.metadata_calls == []
 
 
-def test_query_use_case_returns_interactive_candidate_details_from_core_ranking() -> None:
+def test_query_use_case_returns_interactive_candidate_details_from_core_ranking() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["postman"] = ["postman.old", "postman.new"]
     registry_client.versions_by_slug["postman.old"] = [
@@ -244,14 +250,18 @@ def test_query_use_case_returns_interactive_candidate_details_from_core_ranking(
     assert result.candidates[0].content_size_bytes == 79
     assert "tokens=200" in result.candidates[0].selection_details
     assert "size=79B" in result.candidates[0].selection_details
-    assert "published=2026-03-28T16:55:09.761768Z" in result.candidates[0].selection_details
+    assert (
+        "published=2026-03-28T16:55:09.761768Z"
+        in result.candidates[0].selection_details
+    )
     assert result.candidates[0].selection_reason is not None
     assert "newer publication date" in result.candidates[0].selection_reason
     assert result.candidates[1].selection_reason is None
 
 
-
-def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive() -> None:
+def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["python lint"] = ["js.lint", "python.lint"]
     registry_client.versions_by_slug["python.lint"] = [
@@ -284,7 +294,9 @@ def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive()
         tags=["python", "base"],
     )
     registry_client.dependencies_by_coordinate[("python.lint", "1.2.3")] = [
-        DependencySpec(slug="python.base", version="1.0.0", optional=False, markers=["linux"])
+        DependencySpec(
+            slug="python.base", version="1.0.0", optional=False, markers=["linux"]
+        )
     ]
 
     result = ResolveSkillQueryUseCase(registry_client).execute(
@@ -300,7 +312,10 @@ def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive()
     assert result.selected_coordinate is not None
     assert result.selected_coordinate.slug == "python.lint"
     assert result.graph is not None
-    assert [item.slug for item in result.graph.install_order] == ["python.base", "python.lint"]
+    assert [item.slug for item in result.graph.install_order] == [
+        "python.base",
+        "python.lint",
+    ]
     assert result.lockfile is not None
     assert result.lockfile.install_order == ["python.base@1.0.0", "python.lint@1.2.3"]
     assert result.execution_plan is not None
@@ -309,7 +324,6 @@ def test_query_use_case_auto_selects_top_ranked_candidate_when_non_interactive()
         "python.lint@1.2.3",
     ]
     assert any(item.action == "auto_select_top_ranked" for item in result.trace)
-
 
 
 def test_query_use_case_filters_candidates_by_policy_before_ranking() -> None:
@@ -393,7 +407,6 @@ def test_query_use_case_respects_explicit_selected_slug() -> None:
     assert result.lockfile.root.selected_node_id == "js.lint@2.1.0"
 
 
-
 def test_query_use_case_raises_when_selected_slug_is_missing_from_candidates() -> None:
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["lint"] = ["python.lint"]
@@ -405,7 +418,6 @@ def test_query_use_case_raises_when_selected_slug_is_missing_from_candidates() -
         ResolveSkillQueryUseCase(registry_client).execute(
             ResolveQueryRequestDto(query="lint", select_slug="js.lint")
         )
-
 
 
 def test_query_use_case_raises_when_discovery_has_no_candidates() -> None:
@@ -427,7 +439,9 @@ def test_query_use_case_raises_when_policy_rejects_all_candidates() -> None:
         )
     ]
 
-    with pytest.raises(PolicyViolationError, match="All discovered candidates were rejected by policy"):
+    with pytest.raises(
+        PolicyViolationError, match="All discovered candidates were rejected by policy"
+    ):
         ResolveSkillQueryUseCase(
             registry_client,
             policy_context=PolicyContext(allowed_trust_tiers=["verified"]),
@@ -446,7 +460,9 @@ def test_query_use_case_rejects_candidates_by_lifecycle_override() -> None:
         )
     ]
 
-    with pytest.raises(PolicyViolationError, match="All discovered candidates were rejected by policy"):
+    with pytest.raises(
+        PolicyViolationError, match="All discovered candidates were rejected by policy"
+    ):
         ResolveSkillQueryUseCase(
             registry_client,
             policy_context=PolicyContext(allowed_lifecycle_statuses=["published"]),
@@ -465,7 +481,9 @@ def test_query_use_case_rejects_candidates_by_content_size_override() -> None:
         )
     ]
 
-    with pytest.raises(PolicyViolationError, match="All discovered candidates were rejected by policy"):
+    with pytest.raises(
+        PolicyViolationError, match="All discovered candidates were rejected by policy"
+    ):
         ResolveSkillQueryUseCase(
             registry_client,
             policy_context=PolicyContext(max_content_size_bytes=1024),
@@ -525,7 +543,9 @@ def test_query_use_case_raises_when_always_mode_cannot_prompt() -> None:
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["python lint"] = ["js.lint", "python.lint"]
     registry_client.versions_by_slug["python.lint"] = [
-        _version_summary("python.lint", "1.2.3", name="Python Lint", tags=["python", "lint"])
+        _version_summary(
+            "python.lint", "1.2.3", name="Python Lint", tags=["python", "lint"]
+        )
     ]
     registry_client.versions_by_slug["js.lint"] = [
         _version_summary(
@@ -547,7 +567,9 @@ def test_query_use_case_raises_when_always_mode_cannot_prompt() -> None:
         )
 
 
-def test_query_use_case_emits_selection_explainability_trace_and_lock_metadata() -> None:
+def test_query_use_case_emits_selection_explainability_trace_and_lock_metadata() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["lint tool"] = ["trusted.lint", "cheap.lint"]
     registry_client.versions_by_slug["trusted.lint"] = [

@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from aptitude_client.discovery import DiscoverSkillCandidatesQuery
-from aptitude_client.domain.models import SkillCoordinate, SkillIdentity, VersionSummary
+from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery
+from aptitude_resolver.domain.models import (
+    SkillCoordinate,
+    SkillIdentity,
+    VersionSummary,
+)
 
 
 class FakeRegistryClient:
@@ -42,10 +46,14 @@ class FakeRegistryClient:
 def test_discovery_keeps_all_registry_candidates_without_client_side_cap() -> None:
     candidates = [f"skill.{index:02d}" for index in range(12)]
 
-    result = DiscoverSkillCandidatesQuery(FakeRegistryClient(candidates)).execute("demo skill")
+    result = DiscoverSkillCandidatesQuery(FakeRegistryClient(candidates)).execute(
+        "demo skill"
+    )
 
     assert [match.slug for match in result.matches] == candidates
-    discovery_trace = next(item for item in result.trace if item.action == "discover_candidates")
+    discovery_trace = next(
+        item for item in result.trace if item.action == "discover_candidates"
+    )
     assert discovery_trace.data == {
         "candidate_count": 12,
         "slugs": candidates,
