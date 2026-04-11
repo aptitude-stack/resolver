@@ -68,12 +68,13 @@ def test_format_cli_error_renders_missing_lockfile_errors_for_humans() -> None:
         InvalidLockfileError("Lockfile not found: /tmp/missing.lock.json")
     )
 
-    assert "Lockfile error." in rendered
+    assert "Lockfile not found." in rendered
     assert (
         "────────────────────────────────────────────────────────────────" in rendered
     )
-    assert "Lockfile not found: /tmp/missing.lock.json" in rendered
-    assert "--lock points to a valid resolver lockfile" in rendered
+    assert "Path: /tmp/missing.lock.json" in rendered
+    assert "Pass a real lockfile path to --lock" in rendered
+    assert "replace it with an actual file path" in rendered
 
 
 def test_format_cli_error_renders_missing_selected_slug_errors_for_humans() -> None:

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import sys
-import termios
-import tty
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
@@ -16,6 +14,13 @@ from typing import (
     TypeVar,
     cast,
 )
+
+try:
+    import termios
+    import tty
+except ModuleNotFoundError:  # pragma: no cover - exercised via import simulation
+    termios = None
+    tty = None
 
 from rich import box
 from rich.console import Console, Group
@@ -208,6 +213,30 @@ def _format_error(error: AptitudeResolverError) -> str:
     """Render one error payload for CLI output."""
 
     return format_cli_error(error)
+
+
+def _stream_supports_text(stream: object, text: str) -> bool:
+    """Return whether the given stream encoding can represent the sample text."""
+
+    encoding = getattr(stream, "encoding", None)
+    if not encoding:
+        return True
+
+    try:
+        text.encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        return False
+    return True
+
+
+def can_launch_cli_wizard() -> bool:
+    """Return whether the current terminal can safely render the wizard UI."""
+
+    return (
+        sys.stdin.isatty()
+        and sys.stdout.isatty()
+        and _stream_supports_text(sys.stdout, "─●→✓↑↓╭╮╰╯")
+    )
 
 
 def _render_wordmark(*, style: BannerStyle = "classic") -> str:
@@ -523,7 +552,12 @@ def _fallback_select_one(
     if not options:
         raise ValueError("Expected at least one option.")
 
-    if not sys.stdin.isatty() or not sys.stdout.isatty():
+    if (
+        not sys.stdin.isatty()
+        or not sys.stdout.isatty()
+        or termios is None
+        or tty is None
+    ):
         print(title)
         if help_text:
             print(help_text)

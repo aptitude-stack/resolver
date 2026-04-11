@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import hashlib
 
-from aptitude_client.application.dto import InspectSkillRequestDto, SearchSkillsRequestDto
-from aptitude_client.application.use_cases import InspectSkillUseCase, SearchSkillsUseCase
-from aptitude_client.domain.errors import SkillNotFoundError
-from aptitude_client.domain.models import (
+from aptitude_resolver.application.dto import InspectSkillRequestDto, SearchSkillsRequestDto
+from aptitude_resolver.application.use_cases import InspectSkillUseCase, SearchSkillsUseCase
+from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.domain.models import (
     DiscoveryQuery,
     SkillCoordinate,
     SkillIdentity,
     SkillMetadata,
     VersionSummary,
 )
-from aptitude_client.domain.policy import PolicyContext, SelectionPreferences
+from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
 
 
 class FakeRegistryClient:

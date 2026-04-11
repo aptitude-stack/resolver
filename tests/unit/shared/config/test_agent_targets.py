@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aptitude_client.shared.config import (
+from aptitude_resolver.shared.config import (
     detect_available_agent_targets,
     get_agent_target_preset,
     resolve_agent_install_root,

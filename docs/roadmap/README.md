@@ -10,6 +10,8 @@ Status labels used here:
 
 ## Contents
 
+- [client-policy-summary.md](client-policy-summary.md)
+- [client-policy-configuration.md](client-policy-configuration.md)
 - [requirements-and-phases.md](requirements-and-phases.md)
 - [near-term-evolution.md](near-term-evolution.md)
 - [interface-expansion.md](interface-expansion.md)

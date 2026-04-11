@@ -4,6 +4,7 @@ Reference docs capture stable technical facts and artifacts that support impleme
 
 ## Contents
 
+- [cli-command-reference.md](cli-command-reference.md): full user-facing CLI command list and flags
 - [api-contract.md](api-contract.md): concrete runtime-facing registry contract and lock assumptions
 - [schema.md](schema.md): local schema surfaces for config and lock data
 - [storage-strategy.md](storage-strategy.md): current storage and materialization strategy

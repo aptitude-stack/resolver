@@ -188,6 +188,12 @@ def format_invalid_configuration_error(
     if source == "cli override":
         title = "Invalid CLI configuration."
         hint = "Review the supplied flags and try again."
+    elif source == "system config":
+        title = "Invalid system configuration."
+        hint = "Fix the system Aptitude configuration and try again."
+    elif source == "user config":
+        title = "Invalid user configuration."
+        hint = "Fix the user Aptitude configuration and try again."
     elif source == "workspace config":
         title = "Invalid workspace configuration."
         hint = "Fix the workspace Aptitude configuration and try again."
@@ -217,11 +223,25 @@ def format_selection_slug_not_found_error(error: SelectionSlugNotFoundError) -> 
 def format_invalid_lockfile_error(error: InvalidLockfileError) -> str:
     """Render one lockfile failure for humans."""
 
+    details = str(error)
+    if details.startswith("Lockfile not found: "):
+        missing_path = details.removeprefix("Lockfile not found: ")
+        return "\n".join(
+            [
+                "Lockfile not found.",
+                HORIZONTAL_SEPARATOR,
+                f"Path: {missing_path}",
+                "",
+                "Pass a real lockfile path to --lock and try again.",
+                "If you copied PATH from the docs, replace it with an actual file path.",
+            ]
+        )
+
     return "\n".join(
         [
-            "Lockfile error.",
+            "Lockfile could not be loaded.",
             HORIZONTAL_SEPARATOR,
-            str(error),
+            details,
             "",
             "Check that --lock points to a valid resolver lockfile and try again.",
         ]

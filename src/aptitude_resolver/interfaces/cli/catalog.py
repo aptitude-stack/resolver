@@ -63,6 +63,28 @@ class CommandSurface:
 
 THEME = CliTheme()
 HORIZONTAL_SEPARATOR = "─" * 140
+ASCII_SEPARATOR = "-" * 100
+
+
+def _stream_supports_text(stream: object, text: str) -> bool:
+    encoding = getattr(stream, "encoding", None)
+    if not encoding:
+        return True
+
+    try:
+        text.encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        return False
+    return True
+
+
+def horizontal_separator_for_stream(stream: object | None = None) -> str:
+    """Return a separator that can be printed by the target stream encoding."""
+
+    target_stream = sys.stdout if stream is None else stream
+    if _stream_supports_text(target_stream, HORIZONTAL_SEPARATOR):
+        return HORIZONTAL_SEPARATOR
+    return ASCII_SEPARATOR
 
 OPTIONS = {
     "version_select": OptionSurface(
@@ -146,6 +168,12 @@ OPTIONS = {
         brief="structured machine-readable result",
         help_text="Print the structured JSON sync result for automation and CI.",
     ),
+    "policy_json": OptionSurface(
+        key="policy_json",
+        signature="--json",
+        brief="structured machine-readable policy report",
+        help_text="Print the effective client policy report as structured JSON.",
+    ),
     "lock": OptionSurface(
         key="lock",
         signature="--lock PATH",
@@ -163,21 +191,6 @@ OPTIONS = {
         signature="--help",
         brief="show help and exit",
         help_text="Show this message and exit.",
-    ),
-    "install_completion": OptionSurface(
-        key="install_completion",
-        signature="--install-completion",
-        brief="install shell completion for the current shell",
-        help_text="Install completion for the current shell.",
-    ),
-    "show_completion": OptionSurface(
-        key="show_completion",
-        signature="--show-completion",
-        brief="print shell completion for manual install/customization",
-        help_text=(
-            "Show completion for the current shell, to copy it or customize "
-            "the installation."
-        ),
     ),
 }
 
@@ -267,8 +280,55 @@ COMMANDS = {
         usage="{cli} manifest",
         description="Show the complete Aptitude CLI capability map.",
         note_lines=(
-            "shows public commands, advanced/internal commands, and global/framework flags",
+            "shows public commands, advanced/internal commands, and global flags",
             "lists every supported command and flag the app exposes",
+        ),
+    ),
+    "policy": CommandSurface(
+        name="policy",
+        audience="public",
+        summary="inspect effective client policy and config sources",
+        usage="{cli} policy show",
+        description=(
+            "Inspect the effective client policy, selection preferences, and "
+            "contributing config layers."
+        ),
+        examples=(
+            "{cli} policy show",
+            "{cli} policy show --json",
+        ),
+        note_lines=(
+            "shows built-in defaults plus system, user, workspace, environment, and CLI layers",
+            "keeps policy fully client-owned and file-based",
+        ),
+    ),
+    "policy_show": CommandSurface(
+        name="policy show",
+        audience="public",
+        summary="show effective client policy and config layers",
+        usage="{cli} policy show",
+        description=(
+            "Show the effective client policy, selection preferences, and "
+            "contributing config layers."
+        ),
+        examples=(
+            "{cli} policy show",
+            "{cli} policy show --json",
+        ),
+        option_groups=(
+            OptionGroup(
+                title="Output behavior",
+                option_keys=("policy_json",),
+                lines=(
+                    "default   human-readable policy report",
+                    "--json    structured machine-readable result",
+                ),
+            ),
+        ),
+        note_lines=(
+            "shows built-in defaults plus system, user, workspace, environment, and CLI layers",
+            "policy uses restrictive-only merge across system, user, workspace, and CLI layers",
+            "selection keeps normal override precedence across file, environment, and CLI layers",
         ),
     ),
     "resolve": CommandSurface(
@@ -324,6 +384,7 @@ def build_root_help(program_name: str | None = None) -> str:
     public_commands = (
         COMMANDS["install"],
         COMMANDS["sync"],
+        COMMANDS["policy"],
         COMMANDS["manifest"],
     )
     lines = [
@@ -357,6 +418,11 @@ def build_root_help(program_name: str | None = None) -> str:
             "  "
             + _render_command_text(
                 '{cli} install "Postman Primary Skill" --prefer low-cost',
+                program_name=program_name,
+            ),
+            "  "
+            + _render_command_text(
+                "{cli} policy show",
                 program_name=program_name,
             ),
             "  "
@@ -420,22 +486,22 @@ def build_manifest_text(program_name: str | None = None) -> str:
     public_commands = (
         COMMANDS["install"],
         COMMANDS["sync"],
+        COMMANDS["policy"],
         COMMANDS["manifest"],
     )
     advanced_commands = (COMMANDS["resolve"],)
     global_flags = (
         OPTIONS["root_version"],
         OPTIONS["help"],
-        OPTIONS["install_completion"],
-        OPTIONS["show_completion"],
     )
+    separator = horizontal_separator_for_stream()
 
     lines = [
         "Aptitude CLI capability map.",
-        HORIZONTAL_SEPARATOR,
+        separator,
         "",
         "Public Commands",
-        HORIZONTAL_SEPARATOR,
+        separator,
     ]
     for command in public_commands:
         lines.append(
@@ -450,7 +516,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
                 + ", ".join(OPTIONS[key].signature for key in option_keys)
             )
     lines.extend(
-        ["", HORIZONTAL_SEPARATOR, "Advanced/Internal Commands", HORIZONTAL_SEPARATOR]
+        ["", separator, "Advanced/Internal Commands", separator]
     )
     for command in advanced_commands:
         lines.append(
@@ -464,9 +530,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
                 OPTIONS[key].signature for key in _manifest_option_keys(command.name)
             )
         )
-    lines.extend(
-        ["", HORIZONTAL_SEPARATOR, "Global / Framework Flags", HORIZONTAL_SEPARATOR]
-    )
+    lines.extend(["", separator, "Global Flags", separator])
     lines.extend(f"  {option.signature:<22} {option.brief}" for option in global_flags)
     return "\n".join(lines)
 
@@ -506,6 +570,11 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
             + _render_command_text("{cli} manifest", program_name=program_name),
             style=THEME.text_primary,
         ),
+        Text(
+            "policy   "
+            + _render_command_text("{cli} policy show [--json]", program_name=program_name),
+            style=THEME.text_primary,
+        ),
         Text(""),
         Text("Advanced/internal", style=THEME.text_subtle),
         Text(
@@ -521,21 +590,17 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
             style=THEME.text_muted,
         ),
         Text(""),
-        Text("Global / framework", style=THEME.text_subtle),
+        Text("Global flags", style=THEME.text_subtle),
         Text(
             "--version",
             style=THEME.text_primary,
         ),
         Text(
-            "--install-completion",
+            "--help",
             style=THEME.text_primary,
         ),
         Text(
-            "--show-completion",
-            style=THEME.text_primary,
-        ),
-        Text(
-            "  Shell/version helpers exposed by the Typer app runtime.",
+            "  Use --help for command help and --version for the installed version.",
             style=THEME.text_muted,
         ),
     )
@@ -553,6 +618,8 @@ def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
         return PLANNING_OPTION_KEYS + ("install_target", "install_json")
     if command_name == "sync":
         return ("lock", "sync_target", "sync_json")
+    if command_name == "policy":
+        return ("policy_json",)
     if command_name == "resolve":
         return PLANNING_OPTION_KEYS
     return ()

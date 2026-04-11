@@ -38,6 +38,7 @@ Related entrypoints outside this directory:
 ### Check live technical facts
 
 - [reference/README.md](reference/README.md): reference index
+- [reference/cli-command-reference.md](reference/cli-command-reference.md): full user-facing CLI command reference
 - [reference/api-contract.md](reference/api-contract.md): canonical HTTP contract
 - [reference/schema.md](reference/schema.md): canonical local schema surfaces
 - [reference/storage-strategy.md](reference/storage-strategy.md): current storage strategy
@@ -46,6 +47,8 @@ Related entrypoints outside this directory:
 ### Review roadmap and history
 
 - [roadmap/README.md](roadmap/README.md): forward-looking documentation index
+- [roadmap/client-policy-summary.md](roadmap/client-policy-summary.md): short explainer for client policy scopes and terminology
+- [roadmap/client-policy-configuration.md](roadmap/client-policy-configuration.md): v1 client policy configuration design
 - [roadmap/requirements-and-phases.md](roadmap/requirements-and-phases.md): product requirements and phased rollout framing
 - [roadmap/near-term-evolution.md](roadmap/near-term-evolution.md): next hardening and capability themes
 - [changelog/README.md](changelog/README.md): protected implementation history entrypoint

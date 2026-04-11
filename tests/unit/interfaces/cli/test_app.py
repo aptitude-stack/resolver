@@ -8,7 +8,9 @@ from typer.testing import CliRunner
 
 from aptitude_resolver.application import composition
 from aptitude_resolver.application.dto import (
+    ConfigLayerDto,
     DiscoveryCandidateDto,
+    EffectivePolicyReportDto,
     ExecutionPlanDto,
     ExecutionStepDto,
     InstalledSkillDto,
@@ -18,11 +20,14 @@ from aptitude_resolver.application.dto import (
     LockfileDto,
     LockRootDto,
     PolicyEvaluationDto,
+    PolicyConfigSnapshotDto,
+    PolicyMergeSemanticsDto,
     ResolvedGraphDto,
     ResolvedSkillNodeDto,
     ResolveCoordinateDto,
     ResolveQueryResultDto,
     ResolveSkillSummaryDto,
+    SelectionConfigSnapshotDto,
     SyncResultDto,
     TraceEntryDto,
 )
@@ -637,6 +642,9 @@ def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
     )
 
     assert result.exit_code == 0
+    assert "Installed Skills" in result.stdout
+    assert "Installation Summary" in result.stdout
+    assert "dep.core" in result.stdout
     assert (
         "Install telemetry | Discovery 95.7ms | Materialization 18.2ms" in result.stdout
     )
@@ -915,6 +923,30 @@ def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
     assert f"Installed to: {target}" in result.stdout
 
 
+def test_cli_sync_interactive_uses_panels(monkeypatch, tmp_path) -> None:
+    lock_path = tmp_path / "aptitude.lock.json"
+    target = tmp_path / "skill_demo"
+    synced_result = _synced_result(str(lock_path.resolve()), str(target))
+    use_case = QueueUseCase(responses=[synced_result])
+
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+    monkeypatch.setattr(
+        app_module,
+        "build_sync_use_case",
+        lambda: (use_case, lambda: None),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["sync", "--lock", str(lock_path), "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert "Sync Summary" in result.stdout
+    assert "Installed Skills" in result.stdout
+    assert "python.lint" in result.stdout
+
+
 def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
     lock_path = tmp_path / "aptitude.lock.json"
     target = tmp_path / "skill_demo"
@@ -963,12 +995,14 @@ def test_cli_sync_prints_structured_error_for_missing_lockfile(
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
-    assert "Lockfile error." in result.stderr
-    assert "Lockfile not found:" in result.stderr
+    assert "Lockfile not found." in result.stderr
+    assert f"Path: {missing_lock.resolve()}" in result.stderr
+    assert "replace it with an actual file path" in result.stderr
 
 
 def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
 
     monkeypatch.setattr(
         app_module,
@@ -986,6 +1020,7 @@ def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting
     monkeypatch,
 ) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
     monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
 
@@ -1005,6 +1040,135 @@ def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting
             "target": Path("skill_demo"),
         }
     ]
+
+
+def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailable(
+    monkeypatch, tmp_path
+) -> None:
+    target = tmp_path / "skill_demo"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: False)
+    monkeypatch.setattr(
+        app_module,
+        "run_cli_wizard",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["install", "python lint", "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
+
+
+def _policy_report() -> EffectivePolicyReportDto:
+    return EffectivePolicyReportDto(
+        cwd=str(Path("C:/Dev/apptitude-client/aptitude-client")),
+        effective_selection=SelectionConfigSnapshotDto(
+            profile="high-trust",
+            interaction_mode="never",
+            profile_source="user_config",
+            interaction_mode_source="workspace_config",
+        ),
+        effective_policy=PolicyConfigSnapshotDto(
+            source="workspace_config",
+            allowed_trust_tiers=["verified", "internal"],
+            allowed_lifecycle_statuses=["published"],
+            max_token_estimate=500,
+            max_content_size_bytes=2048,
+            max_total_token_estimate=None,
+            max_total_content_size_bytes=None,
+        ),
+        layers=[
+            ConfigLayerDto(
+                source="default",
+                label="default",
+                active=True,
+                selection=SelectionConfigSnapshotDto(
+                    profile="balanced",
+                    interaction_mode="auto",
+                ),
+                policy=PolicyConfigSnapshotDto(
+                    allowed_trust_tiers=["verified", "internal", "untrusted"],
+                    allowed_lifecycle_statuses=[
+                        "published",
+                        "deprecated",
+                        "archived",
+                    ],
+                ),
+            ),
+            ConfigLayerDto(
+                source="system_config",
+                label="system config",
+                path="C:/ProgramData/aptitude/aptitude.toml",
+                active=False,
+            ),
+            ConfigLayerDto(
+                source="user_config",
+                label="user config",
+                path="C:/Users/test/AppData/Roaming/aptitude/aptitude.toml",
+                active=True,
+                selection=SelectionConfigSnapshotDto(profile="high-trust"),
+            ),
+            ConfigLayerDto(
+                source="workspace_config",
+                label="workspace config",
+                path="C:/Dev/apptitude-client/aptitude-client/aptitude.toml",
+                active=True,
+                selection=SelectionConfigSnapshotDto(interaction_mode="never"),
+                policy=PolicyConfigSnapshotDto(
+                    allowed_trust_tiers=["verified", "internal"],
+                    allowed_lifecycle_statuses=["published"],
+                    max_token_estimate=500,
+                    max_content_size_bytes=2048,
+                ),
+            ),
+            ConfigLayerDto(
+                source="environment",
+                label="environment",
+                active=False,
+            ),
+            ConfigLayerDto(
+                source="cli_override",
+                label="CLI override",
+                active=False,
+            ),
+        ],
+        semantics=PolicyMergeSemanticsDto(
+            selection_precedence=[
+                "default",
+                "system_config",
+                "user_config",
+                "workspace_config",
+                "environment",
+                "cli_override",
+            ],
+            policy_application_order=[
+                "default",
+                "system_config",
+                "user_config",
+                "workspace_config",
+                "cli_override",
+            ],
+            selection_rule="last non-null value wins by precedence",
+            policy_rule=(
+                "restrictive-only: allowed lists intersect and numeric ceilings "
+                "take the minimum"
+            ),
+        ),
+    )
 
 
 def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
@@ -1048,6 +1212,7 @@ def test_cli_install_with_advanced_flags_bypasses_wizard_launch(
 
 def test_cli_sync_without_lock_launches_sync_wizard_flow(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
 
     monkeypatch.setattr(
         app_module,
@@ -1108,6 +1273,78 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     assert "Requested selection is not available." in result.stderr
     assert "Selected slug: missing.skill" in result.stderr
     assert result.stdout == ""
+
+
+def test_cli_policy_show_renders_human_readable_report(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "build_effective_policy_report", _policy_report)
+
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 0
+    assert "Effective Selection" in result.stdout
+    assert "profile: high-trust (from: User config)" in result.stdout
+    assert "from: Workspace config" in result.stdout
+    assert "allowed trust tiers: verified, internal" in result.stdout
+    assert "System config: Not found" in result.stdout
+    assert "selection: more specific values win" in result.stdout
+    assert "install/resolve flags like --allow-trust are one-off policy overrides" in result.stdout
+
+
+def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "build_effective_policy_report", _policy_report)
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 0
+    assert "Config Sources" in result.stdout
+    assert "How It Works" in result.stdout
+    assert "CLI override" in result.stdout
+    assert "Install/resolve flags like --allow-trust are one-off policy overrides." in result.stdout
+
+
+def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+
+    result = runner.invoke(app_module.app, ["manifest"])
+
+    assert result.exit_code == 0
+    assert "Public Commands" in result.stdout
+    assert "Advanced/Internal Commands" in result.stdout
+    assert "Global Flags" in result.stdout
+    assert "policy" in result.stdout
+    assert "show" in result.stdout
+    assert "--install-completion" not in result.stdout
+    assert "--show-completion" not in result.stdout
+
+
+def test_cli_policy_show_json_outputs_structured_report(monkeypatch) -> None:
+    report = _policy_report()
+    monkeypatch.setattr(app_module, "build_effective_policy_report", lambda: report)
+
+    result = runner.invoke(app_module.app, ["policy", "show", "--json"])
+
+    assert result.exit_code == 0
+    assert result.stdout == report.model_dump_json(indent=2, exclude_none=True) + "\n"
+
+
+def test_cli_policy_show_reports_invalid_system_configuration(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app_module,
+        "build_effective_policy_report",
+        lambda: (_ for _ in ()).throw(
+            InvalidResolverConfigurationError(
+                "system config",
+                "allowed_trust_tiers contains unknown values: partner.",
+            )
+        ),
+    )
+
+    result = runner.invoke(app_module.app, ["policy", "show"])
+
+    assert result.exit_code == 1
+    assert "Invalid system configuration." in result.stderr
+    assert "allowed_trust_tiers contains unknown values: partner." in result.stderr
 
 
 def test_format_error_renders_environment_configuration_errors_for_humans() -> None:

@@ -55,6 +55,7 @@ Canonical architecture and boundary details live in [docs/architecture/system-ov
 The current promoted CLI surface is:
 
 - `aptitude install "<query>"`
+- `aptitude policy show`
 - `aptitude sync --lock aptitude.lock.json`
 - `aptitude manifest`
 
@@ -62,7 +63,7 @@ The current advanced preview surface is:
 
 - hidden `aptitude resolve "<query>"`
 
-Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` are the task commands, `manifest` exposes the full human-readable capability map, and `resolve` remains available for preview, debugging, and CI without materialization.
+Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
 Representative examples:
 
@@ -118,7 +119,90 @@ uvx aptitude-resolver@latest --help
 
 ## Resolver Flows
 
-Fresh planning:
+- `make build` builds the distributable artifacts
+- `make build-publish` performs a local token-based publish to PyPI or TestPyPI
+- pushing a `v*` tag triggers the trusted publishing workflow
+- `uv tool install aptitude-resolver` installs the published package
+- `uvx aptitude-resolver ...` runs the published package ephemerally
+- `aptitude ...` is the command end users run after installation
+
+## How To Use
+
+For repo-local development, typical usage starts with one of these commands:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver policy show
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
+```
+
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
+
+For published usage, prefer the installed CLI:
+
+```bash
+aptitude --help
+aptitude install "Postman Primary Skill"
+aptitude policy show
+aptitude sync --lock aptitude.lock.json
+aptitude manifest
+```
+
+For one-off published usage without installation:
+
+```bash
+uvx aptitude-resolver
+uvx aptitude-resolver install "Postman Primary Skill"
+uvx aptitude-resolver policy show
+uvx aptitude-resolver sync
+```
+
+## What Works Today
+
+- discovery-backed query resolution from human-readable input
+- resolver-owned candidate version selection
+- deterministic recursive dependency graph resolution
+- candidate-policy filtering and graph governance before lock generation
+- system, user, and workspace policy loading from `aptitude.toml`
+- hard policy CLI overrides for fresh planning
+- `aptitude policy show` for effective policy and config-layer inspection
+- rich lockfile generation, serialization, parsing, and replay
+- lock-driven execution plan generation
+- local materialization from either a fresh plan or an existing lockfile
+- `sync --lock` as the lock-replay equivalent of `uv sync`
+- registry caching and bounded transient retry
+- additive telemetry for planning and materialization stages
+- deterministic lockfiles for identical logical inputs
+- trace output for discovery, selection, resolver, lock, and execution steps
+
+## What Is Still Incomplete
+
+- remote or centrally managed policy services are not implemented
+- broader organization-specific rules are not implemented yet
+- winner-vs-runner-up explanation still derives from parallel explanation logic instead of directly from reranker output
+- `plugins/` extensibility is not implemented yet
+- MCP and SDK interfaces are not implemented yet
+
+## Selection, Governance, And Integrity Direction
+
+The canonical architecture now defines these required semantics:
+
+- server provides immutable metadata such as lifecycle, trust, token, size, and checksum facts
+- resolver owns policy and candidate selection
+- governance is split into:
+  - candidate-policy filtering before final ranking and final root selection
+  - full graph governance after resolution and before lock generation
+- ranking compares only policy-compliant candidates
+- phase 1 checksum verification uses server-published `sha256` checksum metadata and fails fast on mismatch
+
+Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution lives under [docs/README.md](docs/README.md).
+
+## Current User Flows
+
+Fresh planning and install:
 
 ```text
 query
