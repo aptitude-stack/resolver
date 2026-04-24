@@ -5,10 +5,10 @@ These files define the current normative technical truth for Aptitude.
 ## Reading Order
 
 1. [system-overview.md](system-overview.md)
-2. [cli-interface.md](cli-interface.md) when the change touches the human CLI surface, wizard routing, prompts, help text, or rendering
+2. [cli-interface.md](cli-interface.md) when the change touches the human CLI surface, install/sync/policy/demo/manifest routing, wizard prompts, help text, or rendering
 3. [server-resolver-boundary.md](server-resolver-boundary.md)
 4. [decision-rules.md](decision-rules.md)
-5. [selection-and-governance.md](selection-and-governance.md) when the change touches discovery, ranking, policy, governance, lockfiles, or checksums
+5. [selection-and-governance.md](selection-and-governance.md) when the change touches discovery, ranking, policy, governance, lockfiles, checksums, or discovery-only query flows
 
 ## Ownership
 

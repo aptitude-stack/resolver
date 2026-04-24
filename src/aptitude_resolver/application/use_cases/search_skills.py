@@ -10,17 +10,25 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
     candidate_to_dto,
     trace_to_dto,
 )
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SkillIdentity,
+    SkillMetadata,
+    VersionSummary,
+)
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
 
 
 class SearchRegistryPort(Protocol):
     """Registry operations required for search."""
 
-    def discover_candidate_slugs(self, query): ...
+    def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]: ...
 
-    def fetch_skill_identity(self, slug: str): ...
+    def fetch_skill_identity(self, slug: str) -> SkillIdentity: ...
 
-    def list_skill_versions(self, slug: str): ...
+    def list_skill_versions(self, slug: str) -> list[VersionSummary]: ...
+
+    def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata: ...
 
 
 class SearchSkillsUseCase:

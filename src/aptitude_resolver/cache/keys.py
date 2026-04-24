@@ -4,8 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Protocol
 
-from aptitude_resolver.domain.models import DiscoveryQuery
+
+class DiscoveryQueryLike(Protocol):
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def description(self) -> str | None: ...
+
+    @property
+    def tags(self) -> list[str]: ...
 
 
 def metadata_key(slug: str, version: str) -> str:
@@ -16,7 +26,7 @@ def version_list_key(slug: str) -> str:
     return f"versions:{slug}"
 
 
-def discovery_key(query: DiscoveryQuery) -> str:
+def discovery_key(query: DiscoveryQueryLike) -> str:
     payload = {
         "name": query.name,
         "description": query.description,

@@ -1,4 +1,4 @@
-"""Execution-owned writers for supplemental install debug artifacts."""
+"""Application-owned writers for supplemental install debug artifacts."""
 
 from __future__ import annotations
 

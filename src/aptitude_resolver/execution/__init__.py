@@ -6,7 +6,6 @@ from aptitude_resolver.execution.agent_export import (
     ExportedSkill,
     export_materialized_skills_to_agent_root,
 )
-from aptitude_resolver.execution.debug_artifacts import write_install_debug_artifacts
 from aptitude_resolver.execution.materialize import (
     MaterializationResult,
     MaterializedSkill,
@@ -35,5 +34,4 @@ __all__ = [
     "export_materialized_skills_to_agent_root",
     "materialize_lockfile",
     "serialize_execution_plan",
-    "write_install_debug_artifacts",
 ]

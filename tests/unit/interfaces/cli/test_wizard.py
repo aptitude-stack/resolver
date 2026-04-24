@@ -602,6 +602,7 @@ def test_cli_wizard_help_shows_capability_map_only_on_demand() -> None:
     assert "--help" in output
     assert "--install-completion" not in output
     assert "--show-completion" not in output
+    assert "aptitude demo" in output
     assert "aptitude manifest" in output
 
 
@@ -697,6 +698,46 @@ def test_cli_wizard_direct_install_flow_starts_at_selection_profile_without_sepa
     wizard.run(initial_flow="install", initial_query="postman primary skill")
 
     assert events[0] == "select:Selection profile"
+
+
+def test_cli_wizard_passes_profile_and_interaction_descriptions() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    confirmations = iter([True])
+    select_calls: list[dict[str, object]] = []
+
+    def select_one(
+        title: str,
+        options: Sequence[tuple[str, object]],
+        help_text: str | None = None,
+        descriptions: Mapping[object, str] | None = None,
+    ) -> str:
+        select_calls.append(
+            {
+                "title": title,
+                "help_text": help_text,
+                "descriptions": descriptions,
+            }
+        )
+        return "balanced" if title == "Selection profile" else "auto"
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=select_one,
+        confirm=lambda *_, **__: next(confirmations),
+    )
+
+    wizard.run(initial_flow="install", initial_query="postman primary skill")
+
+    assert select_calls[0]["title"] == "Selection profile"
+    assert select_calls[0]["descriptions"] == wizard_module.PROFILE_DESCRIPTIONS
+    assert select_calls[1]["title"] == "Interaction mode"
+    assert select_calls[1]["descriptions"] == wizard_module.INTERACTION_DESCRIPTIONS
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
@@ -822,7 +863,9 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
 
     wizard.run()
 
-    expected_separator = wizard_module._render_step_separator(wizard._console.size.width)
+    expected_separator = wizard_module._render_step_separator(
+        wizard._console.size.width
+    )
     assert transcript.getvalue().count(expected_separator) >= 5
 
 

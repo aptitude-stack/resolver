@@ -14,6 +14,46 @@ The resolver makes decisions.
 
 ## Canonical Flows
 
+### Discovery Search
+
+Use this when the input is a user query and the user wants ranked candidates without choosing or installing one.
+
+```text
+query
+-> interface
+-> application
+-> discovery
+-> candidate version enrichment
+-> candidate policy
+-> reranking
+-> result rendering
+```
+
+This is the current application-level flow for discovery-only search use cases.
+
+Discovery search is intentionally discovery-only. It must not perform final root selection, dependency solving, lock generation, or materialization.
+
+### Skill Inspection
+
+Use this when the input is a user query and the user wants to inspect one concrete skill before installation.
+
+```text
+query
+-> interface
+-> application
+-> discovery
+-> candidate version enrichment
+-> candidate policy
+-> reranking
+-> root candidate selection
+-> metadata + content preview fetch
+-> result rendering
+```
+
+This is the current application-level flow for discovery-only inspection use cases.
+
+Inspection is still discovery-oriented. It may select one root candidate, but it must stop before recursive dependency solving, graph governance, lock generation, execution planning, or materialization.
+
 ### Fresh Planning
 
 Use this when the input is a user query.
@@ -91,6 +131,7 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 
 - Resolver logic must be deterministic for the same logical inputs.
 - Discovery may shape and rerank candidates, but it must not make final root decisions.
+- discovery-only search and inspection flows remain non-materializing.
 - Execution must consume lock data only.
 - The server is a fact source, not the final decision-maker.
 - Explainability, telemetry, cache, and retry remain additive; they must not change correctness.

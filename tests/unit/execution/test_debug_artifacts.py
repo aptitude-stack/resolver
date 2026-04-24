@@ -10,7 +10,7 @@ from aptitude_resolver.domain.models import (
 )
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
-from aptitude_resolver.execution import write_install_debug_artifacts
+from aptitude_resolver.application.debug_artifacts import write_install_debug_artifacts
 
 
 def _node(slug: str, version: str) -> ResolvedSkillNode:

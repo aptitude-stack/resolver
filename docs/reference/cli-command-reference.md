@@ -30,6 +30,7 @@ These commands need registry access:
 These commands do not require registry access:
 
 - `aptitude policy show`
+- `aptitude demo`
 - `aptitude manifest`
 
 `aptitude sync --lock ...` replays an existing lockfile and only needs whatever local/runtime prerequisites are required for materialization.
@@ -127,6 +128,18 @@ What it reports:
 - contributing config layers
 - merge semantics
 
+## Demo
+
+```bash
+aptitude demo
+```
+
+Purpose:
+
+- prints a presentation-ready walkthrough of the product
+- explains the wizard entrypoint, main commands, selection profiles, interaction modes, and policy in plain language
+- gives a recommended order for a live CLI demo
+
 ## Manifest
 
 ```bash
@@ -190,6 +203,7 @@ aptitude --version
 aptitude install [QUERY] [flags]
 aptitude sync --lock PATH [flags]
 aptitude policy show [--json]
+aptitude demo
 aptitude manifest
 
 aptitude resolve QUERY [flags]

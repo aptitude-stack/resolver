@@ -22,6 +22,11 @@ Do not:
 - let `execution/` re-resolve dependencies
 - hide feature logic in `shared/`
 
+Interfaces may import domain error types for user-facing error rendering and
+telemetry value types for additive timing display. Those imports must stay
+presentation-only: interfaces must not evaluate policy, rank candidates,
+resolve dependencies, or recompute decisions.
+
 ## Execution Rules
 
 Execution must operate from lock data only.
@@ -37,6 +42,7 @@ Do not:
 - candidate-policy filtering must happen before final ranking and root selection
 - graph governance must still run after dependency resolution and before lock generation
 - ranking compares only legal candidates
+- discovery-only flows must not resolve dependency graphs or materialize files
 - interactive ambiguity handling stays root-only
 - interfaces may render comparison details, but must not recompute ranking decisions
 

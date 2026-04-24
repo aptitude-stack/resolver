@@ -25,6 +25,7 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
     assert "install" in result.stdout
     assert "policy" in result.stdout
     assert "sync" in result.stdout
+    assert "demo" in result.stdout
     assert "manifest" in result.stdout
     assert "--version" in result.stdout
     assert "--install-completion" not in result.stdout
@@ -37,6 +38,7 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
     assert "replay and materialize from an existing lockfile" in result.stdout
     assert 'aptitude install "Postman Primary Skill"' in result.stdout
     assert "aptitude policy show" in result.stdout
+    assert "aptitude demo" in result.stdout
     assert "aptitude sync --lock aptitude.lock.json" in result.stdout
 
 
@@ -83,6 +85,22 @@ def test_cli_policy_show_help_explains_config_layers_and_json_output() -> None:
     assert "aptitude policy show --json" in result.stdout
 
 
+def test_cli_demo_help_explains_walkthrough_scope() -> None:
+    result = _invoke(["demo", "--help"])
+
+    assert result.exit_code == 0
+    assert "presentation-ready walkthrough" in result.stdout
+    assert "wizard" in result.stdout
+    assert "install flow" in result.stdout
+    assert "policy" in result.stdout
+    assert "main CLI commands" in result.stdout
+    assert "clarifies selection profiles" in result.stdout
+    assert (
+        "keeps explanation separate from everyday install and sync output"
+        in result.stdout
+    )
+
+
 def test_hidden_resolve_help_is_rich_even_though_root_help_hides_it() -> None:
     result = _invoke(["resolve", "--help"])
 
@@ -110,6 +128,7 @@ def test_cli_manifest_lists_public_advanced_and_global_capabilities() -> None:
     assert "Global Flags" in result.stdout
     assert 'aptitude install "query"' in result.stdout
     assert "aptitude policy show" in result.stdout
+    assert "aptitude demo" in result.stdout
     assert "aptitude sync --lock aptitude.lock.json" in result.stdout
     assert "aptitude manifest" in result.stdout
     assert 'aptitude resolve "query"' in result.stdout

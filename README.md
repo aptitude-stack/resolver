@@ -56,6 +56,7 @@ The current promoted CLI surface is:
 
 - `aptitude install "<query>"`
 - `aptitude policy show`
+- `aptitude demo`
 - `aptitude sync --lock aptitude.lock.json`
 - `aptitude manifest`
 
@@ -63,7 +64,7 @@ The current advanced preview surface is:
 
 - hidden `aptitude resolve "<query>"`
 
-Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
+Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, `demo` provides a presentation-ready walkthrough of the product surface, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
 Representative examples:
 
@@ -71,6 +72,7 @@ Representative examples:
 aptitude --help
 aptitude install "Postman Primary Skill"
 aptitude install "Postman Primary Skill" --json
+aptitude demo
 aptitude sync --lock aptitude.lock.json
 aptitude manifest
 uv run python -m aptitude_resolver resolve "Postman Primary Skill"
@@ -78,7 +80,7 @@ uv run python -m aptitude_resolver resolve "Postman Primary Skill"
 
 The normative CLI contract lives in [docs/architecture/cli-interface.md](docs/architecture/cli-interface.md).
 
-## Quick Start
+## How To Install
 
 Requirements:
 
@@ -135,11 +137,12 @@ PYTHONPATH=src .venv/bin/python -m aptitude_resolver
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver --help
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Skill"
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver policy show
+PYTHONPATH=src .venv/bin/python -m aptitude_resolver demo
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
 ```
 
-The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
+The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `demo` for a guided presentation surface, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
 
 For published usage, prefer the installed CLI:
 
@@ -147,6 +150,7 @@ For published usage, prefer the installed CLI:
 aptitude --help
 aptitude install "Postman Primary Skill"
 aptitude policy show
+aptitude demo
 aptitude sync --lock aptitude.lock.json
 aptitude manifest
 ```
@@ -157,6 +161,7 @@ For one-off published usage without installation:
 uvx aptitude-resolver
 uvx aptitude-resolver install "Postman Primary Skill"
 uvx aptitude-resolver policy show
+uvx aptitude-resolver demo
 uvx aptitude-resolver sync
 ```
 

@@ -86,6 +86,7 @@ def horizontal_separator_for_stream(stream: object | None = None) -> str:
         return HORIZONTAL_SEPARATOR
     return ASCII_SEPARATOR
 
+
 OPTIONS = {
     "version_select": OptionSurface(
         key="version_select",
@@ -273,6 +274,22 @@ COMMANDS = {
             "rebuilds the local workspace from locked data only",
         ),
     ),
+    "demo": CommandSurface(
+        name="demo",
+        audience="public",
+        summary="guided tour of the CLI surface for demos and onboarding",
+        usage="{cli} demo",
+        description=(
+            "Show a presentation-ready walkthrough of the wizard, install flow, "
+            "policy model, and main CLI commands."
+        ),
+        examples=("{cli} demo",),
+        note_lines=(
+            "explains the wizard-first entrypoint and the main user-facing commands",
+            "clarifies selection profiles, interaction modes, and policy in plain language",
+            "keeps explanation separate from everyday install and sync output",
+        ),
+    ),
     "manifest": CommandSurface(
         name="manifest",
         audience="public",
@@ -385,6 +402,7 @@ def build_root_help(program_name: str | None = None) -> str:
         COMMANDS["install"],
         COMMANDS["sync"],
         COMMANDS["policy"],
+        COMMANDS["demo"],
         COMMANDS["manifest"],
     )
     lines = [
@@ -425,6 +443,7 @@ def build_root_help(program_name: str | None = None) -> str:
                 "{cli} policy show",
                 program_name=program_name,
             ),
+            "  " + _render_command_text("{cli} demo", program_name=program_name),
             "  "
             + _render_command_text(
                 "{cli} sync --lock aptitude.lock.json",
@@ -487,6 +506,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
         COMMANDS["install"],
         COMMANDS["sync"],
         COMMANDS["policy"],
+        COMMANDS["demo"],
         COMMANDS["manifest"],
     )
     advanced_commands = (COMMANDS["resolve"],)
@@ -515,9 +535,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
                 "           flags: "
                 + ", ".join(OPTIONS[key].signature for key in option_keys)
             )
-    lines.extend(
-        ["", separator, "Advanced/Internal Commands", separator]
-    )
+    lines.extend(["", separator, "Advanced/Internal Commands", separator])
     for command in advanced_commands:
         lines.append(
             f"  {command.name:<8} "
@@ -571,8 +589,18 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
             style=THEME.text_primary,
         ),
         Text(
+            "demo     " + _render_command_text("{cli} demo", program_name=program_name),
+            style=THEME.text_primary,
+        ),
+        Text(
+            "  Guided overview for live demos, onboarding, and lecturer walkthroughs.",
+            style=THEME.text_muted,
+        ),
+        Text(
             "policy   "
-            + _render_command_text("{cli} policy show [--json]", program_name=program_name),
+            + _render_command_text(
+                "{cli} policy show [--json]", program_name=program_name
+            ),
             style=THEME.text_primary,
         ),
         Text(""),

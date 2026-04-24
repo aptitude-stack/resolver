@@ -24,11 +24,9 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
     policy_to_dto,
     trace_to_dto,
 )
+from aptitude_resolver.application.debug_artifacts import write_install_debug_artifacts
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
-from aptitude_resolver.execution import (
-    materialize_lockfile,
-    write_install_debug_artifacts,
-)
+from aptitude_resolver.execution import materialize_lockfile
 from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
 

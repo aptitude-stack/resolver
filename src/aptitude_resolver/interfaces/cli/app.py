@@ -40,6 +40,7 @@ from aptitude_resolver.interfaces.cli.catalog import (
     build_command_help,
     build_manifest_text,
     build_root_help,
+    resolve_cli_program_name,
 )
 from aptitude_resolver.interfaces.cli.wizard import (
     can_launch_cli_wizard,
@@ -89,6 +90,7 @@ def configure_help_surfaces(program_name: str | None = None) -> None:
         "resolve": "resolve",
         "install": "install",
         "sync": "sync",
+        "demo": "demo",
         "manifest": "manifest",
         "show_policy": "policy_show",
     }
@@ -566,8 +568,7 @@ def _render_layer_details(layer) -> list[str]:
             lines.append("trust " + _format_policy_list(policy.allowed_trust_tiers))
         if policy.allowed_lifecycle_statuses is not None:
             lines.append(
-                "lifecycle "
-                + _format_policy_list(policy.allowed_lifecycle_statuses)
+                "lifecycle " + _format_policy_list(policy.allowed_lifecycle_statuses)
             )
         if policy.max_token_estimate is not None:
             lines.append(f"skill tokens <= {policy.max_token_estimate}")
@@ -604,8 +605,7 @@ def _format_policy_layer(line_report: EffectivePolicyReportDto, layer) -> list[s
         lines.append("default: built-in defaults")
     elif layer.source == "workspace_config" and layer.path is None:
         lines.append(
-            "workspace config: no aptitude.toml found upward from "
-            f"{line_report.cwd}"
+            f"workspace config: no aptitude.toml found upward from {line_report.cwd}"
         )
     elif layer.path is not None and layer.active:
         lines.append(f"{layer.label}: {layer.path}")
@@ -885,7 +885,9 @@ def _render_manifest_flags_table() -> Table:
 def _render_manifest_panel() -> Group:
     return Group(
         Panel(
-            _render_manifest_commands_table(["install", "sync", "policy", "manifest"]),
+            _render_manifest_commands_table(
+                ["install", "sync", "policy", "demo", "manifest"]
+            ),
             title="Public Commands",
             border_style=THEME.border_secondary,
             box=_panel_box_for_stream(sys.stdout),
@@ -906,6 +908,305 @@ def _render_manifest_panel() -> Group:
             padding=(1, 1),
         ),
     )
+
+
+def _demo_program_name() -> str:
+    """Return the command name shown in demo walkthrough examples."""
+
+    return resolve_cli_program_name()
+
+
+def _demo_walkthrough_rows() -> list[tuple[str, str, str]]:
+    """Return the recommended live demo order."""
+
+    cli = _demo_program_name()
+    return [
+        (
+            "1",
+            cli,
+            "Open the wizard-first entrypoint and show install, sync, help, and exit.",
+        ),
+        (
+            "2",
+            f'{cli} install "Postman Primary Skill"',
+            "Show the happy path from query to planning, review, and materialization.",
+        ),
+        (
+            "3",
+            f'{cli} install "Postman" --interaction-mode always',
+            "Show root ambiguity handling when several legal candidates match.",
+        ),
+        (
+            "4",
+            f"{cli} policy show",
+            "Show the effective baseline: defaults plus system, user, workspace, environment, and CLI layers.",
+        ),
+        (
+            "5",
+            f"{cli} manifest",
+            "Show the full supported CLI surface in one place.",
+        ),
+        (
+            "6",
+            f"{cli} sync --lock aptitude.lock.json",
+            "Show lock replay without re-running live planning.",
+        ),
+    ]
+
+
+def _demo_profile_rows() -> list[tuple[str, str, str]]:
+    """Return the selection-profile explanations for the demo surface."""
+
+    return [
+        (
+            "balanced",
+            "Default profile. Tries to keep the overall choice practical and well-rounded.",
+            "General product demos and ordinary installs.",
+        ),
+        (
+            "low-cost",
+            "Prefers lighter candidates when several legal options are otherwise similar.",
+            "When the team wants smaller and cheaper skills where possible.",
+        ),
+        (
+            "high-trust",
+            "Prefers stronger trust signals when several legal options are otherwise similar.",
+            "When governance or confidence matters more than minimal size.",
+        ),
+    ]
+
+
+def _demo_interaction_rows() -> list[tuple[str, str]]:
+    """Return the ambiguity-handling explanations for the demo surface."""
+
+    return [
+        ("auto", "Prompt only when ambiguity remains and the terminal can interact."),
+        ("always", "Require an explicit user choice when ambiguity exists."),
+        (
+            "never",
+            "Pick the top-ranked legal candidate deterministically without prompting.",
+        ),
+    ]
+
+
+def _demo_policy_rows() -> list[tuple[str, str]]:
+    """Return the plain-language policy explanations for the demo surface."""
+
+    return [
+        (
+            "Selection preference",
+            "Ranks legal candidates. Example: balanced, low-cost, or high-trust.",
+        ),
+        (
+            "Policy",
+            "Hard rules that decide what is allowed at all. Policy is about governance, not taste.",
+        ),
+        (
+            "--allow-trust",
+            "Allow only specific trust tiers such as verified or internal.",
+        ),
+        (
+            "--allow-lifecycle",
+            "Allow only specific lifecycle states such as published.",
+        ),
+        (
+            "--max-tokens",
+            "Reject skills or resolved graphs whose estimated token usage is above the configured ceiling.",
+        ),
+        (
+            "--max-content-size",
+            "Reject skills or resolved graphs whose content size is above the configured byte ceiling.",
+        ),
+        (
+            "policy show",
+            "Explains the current effective baseline and where it came from.",
+        ),
+    ]
+
+
+def _demo_wizard_steps() -> list[str]:
+    """Return the wizard steps shown in the demo surface."""
+
+    return [
+        "No arguments opens the wizard.",
+        "Install flow: query -> profile -> interaction mode -> review plan -> install.",
+        "Sync flow: lockfile path -> target directory -> materialize from lock.",
+        "Help flow: compact capability map without leaving the wizard.",
+    ]
+
+
+def _build_demo_intro_panel() -> Panel:
+    body = Group(
+        Text(
+            "Use this surface to frame the product before a live walkthrough.",
+            style=THEME.text_body,
+        ),
+        Text(
+            "Aptitude is a wizard-first CLI for fresh planning, policy inspection, lock replay, and capability discovery.",
+            style=THEME.text_body,
+        ),
+        Text(
+            f"Recommended order: run {_demo_program_name()} demo first, then follow the live commands below.",
+            style=THEME.text_muted,
+        ),
+    )
+    return Panel(
+        body,
+        title="CLI Demo Tour",
+        border_style=THEME.border_secondary,
+        box=_panel_box_for_stream(sys.stdout),
+        padding=(1, 1),
+    )
+
+
+def _build_demo_walkthrough_table() -> Table:
+    table = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=_panel_box_for_stream(sys.stdout),
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    table.add_column("Step", style=THEME.text_primary, width=6, no_wrap=True)
+    table.add_column("Command", style=THEME.text_primary, ratio=2)
+    table.add_column("What To Highlight", style=THEME.text_body, ratio=3)
+    for step, command, highlight in _demo_walkthrough_rows():
+        table.add_row(step, command, highlight)
+    return table
+
+
+def _build_demo_profiles_table() -> Table:
+    table = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=_panel_box_for_stream(sys.stdout),
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    table.add_column("Profile", style=THEME.text_primary, min_width=12, no_wrap=True)
+    table.add_column("Meaning", style=THEME.text_body, ratio=3)
+    table.add_column("Typical Use", style=THEME.text_body, ratio=2)
+    for profile, meaning, typical_use in _demo_profile_rows():
+        table.add_row(profile, meaning, typical_use)
+    return table
+
+
+def _build_demo_interaction_table() -> Table:
+    table = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=_panel_box_for_stream(sys.stdout),
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    table.add_column("Mode", style=THEME.text_primary, min_width=10, no_wrap=True)
+    table.add_column("Meaning", style=THEME.text_body, ratio=4)
+    for mode, meaning in _demo_interaction_rows():
+        table.add_row(mode, meaning)
+    return table
+
+
+def _build_demo_policy_table() -> Table:
+    table = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=_panel_box_for_stream(sys.stdout),
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    table.add_column("Concept", style=THEME.text_primary, min_width=18, no_wrap=True)
+    table.add_column("Meaning", style=THEME.text_body, ratio=4)
+    for concept, meaning in _demo_policy_rows():
+        table.add_row(concept, meaning)
+    return table
+
+
+def _build_demo_wizard_panel() -> Panel:
+    body = Group(
+        *[
+            Text(f"{index}. {step}", style=THEME.text_body)
+            for index, step in enumerate(_demo_wizard_steps(), start=1)
+        ]
+    )
+    return Panel(
+        body,
+        title="Wizard Walkthrough",
+        border_style=THEME.border_secondary,
+        box=_panel_box_for_stream(sys.stdout),
+        padding=(1, 1),
+    )
+
+
+def _render_demo_panel() -> Group:
+    return Group(
+        _build_demo_intro_panel(),
+        Panel(
+            _build_demo_walkthrough_table(),
+            title="Recommended Live Walkthrough",
+            border_style=THEME.border_secondary,
+            box=_panel_box_for_stream(sys.stdout),
+            padding=(1, 1),
+        ),
+        Panel(
+            _build_demo_profiles_table(),
+            title="Selection Profiles",
+            border_style=THEME.border_secondary,
+            box=_panel_box_for_stream(sys.stdout),
+            padding=(1, 1),
+        ),
+        Panel(
+            _build_demo_interaction_table(),
+            title="Interaction Modes",
+            border_style=THEME.border_secondary,
+            box=_panel_box_for_stream(sys.stdout),
+            padding=(1, 1),
+        ),
+        Panel(
+            _build_demo_policy_table(),
+            title="Policy In Plain English",
+            border_style=THEME.border_secondary,
+            box=_panel_box_for_stream(sys.stdout),
+            padding=(1, 1),
+        ),
+        _build_demo_wizard_panel(),
+    )
+
+
+def _format_demo_text() -> str:
+    separator = _text_separator(sys.stdout)
+    lines = [
+        "Aptitude CLI demo tour",
+        separator,
+        "Use this command before a live walkthrough.",
+        "Aptitude is a wizard-first CLI for fresh planning, policy inspection, lock replay, and capability discovery.",
+        "",
+        "Recommended live walkthrough",
+        separator,
+    ]
+    for step, command, highlight in _demo_walkthrough_rows():
+        lines.extend([f"{step}. {command}", f"   {highlight}"])
+
+    lines.extend(["", "Selection profiles", separator])
+    for profile, meaning, typical_use in _demo_profile_rows():
+        lines.extend([f"- {profile}: {meaning}", f"  Best for: {typical_use}"])
+
+    lines.extend(["", "Interaction modes", separator])
+    for mode, meaning in _demo_interaction_rows():
+        lines.append(f"- {mode}: {meaning}")
+
+    lines.extend(["", "Policy in plain English", separator])
+    for concept, meaning in _demo_policy_rows():
+        lines.append(f"- {concept}: {meaning}")
+
+    lines.extend(["", "Wizard walkthrough", separator])
+    for index, step in enumerate(_demo_wizard_steps(), start=1):
+        lines.append(f"{index}. {step}")
+
+    return "\n".join(lines)
 
 
 def _render_error_panel(message: str) -> Panel:
@@ -1372,6 +1673,17 @@ def manifest() -> None:
         return
 
     typer.echo(build_manifest_text())
+
+
+@app.command(help=build_command_help("demo"))
+def demo() -> None:
+    """Show a presentation-ready overview of the CLI surface."""
+
+    if _has_interactive_output():
+        _stdout_console().print(_render_demo_panel())
+        return
+
+    typer.echo(_format_demo_text())
 
 
 @policy_app.command("show", help=build_command_help("policy_show"))

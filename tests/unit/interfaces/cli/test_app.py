@@ -1287,7 +1287,10 @@ def test_cli_policy_show_renders_human_readable_report(monkeypatch) -> None:
     assert "allowed trust tiers: verified, internal" in result.stdout
     assert "System config: Not found" in result.stdout
     assert "selection: more specific values win" in result.stdout
-    assert "install/resolve flags like --allow-trust are one-off policy overrides" in result.stdout
+    assert (
+        "install/resolve flags like --allow-trust are one-off policy overrides"
+        in result.stdout
+    )
 
 
 def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
@@ -1300,7 +1303,10 @@ def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Config Sources" in result.stdout
     assert "How It Works" in result.stdout
     assert "CLI override" in result.stdout
-    assert "Install/resolve flags like --allow-trust are one-off policy overrides." in result.stdout
+    assert (
+        "Install/resolve flags like --allow-trust are one-off policy overrides."
+        in result.stdout
+    )
 
 
 def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:
@@ -1312,10 +1318,39 @@ def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Public Commands" in result.stdout
     assert "Advanced/Internal Commands" in result.stdout
     assert "Global Flags" in result.stdout
+    assert "demo" in result.stdout
     assert "policy" in result.stdout
     assert "show" in result.stdout
     assert "--install-completion" not in result.stdout
     assert "--show-completion" not in result.stdout
+
+
+def test_cli_demo_renders_plain_text_walkthrough() -> None:
+    result = runner.invoke(app_module.app, ["demo"])
+
+    assert result.exit_code == 0
+    assert "Aptitude CLI demo tour" in result.stdout
+    assert "Recommended live walkthrough" in result.stdout
+    assert "Selection profiles" in result.stdout
+    assert "Policy in plain English" in result.stdout
+    assert "Wizard walkthrough" in result.stdout
+    assert 'aptitude install "Postman Primary Skill"' in result.stdout
+    assert "aptitude policy show" in result.stdout
+    assert "aptitude sync --lock aptitude.lock.json" in result.stdout
+
+
+def test_cli_demo_interactive_uses_rich_panels(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "_has_interactive_output", lambda: True)
+
+    result = runner.invoke(app_module.app, ["demo"])
+
+    assert result.exit_code == 0
+    assert "CLI Demo Tour" in result.stdout
+    assert "Recommended Live Walkthrough" in result.stdout
+    assert "Selection Profiles" in result.stdout
+    assert "Interaction Modes" in result.stdout
+    assert "Policy In Plain English" in result.stdout
+    assert "Wizard Walkthrough" in result.stdout
 
 
 def test_cli_policy_show_json_outputs_structured_report(monkeypatch) -> None:

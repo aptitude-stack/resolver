@@ -23,6 +23,7 @@ The CLI exists to give humans one reliable local interface for:
 - fresh planning from a natural-language query
 - lock replay from an existing resolver lockfile
 - inspecting the effective local client policy
+- presenting the product surface during demos and onboarding
 - reviewing the command surface without reading source code
 
 The current UX goals are:
@@ -44,13 +45,14 @@ The CLI must not:
 
 ## Component Map
 
-The CLI surface is split across five files:
+The CLI surface currently depends on six primary files:
 
 - `src/aptitude_resolver/interfaces/cli/main.py`: root entrypoint; launches the wizard for zero-argument invocations and otherwise delegates to Typer
 - `src/aptitude_resolver/interfaces/cli/app.py`: Typer command definitions and non-wizard command execution
 - `src/aptitude_resolver/interfaces/cli/wizard.py`: guided install and sync flows, interactive prompts, and review panels
 - `src/aptitude_resolver/interfaces/cli/catalog.py`: canonical command metadata, help text, manifest text, theme tokens, and separator conventions
-- `src/aptitude_resolver/interfaces/cli/support.py`: shared workflow wiring, telemetry capture, TTY detection, option parsing, and user-facing error formatting
+- `src/aptitude_resolver/interfaces/cli/support.py`: shared telemetry capture, TTY detection, option parsing, and user-facing error formatting
+- `src/aptitude_resolver/interfaces/shared/install_workflow.py`: reusable workflow service and option objects shared across CLI surfaces
 
 ## Entry And Routing
 
@@ -61,20 +63,12 @@ The CLI currently routes requests with these rules:
 - `aptitude sync` with no `--lock` and no `--json` launches the sync flow directly inside the wizard
 - `aptitude install ...` with explicit arguments runs the Typer command path
 - `aptitude policy show` prints the effective client policy and config layers
+- `aptitude demo` prints a presentation-ready overview of the wizard, core commands, profiles, and policy concepts
 - `aptitude sync ...` with explicit arguments runs the Typer command path
 - `aptitude manifest` prints the full command and flag capability map
 - hidden `aptitude resolve ...` exists for advanced preview and debugging of fresh planning without materialization
 
 The CLI therefore supports both discovery-oriented use and automation-oriented use without maintaining two separate products.
-
-For published one-off usage without a persistent install, the promoted entry examples are:
-
-```bash
-uvx aptitude-resolver@latest
-uvx aptitude-resolver@latest install
-uvx aptitude-resolver@latest install "<query text>"
-uvx aptitude-resolver@latest sync
-```
 
 ## Command Surface
 
@@ -82,6 +76,7 @@ uvx aptitude-resolver@latest sync
 
 - `install`: fresh planning from a query plus local materialization
 - `policy show`: inspect effective client policy and contributing config layers
+- `demo`: presentation-ready overview of the wizard and core CLI concepts
 - `sync`: lock replay and local materialization from an existing lockfile
 - `manifest`: human-readable capability map for commands and flags
 
@@ -179,7 +174,9 @@ Current keyboard rules:
 - launcher and menus use arrow-key navigation
 - `enter` confirms a menu selection
 - `q` cancels menu selection where supported
-- the large install-query text box uses `Ctrl+D` to submit
+- the large install-query text box uses the first supported submit binding shown in the prompt hint
+- the current preferred submit binding is `Shift+Enter`
+- a fallback binding may be rendered as `Esc, Enter`
 - `Ctrl+C` cancels interactive prompt-toolkit flows
 
 The CLI should prefer the simplest interaction model that works in the current terminal rather than assuming a fully featured environment.
@@ -191,6 +188,7 @@ The current CLI rendering contract is:
 - the wizard uses a shared 140-character separator line
 - human-facing summaries use Rich panels, text styling, and transient status/progress indicators
 - help and manifest output stay text-first and copy-paste-friendly
+- `demo` renders a polished walkthrough in interactive terminals and a readable script in plain text
 - `policy show` uses a text-first inspection report by default and JSON when explicitly requested
 - install and sync success summaries are concise and package-manager-like
 - the wizard should feel structured, but it must remain readable in ordinary terminals without relying on full-screen layouts
@@ -237,7 +235,12 @@ These messages must stay specific, actionable, and free of traceback noise.
 
 ## Layering And Ownership Rules
 
-The CLI is a presentation layer over `InstallWorkflowService`.
+The CLI is a presentation layer over application-owned workflow services and use cases.
+
+Current ownership split:
+
+- `install`, hidden `resolve`, and `sync` use `InstallWorkflowService`
+- `policy show` builds an application-owned effective-policy report directly through composition helpers
 
 It may:
 
@@ -280,6 +283,8 @@ When extending the CLI:
 3. preserve non-interactive fallbacks for automation and CI
 4. prefer adding presentation logic in `wizard.py` or `app.py`, not business logic
 5. update canonical docs in the same change when behavior or routing changes
+
+Discovery-only search and inspection use cases already exist in the application layer. If they become public CLI commands later, document them here in the same change and keep them non-materializing.
 
 Good extensions:
 

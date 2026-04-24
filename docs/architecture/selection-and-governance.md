@@ -49,6 +49,13 @@ This phase may reject candidates based on:
 
 Final ranking must compare only policy-compliant candidates.
 
+This same candidate-policy pass also applies to discovery-only query flows:
+
+- search-style flows stop after candidate policy and reranking
+- inspection-style flows stop after candidate policy, reranking, and root-only candidate selection
+
+Neither of those flows may silently continue into recursive graph resolution.
+
 ## Graph Governance After Resolution
 
 Fresh planning also requires a post-resolution governance pass before lock generation.
@@ -61,10 +68,19 @@ This phase validates:
 
 Governance failure after graph resolution must not silently fall through to another candidate unless the architecture is explicitly changed to permit that behavior.
 
+This phase is only for graph-producing flows:
+
+- `aptitude install`
+- hidden `aptitude resolve`
+
+It does not run during discovery-only search or inspection flows, because those flows do not build a dependency graph.
+
 ## Interaction Rules
 
 - Prompting is allowed only for root candidate ambiguity.
 - Recursive dependency resolution must never prompt.
+- discovery-only search flows never prompt; they only render ranked candidates.
+- inspection flows, `aptitude install`, and hidden `aptitude resolve` may prompt only when root ambiguity remains.
 - `auto` may prompt when ambiguity remains and the session can prompt.
 - `always` must fail clearly if prompting is required but unavailable.
 - `never` must choose the top-ranked legal candidate deterministically.

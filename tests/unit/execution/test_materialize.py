@@ -16,10 +16,10 @@ from aptitude_resolver.domain.models import (
 )
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.application.debug_artifacts import write_install_debug_artifacts
 from aptitude_resolver.execution import (
     build_execution_plan,
     materialize_lockfile,
-    write_install_debug_artifacts,
 )
 from aptitude_resolver.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
 

@@ -6,6 +6,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
+    Any,
     Generic,
     Literal,
     Mapping,
@@ -14,13 +15,6 @@ from typing import (
     TypeVar,
     cast,
 )
-
-try:
-    import termios
-    import tty
-except ModuleNotFoundError:  # pragma: no cover - exercised via import simulation
-    termios = None
-    tty = None
 
 from rich import box
 from rich.console import Console, Group
@@ -61,12 +55,29 @@ from aptitude_resolver.interfaces.shared import (
     InteractionMode,
 )
 
+_termios: Any
+_tty: Any
+try:
+    import termios as _termios
+    import tty as _tty
+except ModuleNotFoundError:  # pragma: no cover - exercised via import simulation
+    _termios = None
+    _tty = None
+
+termios: Any = _termios
+tty: Any = _tty
+
 
 PROFILE_OPTIONS: list[tuple[str, str]] = [
     ("Balanced", "balanced"),
     ("Low cost", "low-cost"),
     ("High trust", "high-trust"),
 ]
+PROFILE_DESCRIPTIONS: dict[str, str] = {
+    "balanced": "Default profile. Keeps the choice practical and well-rounded.",
+    "low-cost": "Prefers lighter candidates when several legal options are similar.",
+    "high-trust": "Prefers stronger trust signals when several legal options are similar.",
+}
 
 WizardEntryFlow = Literal["install", "sync"]
 WizardLauncherAction = Literal["install", "sync", "help", "exit"]
@@ -93,6 +104,11 @@ INTERACTION_OPTIONS: list[tuple[str, InteractionMode]] = [
     ("Always ask", "always"),
     ("Never ask", "never"),
 ]
+INTERACTION_DESCRIPTIONS: dict[InteractionMode, str] = {
+    "auto": "Prompt only when ambiguity remains and the terminal can interact.",
+    "always": "Require an explicit user choice when ambiguity exists.",
+    "never": "Pick the top-ranked legal candidate deterministically.",
+}
 
 T = TypeVar("T")
 BannerStyle = Literal["classic", "block"]
@@ -876,6 +892,7 @@ class CliWizard:
                 "Selection profile",
                 _with_return_option(PROFILE_OPTIONS),
                 "Choose how candidates should be ranked.",
+                PROFILE_DESCRIPTIONS,
             )
             if selection_profile == RETURN_OPTION_VALUE:
                 self._print_step_separator()
@@ -888,10 +905,12 @@ class CliWizard:
             while True:
                 retry_query = False
                 self._print_step_separator()
+                interaction_options = _with_return_option(INTERACTION_OPTIONS)
                 interaction_mode = self._select(
                     "Interaction mode",
-                    _with_return_option(INTERACTION_OPTIONS),
+                    interaction_options,
                     "Choose how ambiguity should be handled.",
+                    cast(Any, INTERACTION_DESCRIPTIONS),
                 )
                 if interaction_mode == RETURN_OPTION_VALUE:
                     break
