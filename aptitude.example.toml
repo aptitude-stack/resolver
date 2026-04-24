@@ -1,0 +1,34 @@
+# Example Aptitude workspace configuration.
+#
+# To use this locally, create an aptitude.toml file in your workspace and copy
+# the sections you want to override. This example file is documentation only.
+
+[selection]
+# Candidate selection profile for fresh install/resolve flows.
+# Supported values: "balanced", "low-cost", "high-trust"
+profile = "balanced"
+
+# Whether Aptitude may ask the user to choose when discovery is ambiguous.
+# Supported values: "auto", "always", "never"
+interaction_mode = "auto"
+
+[policy]
+# Allowed skill trust tiers. Aptitude intersects stricter policy layers, so
+# narrower lists reject more candidates.
+allowed_trust_tiers = ["verified", "internal"]
+
+# Allowed skill lifecycle states.
+allowed_lifecycle_statuses = ["published"]
+
+# Per-skill limits.
+max_token_estimate = 500
+max_content_size_bytes = 2048
+
+# Whole-graph limits.
+max_total_token_estimate = 1500
+max_total_content_size_bytes = 4096
+
+[execution]
+# Number of locked skills Aptitude may fetch, verify, and write at the same time
+# during install/sync materialization. Omit this to use the CPU-core default.
+concurrent_installs = 4
