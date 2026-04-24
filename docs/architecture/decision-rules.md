@@ -30,6 +30,9 @@ Parallel materialization is allowed only after a lockfile has defined the
 install order. Workers may fetch compressed locked artifacts and extract verified
 archives inside a staging directory, but final result ordering and trace ordering
 must be derived from the lock install order rather than worker completion order.
+Download concurrency and extraction concurrency are separate execution controls;
+do not add normal install/sync CLI flags for these knobs unless the CLI contract
+is intentionally expanded.
 
 Artifact checksums must be verified against downloaded compressed bytes before
 archive extraction unless the registry metadata explicitly defines a different

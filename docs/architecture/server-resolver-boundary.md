@@ -8,7 +8,7 @@ The server owns:
 
 - registry storage
 - immutable metadata
-- immutable artifacts
+- immutable `tar.zst` artifacts
 - indexed candidate retrieval
 - published checksum facts
 
@@ -31,5 +31,7 @@ The resolver owns:
 
 - discovery may consume server facts, but final root choice remains local
 - lock replay must not call discovery or dependency solving again
+- the content/artifact endpoint path name may remain `/content`; the resolver
+  still treats its install payload as binary artifact bytes, not markdown text
 - transport artifacts in `docs/reference/openapi/` inform the registry boundary, but they do not override resolver architecture docs
 - if code begins depending on server ordering as final truth, the boundary has been violated

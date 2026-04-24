@@ -4,19 +4,20 @@
 - Runtime: Python `>=3.9`.
 - Current public CLI: `install`, `sync`.
 - Current hidden internal CLI: `resolve`.
+- Current package root: `src/aptitude_resolver/`.
 - Current package structure:
-  - `src/aptitude/application/`
-  - `src/aptitude/cache/`
-  - `src/aptitude/discovery/`
-  - `src/aptitude/domain/`
-  - `src/aptitude/execution/`
-  - `src/aptitude/governance/`
-  - `src/aptitude/interfaces/`
-  - `src/aptitude/lockfile/`
-  - `src/aptitude/registry/`
-  - `src/aptitude/resolution/`
-  - `src/aptitude/shared/`
-  - `src/aptitude/telemetry/`
+  - `src/aptitude_resolver/application/`
+  - `src/aptitude_resolver/cache/`
+  - `src/aptitude_resolver/discovery/`
+  - `src/aptitude_resolver/domain/`
+  - `src/aptitude_resolver/execution/`
+  - `src/aptitude_resolver/governance/`
+  - `src/aptitude_resolver/interfaces/`
+  - `src/aptitude_resolver/lockfile/`
+  - `src/aptitude_resolver/registry/`
+  - `src/aptitude_resolver/resolution/`
+  - `src/aptitude_resolver/shared/`
+  - `src/aptitude_resolver/telemetry/`
 - Reserved but not yet implemented as top-level packages:
   - `plugins/`
 - Canonical docs:
@@ -46,6 +47,8 @@
     - graph governance after resolution and before lock generation
   - policy is resolver-owned; trust, lifecycle, token, size, and checksum metadata are server-owned facts
   - phase 1 checksum contract is explicit: server publishes `sha256`, resolver verifies it during materialization, lock records it
+  - materialization installs verified `tar.zst` artifact bytes, not single markdown content responses
+  - execution config supports `concurrent_downloads` and `concurrent_installs`; defaults are 8 downloads and `min(os.cpu_count() or 1, 4)` installs
   - the lock stores governance outcomes, the minimal policy snapshot, and optional selection explainability metadata
   - `docs/reference/openapi/` is reference material, not the sole runtime truth
   - historical milestone plans under `.agents/plans/` are not the architecture source of truth

@@ -8,7 +8,8 @@ This guide maps responsibilities to the current `src/aptitude_resolver/` tree.
 - `cache/`: advisory caches around registry-backed reads
 - `discovery/`: intent parsing, query building, non-final candidate reranking
 - `domain/`: models, policy types, tracing, resolver-owned errors
-- `execution/`: execution planning and materialization from lock data
+- `execution/`: execution planning, checksum verification, safe `tar.zst`
+  extraction, and materialization from lock data
 - `governance/`: legality checks before lock generation
 - `lockfile/`: durable resolved representation, serializer, parser, and replay helpers
 - `registry/`: Aptitude Server transport, auth, and transport-to-domain mapping

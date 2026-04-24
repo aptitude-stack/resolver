@@ -78,7 +78,7 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 - `cache/`: advisory caching helpers
 - `discovery/`: intent parsing, query building, non-final candidate shaping and reranking
 - `domain/`: models, policy types, tracing models, resolver-owned errors
-- `execution/`: lock-driven execution planning and materialization
+- `execution/`: lock-driven execution planning, artifact verification, safe archive extraction, and materialization
 - `governance/`: legality checks before lock generation
 - `interfaces/`: CLI, wizard-oriented interface helpers, and shared interface support
 - `lockfile/`: lock schema, serializer, parser, and replay helpers
@@ -96,6 +96,10 @@ The current package tree is rooted at `src/aptitude_resolver/`.
   and local archive extraction concurrency are separate controls, but observable
   results such as installed skill order, trace order, lockfiles, and execution
   plans must remain deterministic from the lock install order.
+- Materialization fetches locked skill artifacts as compressed `tar.zst` bytes,
+  verifies the compressed-byte checksum, extracts only safe archive members into
+  staging, and promotes the target workspace only after every locked skill is
+  materialized successfully.
 - The server is a fact source, not the final decision-maker.
 - Explainability, telemetry, cache, and retry remain additive; they must not change correctness.
 

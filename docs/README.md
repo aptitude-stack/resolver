@@ -42,6 +42,7 @@ Related entrypoints outside this directory:
 - [reference/api-contract.md](reference/api-contract.md): canonical HTTP contract
 - [reference/schema.md](reference/schema.md): canonical local schema surfaces
 - [reference/storage-strategy.md](reference/storage-strategy.md): current storage strategy
+- [reference/archive-artifact-materialization.md](reference/archive-artifact-materialization.md): tar.zst artifact materialization from user and engineer viewpoints
 - [reference/operations/README.md](reference/operations/README.md): operational runbook index
 
 ### Review roadmap and history

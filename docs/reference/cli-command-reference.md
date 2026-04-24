@@ -26,13 +26,14 @@ These commands need registry access:
 
 - `aptitude install`
 - `aptitude resolve`
+- `aptitude sync --lock ...`
 
 These commands do not require registry access:
 
 - `aptitude policy show`
 - `aptitude manifest`
 
-`aptitude sync --lock ...` replays an existing lockfile and only needs whatever local/runtime prerequisites are required for materialization.
+`aptitude sync --lock ...` replays an existing lockfile without discovery or dependency solving, but it still needs registry access to download the locked skill artifacts unless those artifacts are already served by an equivalent configured registry/cache path.
 
 ## Root Command
 

@@ -172,6 +172,8 @@ uvx aptitude-resolver sync
 - rich lockfile generation, serialization, parsing, and replay
 - lock-driven execution plan generation
 - local materialization from either a fresh plan or an existing lockfile
+- archive-based skill installs from verified `tar.zst` artifacts
+- separate execution tuning for artifact downloads and local archive extraction
 - `sync --lock` as the lock-replay equivalent of `uv sync`
 - registry caching and bounded transient retry
 - additive telemetry for planning and materialization stages
@@ -197,8 +199,35 @@ The canonical architecture now defines these required semantics:
   - full graph governance after resolution and before lock generation
 - ranking compares only policy-compliant candidates
 - phase 1 checksum verification uses server-published `sha256` checksum metadata and fails fast on mismatch
+- materialization verifies downloaded compressed artifact bytes before archive extraction
 
 Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution lives under [docs/README.md](docs/README.md).
+
+## Materialization And Execution Config
+
+Install and sync commands are unchanged, but the payload format is now archive-based. Aptitude downloads `tar.zst` skill artifacts, verifies the checksum from the lock metadata, extracts safe archive members into a staging directory, and promotes the target only after all locked skills succeed.
+
+Workspace `aptitude.toml` can tune materialization concurrency:
+
+```toml
+[execution]
+concurrent_downloads = 8
+concurrent_installs = 4
+```
+
+Defaults:
+
+- `concurrent_downloads = 8`
+- `concurrent_installs = min(os.cpu_count() or 1, 4)`
+
+Environment overrides:
+
+```bash
+APTITUDE_CONCURRENT_DOWNLOADS=8
+APTITUDE_CONCURRENT_INSTALLS=4
+```
+
+There are no CLI flags for these settings; they are operational config, not per-install selection options.
 
 ## Current User Flows
 
@@ -297,10 +326,18 @@ src/aptitude_resolver/
 The resolver currently talks to the live registry through `registry/` using these runtime paths:
 
 - `POST /discovery`
+- `GET /skills/{slug}/versions`
+- `GET /skills/{slug}/versions/{version}`
+- `GET /resolution/{slug}/{version}`
+- `GET /skills/{slug}/versions/{version}/content`
+
+The client keeps legacy fallbacks for older server deployments:
+
 - `GET /skills/{slug}`
 - `GET /skills/{slug}/{version}`
-- `GET /resolution/{slug}/{version}`
 - `GET /skills/{slug}/{version}/content`
+
+The `/content` endpoint name is preserved for compatibility, but install and sync now treat that response as binary `tar.zst` artifact bytes rather than markdown text.
 
 The resolver treats the server as a source of immutable facts and candidate generation only. Final ranking, version choice, solving, policy enforcement, lock generation, and execution planning remain resolver-owned.
 
@@ -354,6 +391,7 @@ Supporting docs:
 
 - [docs/contributors/README.md](docs/contributors/README.md)
 - [docs/reference/recommended-libraries.md](docs/reference/recommended-libraries.md)
+- [docs/reference/archive-artifact-materialization.md](docs/reference/archive-artifact-materialization.md)
 - [docs/roadmap/README.md](docs/roadmap/README.md)
 
 The `docs/reference/openapi/` directory is kept as raw server reference material, not as the sole source of truth for runtime behavior.

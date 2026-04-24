@@ -9,6 +9,7 @@ Before non-trivial implementation work, read:
 1. `../docs/architecture/system-overview.md`
 2. `../docs/architecture/decision-rules.md`
 3. `../docs/architecture/selection-and-governance.md` when the change touches planning, policy, governance, locking, or checksums
+4. `../docs/reference/archive-artifact-materialization.md` when the change touches artifact fetching, archive extraction, materialization concurrency, or install/sync payload handling
 
 ## Agent-Specific Rules
 
