@@ -26,6 +26,7 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
 )
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
 from aptitude_resolver.execution import (
+    MaterializationOptions,
     materialize_lockfile,
     write_install_debug_artifacts,
 )
@@ -62,10 +63,14 @@ class InstallSkillUseCase:
         self,
         registry_client: InstallRegistryPort,
         *,
+        materialization_options: MaterializationOptions | None = None,
         policy_context: PolicyContext | None = None,
         selection_preferences: SelectionPreferences | None = None,
     ) -> None:
         self._registry_client = registry_client
+        self._materialization_options = (
+            materialization_options or MaterializationOptions()
+        )
         self._planner = PlanSkillResolutionQuery(
             registry_client,
             policy_context=policy_context or PolicyContext(),
@@ -100,6 +105,7 @@ class InstallSkillUseCase:
                     lockfile=plan.lockfile,
                     registry_client=self._registry_client,
                     execution_plan=plan.execution_plan,
+                    options=self._materialization_options,
                 )
                 trace = list(plan.trace)
                 trace.extend(materialization.trace)

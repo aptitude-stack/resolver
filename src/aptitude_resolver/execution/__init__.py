@@ -8,6 +8,7 @@ from aptitude_resolver.execution.agent_export import (
 )
 from aptitude_resolver.execution.debug_artifacts import write_install_debug_artifacts
 from aptitude_resolver.execution.materialize import (
+    MaterializationOptions,
     MaterializationResult,
     MaterializedSkill,
     RegistryContentPort,
@@ -27,6 +28,7 @@ __all__ = [
     "ExecutionPlan",
     "ExecutionStep",
     "ExportedSkill",
+    "MaterializationOptions",
     "MaterializationResult",
     "MaterializedSkill",
     "RegistryContentPort",

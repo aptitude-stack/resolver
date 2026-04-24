@@ -26,6 +26,11 @@ Do not:
 
 Execution must operate from lock data only.
 
+Parallel materialization is allowed only after a lockfile has defined the
+install order. Workers may fetch, verify, and write independent locked artifacts
+inside a staging directory, but final result ordering and trace ordering must be
+derived from the lock install order rather than worker completion order.
+
 Do not:
 
 - rebuild execution order from an unlocked graph during materialization

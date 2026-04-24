@@ -92,6 +92,9 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 - Resolver logic must be deterministic for the same logical inputs.
 - Discovery may shape and rerank candidates, but it must not make final root decisions.
 - Execution must consume lock data only.
+- Execution may materialize locked artifacts concurrently, but observable results
+  such as installed skill order, trace order, lockfiles, and execution plans must
+  remain deterministic from the lock install order.
 - The server is a fact source, not the final decision-maker.
 - Explainability, telemetry, cache, and retry remain additive; they must not change correctness.
 

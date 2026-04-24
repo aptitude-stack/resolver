@@ -6,6 +6,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
+    Any,
     Generic,
     Literal,
     Mapping,
@@ -14,13 +15,6 @@ from typing import (
     TypeVar,
     cast,
 )
-
-try:
-    import termios
-    import tty
-except ModuleNotFoundError:  # pragma: no cover - exercised via import simulation
-    termios = None
-    tty = None
 
 from rich import box
 from rich.console import Console, Group
@@ -60,6 +54,13 @@ from aptitude_resolver.interfaces.shared import (
     InstallWorkflowService,
     InteractionMode,
 )
+
+try:
+    import termios
+    import tty
+except ModuleNotFoundError:  # pragma: no cover - exercised via import simulation
+    termios = None  # type: ignore[assignment]
+    tty = None  # type: ignore[assignment]
 
 
 PROFILE_OPTIONS: list[tuple[str, str]] = [
@@ -626,9 +627,11 @@ def _fallback_select_one(
         return first + second + third
 
     fd = sys.stdin.fileno()
-    original = termios.tcgetattr(fd)
+    termios_module = cast(Any, termios)
+    tty_module = cast(Any, tty)
+    original = termios_module.tcgetattr(fd)
     try:
-        tty.setraw(fd)
+        tty_module.setraw(fd)
         sys.stdout.write("\x1b[?25l")
         draw(render_lines())
         while True:
@@ -648,7 +651,7 @@ def _fallback_select_one(
                 sys.stdout.flush()
                 raise WizardCancelled()
     finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, original)
+        termios_module.tcsetattr(fd, termios_module.TCSADRAIN, original)
         sys.stdout.write("\x1b[?25h")
         sys.stdout.flush()
 

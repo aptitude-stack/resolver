@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 import hashlib
 import json
+import os
 import shutil
 import tempfile
 from dataclasses import dataclass, field
@@ -57,17 +59,39 @@ class MaterializationResult:
     trace: list[TraceEntry] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class MaterializationOptions:
+    """Execution-time controls for lockfile materialization."""
+
+    concurrent_installs: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.concurrent_installs is not None and self.concurrent_installs < 1:
+            raise ValueError("concurrent_installs must be greater than or equal to 1.")
+
+
+@dataclass(frozen=True)
+class _MaterializedSkillResult:
+    """One worker result kept separate so completion order stays irrelevant."""
+
+    index: int
+    skill: MaterializedSkill
+    trace: TraceEntry
+
+
 def materialize_lockfile(
     *,
     target: Path,
     lockfile: Lockfile,
     registry_client: RegistryContentPort,
     execution_plan: ExecutionPlan | None = None,
+    options: MaterializationOptions | None = None,
 ) -> MaterializationResult:
     """Materialize a local workspace from lock data only."""
 
     replayed = replay_lockfile(lockfile)
     execution_plan = execution_plan or build_execution_plan(lockfile)
+    materialization_options = options or MaterializationOptions()
     target = target.resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -77,43 +101,14 @@ def materialize_lockfile(
         prefix=f".{target.name}-", dir=target.parent
     ) as temp_dir:
         staging_root = Path(temp_dir)
-        installed_skills: list[MaterializedSkill] = []
-        trace: list[TraceEntry] = []
-
-        for node in replayed.install_order:
-            content = registry_client.fetch_skill_content(
-                node.slug,
-                node.version,
-                checksum_algorithm=node.content_checksum_algorithm,
-                checksum_digest=node.content_checksum_digest,
-            )
-            _verify_checksum(node, content)
-
-            skill_dir = staging_root / "skills" / node.slug / node.version
-            skill_dir.mkdir(parents=True, exist_ok=True)
-            (skill_dir / "content.md").write_text(content, encoding="utf-8")
-            (skill_dir / "metadata.json").write_text(
-                json.dumps(_metadata_to_dict(node), indent=2),
-                encoding="utf-8",
-            )
-            installed_skills.append(
-                MaterializedSkill(
-                    slug=node.slug,
-                    version=node.version,
-                    install_path=str(skill_dir),
-                )
-            )
-            trace.append(
-                TraceEntry(
-                    stage="execution",
-                    action="materialize_locked_skill",
-                    message=f"Materialized locked skill {node.node_id}.",
-                    data={
-                        "node_id": node.node_id,
-                        "install_path": str(skill_dir),
-                    },
-                )
-            )
+        materialized_results = _materialize_locked_skills(
+            install_order=replayed.install_order,
+            staging_root=staging_root,
+            registry_client=registry_client,
+            options=materialization_options,
+        )
+        installed_skills = [item.skill for item in materialized_results]
+        trace = [item.trace for item in materialized_results]
 
         resolution_dir = staging_root / "resolution"
         resolution_dir.mkdir(parents=True, exist_ok=True)
@@ -136,6 +131,104 @@ def materialize_lockfile(
         execution_plan=execution_plan,
         trace=trace,
     )
+
+
+def _materialize_locked_skills(
+    *,
+    install_order: list[LockedSkill],
+    staging_root: Path,
+    registry_client: RegistryContentPort,
+    options: MaterializationOptions,
+) -> list[_MaterializedSkillResult]:
+    worker_count = _resolve_worker_count(options, len(install_order))
+    if worker_count <= 1:
+        return [
+            _materialize_locked_skill(
+                index=index,
+                node=node,
+                staging_root=staging_root,
+                registry_client=registry_client,
+            )
+            for index, node in enumerate(install_order)
+        ]
+
+    results: list[_MaterializedSkillResult | None] = [None] * len(install_order)
+    executor = ThreadPoolExecutor(
+        max_workers=worker_count,
+        thread_name_prefix="aptitude-materialize",
+    )
+    futures: list[Future[_MaterializedSkillResult]] = []
+    try:
+        futures = [
+            executor.submit(
+                _materialize_locked_skill,
+                index=index,
+                node=node,
+                staging_root=staging_root,
+                registry_client=registry_client,
+            )
+            for index, node in enumerate(install_order)
+        ]
+        for future in as_completed(futures):
+            result = future.result()
+            results[result.index] = result
+    except BaseException:
+        for future in futures:
+            future.cancel()
+        raise
+    finally:
+        executor.shutdown(cancel_futures=True)
+
+    return [result for result in results if result is not None]
+
+
+def _materialize_locked_skill(
+    *,
+    index: int,
+    node: LockedSkill,
+    staging_root: Path,
+    registry_client: RegistryContentPort,
+) -> _MaterializedSkillResult:
+    content = registry_client.fetch_skill_content(
+        node.slug,
+        node.version,
+        checksum_algorithm=node.content_checksum_algorithm,
+        checksum_digest=node.content_checksum_digest,
+    )
+    _verify_checksum(node, content)
+
+    skill_dir = staging_root / "skills" / node.slug / node.version
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "content.md").write_text(content, encoding="utf-8")
+    (skill_dir / "metadata.json").write_text(
+        json.dumps(_metadata_to_dict(node), indent=2),
+        encoding="utf-8",
+    )
+    return _MaterializedSkillResult(
+        index=index,
+        skill=MaterializedSkill(
+            slug=node.slug,
+            version=node.version,
+            install_path=str(skill_dir),
+        ),
+        trace=TraceEntry(
+            stage="execution",
+            action="materialize_locked_skill",
+            message=f"Materialized locked skill {node.node_id}.",
+            data={
+                "node_id": node.node_id,
+                "install_path": str(skill_dir),
+            },
+        ),
+    )
+
+
+def _resolve_worker_count(options: MaterializationOptions, install_count: int) -> int:
+    if install_count <= 0:
+        return 1
+    configured = options.concurrent_installs
+    worker_count = configured if configured is not None else (os.cpu_count() or 1)
+    return max(1, min(worker_count, install_count))
 
 
 def _verify_checksum(node: LockedSkill, content: str) -> None:

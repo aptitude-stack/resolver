@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
+import time
 from dataclasses import replace
 
 import pytest
@@ -17,6 +19,7 @@ from aptitude_resolver.domain.models import (
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.execution import (
+    MaterializationOptions,
     build_execution_plan,
     materialize_lockfile,
     write_install_debug_artifacts,
@@ -39,6 +42,39 @@ class FakeRegistryClient:
     ) -> str:
         self.calls.append((slug, version))
         return self.content_by_coordinate[(slug, version)]
+
+
+class DelayedRegistryClient(FakeRegistryClient):
+    def __init__(
+        self,
+        content_by_coordinate: dict[tuple[str, str], str],
+        *,
+        delays_by_slug: dict[str, float] | None = None,
+    ) -> None:
+        super().__init__(content_by_coordinate)
+        self.delays_by_slug = delays_by_slug or {}
+        self._lock = threading.Lock()
+        self.active_calls = 0
+        self.max_active_calls = 0
+
+    def fetch_skill_content(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> str:
+        with self._lock:
+            self.calls.append((slug, version))
+            self.active_calls += 1
+            self.max_active_calls = max(self.max_active_calls, self.active_calls)
+        try:
+            time.sleep(self.delays_by_slug.get(slug, 0.02))
+            return self.content_by_coordinate[(slug, version)]
+        finally:
+            with self._lock:
+                self.active_calls -= 1
 
 
 def _node(slug: str, version: str, content: str) -> ResolvedSkillNode:
@@ -91,6 +127,45 @@ def _lockfile(content_by_coordinate: dict[tuple[str, str], str]):
     )
 
 
+def _multi_lockfile(content_by_coordinate: dict[tuple[str, str], str]):
+    base = SkillCoordinate(slug="python.base", version="1.0.0")
+    format_skill = SkillCoordinate(slug="python.format", version="2.0.0")
+    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    graph = ResolutionGraph(
+        root=root,
+        nodes=[
+            _node(
+                base.slug,
+                base.version,
+                content_by_coordinate[(base.slug, base.version)],
+            ),
+            _node(
+                format_skill.slug,
+                format_skill.version,
+                content_by_coordinate[(format_skill.slug, format_skill.version)],
+            ),
+            _node(
+                root.slug,
+                root.version,
+                content_by_coordinate[(root.slug, root.version)],
+            ),
+        ],
+        edges=[
+            DependencyEdge(source=root, target=base),
+            DependencyEdge(source=root, target=format_skill),
+        ],
+        install_order=[base, format_skill, root],
+        conflicts=[],
+    )
+    return build_lockfile(
+        graph=graph,
+        requested_query="python lint",
+        requested_version=None,
+        selection_mode="single_candidate",
+        policy_evaluations=[],
+    )
+
+
 def test_build_execution_plan_uses_locked_install_order() -> None:
     lockfile = _lockfile(
         {
@@ -123,7 +198,10 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
 
     materialized_root = tmp_path / "skill_demo"
     assert materialized_root.exists()
-    assert registry_client.calls == [("python.base", "1.0.0"), ("python.lint", "1.2.3")]
+    assert [item.slug for item in result.installed_skills] == [
+        "python.base",
+        "python.lint",
+    ]
     assert (
         materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md"
     ).read_text(encoding="utf-8") == "# Python Lint\n"
@@ -165,6 +243,89 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
     assert payload["algorithm"] == "sha256"
     assert payload["expected_digest"] == expected_node.content_checksum_digest
     assert payload["actual_digest"] == hashlib.sha256(b"tampered").hexdigest()
+    assert not (tmp_path / "skill_demo").exists()
+
+
+def test_materialize_lockfile_materializes_locked_skills_in_parallel(
+    tmp_path,
+) -> None:
+    content_by_coordinate = {
+        ("python.base", "1.0.0"): "# Python Base\n",
+        ("python.format", "2.0.0"): "# Python Format\n",
+        ("python.lint", "1.2.3"): "# Python Lint\n",
+    }
+    registry_client = DelayedRegistryClient(content_by_coordinate)
+    lockfile = _multi_lockfile(content_by_coordinate)
+
+    materialize_lockfile(
+        target=tmp_path / "skill_demo",
+        lockfile=lockfile,
+        registry_client=registry_client,
+        options=MaterializationOptions(concurrent_installs=3),
+    )
+
+    assert registry_client.max_active_calls > 1
+
+
+def test_materialize_lockfile_preserves_lock_order_when_workers_finish_out_of_order(
+    tmp_path,
+) -> None:
+    content_by_coordinate = {
+        ("python.base", "1.0.0"): "# Python Base\n",
+        ("python.format", "2.0.0"): "# Python Format\n",
+        ("python.lint", "1.2.3"): "# Python Lint\n",
+    }
+    registry_client = DelayedRegistryClient(
+        content_by_coordinate,
+        delays_by_slug={
+            "python.base": 0.05,
+            "python.format": 0.01,
+            "python.lint": 0.02,
+        },
+    )
+    lockfile = _multi_lockfile(content_by_coordinate)
+
+    result = materialize_lockfile(
+        target=tmp_path / "skill_demo",
+        lockfile=lockfile,
+        registry_client=registry_client,
+        options=MaterializationOptions(concurrent_installs=3),
+    )
+
+    assert [item.slug for item in result.installed_skills] == [
+        "python.base",
+        "python.format",
+        "python.lint",
+    ]
+    assert [item.data["node_id"] for item in result.trace] == [
+        "python.base@1.0.0",
+        "python.format@2.0.0",
+        "python.lint@1.2.3",
+    ]
+
+
+def test_materialize_lockfile_concurrent_installs_one_is_serial(tmp_path) -> None:
+    content_by_coordinate = {
+        ("python.base", "1.0.0"): "# Python Base\n",
+        ("python.format", "2.0.0"): "# Python Format\n",
+        ("python.lint", "1.2.3"): "# Python Lint\n",
+    }
+    registry_client = DelayedRegistryClient(content_by_coordinate)
+    lockfile = _multi_lockfile(content_by_coordinate)
+
+    materialize_lockfile(
+        target=tmp_path / "skill_demo",
+        lockfile=lockfile,
+        registry_client=registry_client,
+        options=MaterializationOptions(concurrent_installs=1),
+    )
+
+    assert registry_client.max_active_calls == 1
+    assert registry_client.calls == [
+        ("python.base", "1.0.0"),
+        ("python.format", "2.0.0"),
+        ("python.lint", "1.2.3"),
+    ]
 
 
 def test_materialize_lockfile_reuses_precomputed_execution_plan(
