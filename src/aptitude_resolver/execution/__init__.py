@@ -7,6 +7,10 @@ from aptitude_resolver.execution.agent_export import (
     export_materialized_skills_to_agent_root,
 )
 from aptitude_resolver.execution.debug_artifacts import write_install_debug_artifacts
+from aptitude_resolver.execution.archive import (
+    extract_tar_zstd_artifact,
+    preview_tar_zstd_artifact,
+)
 from aptitude_resolver.execution.materialize import (
     MaterializationOptions,
     MaterializationResult,
@@ -34,8 +38,10 @@ __all__ = [
     "RegistryContentPort",
     "build_execution_plan",
     "execution_plan_to_dict",
+    "extract_tar_zstd_artifact",
     "export_materialized_skills_to_agent_root",
     "materialize_lockfile",
+    "preview_tar_zstd_artifact",
     "serialize_execution_plan",
     "write_install_debug_artifacts",
 ]

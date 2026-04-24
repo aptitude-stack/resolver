@@ -84,23 +84,29 @@ def test_build_install_use_case_applies_effective_materialization_options(
     monkeypatch.setattr(
         composition,
         "load_user_aptitude_config",
-        lambda: AptitudeConfig(execution=ExecutionConfig(concurrent_installs=2)),
+        lambda: AptitudeConfig(
+            execution=ExecutionConfig(concurrent_downloads=2, concurrent_installs=2)
+        ),
     )
     monkeypatch.setattr(
         composition,
         "load_workspace_aptitude_config",
         lambda cwd=None: AptitudeConfig(
-            execution=ExecutionConfig(concurrent_installs=4)
+            execution=ExecutionConfig(concurrent_downloads=4, concurrent_installs=4)
         ),
     )
     monkeypatch.setattr(
         composition,
         "read_env_execution_overrides",
-        lambda env=None: ExecutionConfig(concurrent_installs=6),
+        lambda env=None: ExecutionConfig(
+            concurrent_downloads=8,
+            concurrent_installs=6,
+        ),
     )
 
     use_case, close = composition.build_install_use_case()
 
+    assert use_case._materialization_options.concurrent_downloads == 8
     assert use_case._materialization_options.concurrent_installs == 6
 
     close()

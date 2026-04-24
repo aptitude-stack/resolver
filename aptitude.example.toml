@@ -29,6 +29,10 @@ max_total_token_estimate = 1500
 max_total_content_size_bytes = 4096
 
 [execution]
-# Number of locked skills Aptitude may fetch, verify, and write at the same time
-# during install/sync materialization. Omit this to use the CPU-core default.
+# Number of locked skill archives Aptitude may fetch from the registry at once.
+# Omit this to use the built-in default of 8.
+concurrent_downloads = 8
+
+# Number of verified tar.zst archives Aptitude may extract at once.
+# Omit this to use min(available CPU cores, 4).
 concurrent_installs = 4

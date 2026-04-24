@@ -74,6 +74,7 @@ def test_load_aptitude_config_reads_execution_section(tmp_path) -> None:
     config_path.write_text(
         """
 [execution]
+concurrent_downloads = 8
 concurrent_installs = 4
 """.strip(),
         encoding="utf-8",
@@ -82,7 +83,7 @@ concurrent_installs = 4
     config = load_aptitude_config(config_path)
 
     assert config == AptitudeConfig(
-        execution=ExecutionConfig(concurrent_installs=4)
+        execution=ExecutionConfig(concurrent_downloads=8, concurrent_installs=4)
     )
 
 
@@ -174,12 +175,17 @@ def test_read_env_selection_overrides_reads_selection_fields() -> None:
     )
 
 
-def test_read_env_execution_overrides_reads_concurrent_installs() -> None:
-    config = read_env_execution_overrides({"APTITUDE_CONCURRENT_INSTALLS": "3"})
+def test_read_env_execution_overrides_reads_concurrency_fields() -> None:
+    config = read_env_execution_overrides(
+        {
+            "APTITUDE_CONCURRENT_DOWNLOADS": "8",
+            "APTITUDE_CONCURRENT_INSTALLS": "3",
+        }
+    )
 
-    assert config == ExecutionConfig(concurrent_installs=3)
+    assert config == ExecutionConfig(concurrent_downloads=8, concurrent_installs=3)
 
 
 def test_read_env_execution_overrides_rejects_invalid_value() -> None:
-    with pytest.raises(ValueError, match="APTITUDE_CONCURRENT_INSTALLS"):
-        read_env_execution_overrides({"APTITUDE_CONCURRENT_INSTALLS": "-1"})
+    with pytest.raises(ValueError, match="APTITUDE_CONCURRENT_DOWNLOADS"):
+        read_env_execution_overrides({"APTITUDE_CONCURRENT_DOWNLOADS": "0"})

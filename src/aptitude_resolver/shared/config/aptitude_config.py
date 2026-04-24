@@ -36,6 +36,7 @@ class PolicyConfig(BaseModel):
 class ExecutionConfig(BaseModel):
     """Raw execution config values loaded from files or environment."""
 
+    concurrent_downloads: int | None = Field(default=None, ge=1)
     concurrent_installs: int | None = Field(default=None, ge=1)
 
 
@@ -204,14 +205,22 @@ def read_env_execution_overrides(
     """Read execution preference overrides from environment variables."""
 
     env_map = os.environ if env is None else env
+    concurrent_downloads = env_map.get("APTITUDE_CONCURRENT_DOWNLOADS")
     concurrent_installs = env_map.get("APTITUDE_CONCURRENT_INSTALLS")
-    if concurrent_installs is None:
+    if concurrent_downloads is None and concurrent_installs is None:
         return None
     try:
-        parsed_concurrent_installs = int(concurrent_installs)
-        return ExecutionConfig(concurrent_installs=parsed_concurrent_installs)
+        return ExecutionConfig(
+            concurrent_downloads=(
+                None if concurrent_downloads is None else int(concurrent_downloads)
+            ),
+            concurrent_installs=(
+                None if concurrent_installs is None else int(concurrent_installs)
+            ),
+        )
     except (ValueError, ValidationError) as exc:
         raise ValueError(
             "Invalid environment execution config: "
-            "APTITUDE_CONCURRENT_INSTALLS must be an integer greater than or equal to 1."
+            "APTITUDE_CONCURRENT_DOWNLOADS and APTITUDE_CONCURRENT_INSTALLS must be "
+            "integers greater than or equal to 1."
         ) from exc

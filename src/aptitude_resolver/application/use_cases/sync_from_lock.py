@@ -29,14 +29,14 @@ from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 class SyncRegistryPort(Protocol):
     """Registry operations required for lock-driven sync."""
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ) -> str: ...
+    ) -> bytes: ...
 
 
 class SyncFromLockUseCase:

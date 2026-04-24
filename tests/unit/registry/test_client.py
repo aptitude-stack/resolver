@@ -149,17 +149,21 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
     assert metadata.rendered_summary == "Primary sanity skill for collection coverage"
 
 
-def test_fetch_skill_content_uses_live_content_path() -> None:
+def test_fetch_skill_artifact_uses_live_content_path_for_binary_payload() -> None:
+    artifact = b"zstd artifact bytes"
+
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
         assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content"
-        return httpx.Response(200, text="# Postman Primary Skill v1\n")
+        return httpx.Response(200, content=artifact)
 
     client = _client(handler)
 
-    content = client.fetch_skill_content("postman.primary.1774130709214-55706", "1.0.0")
+    content = client.fetch_skill_artifact(
+        "postman.primary.1774130709214-55706", "1.0.0"
+    )
 
-    assert content == "# Postman Primary Skill v1\n"
+    assert content == artifact
 
 
 def test_list_skill_versions_falls_back_to_legacy_skill_identity_endpoint_when_canonical_path_is_rejected() -> None:
@@ -247,7 +251,8 @@ def test_fetch_skill_metadata_falls_back_to_legacy_exact_metadata_endpoint_when_
     ]
 
 
-def test_fetch_skill_content_falls_back_to_legacy_content_endpoint_when_needed() -> None:
+def test_fetch_skill_artifact_falls_back_to_legacy_content_endpoint_when_needed() -> None:
+    artifact = b"legacy artifact bytes"
     request_paths: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -261,13 +266,15 @@ def test_fetch_skill_content_falls_back_to_legacy_content_endpoint_when_needed()
             request.url.path
             == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
         )
-        return httpx.Response(200, text="# Postman Primary Skill v1\n")
+        return httpx.Response(200, content=artifact)
 
     client = _client(handler)
 
-    content = client.fetch_skill_content("postman.primary.1774130709214-55706", "1.0.0")
+    content = client.fetch_skill_artifact(
+        "postman.primary.1774130709214-55706", "1.0.0"
+    )
 
-    assert content == "# Postman Primary Skill v1\n"
+    assert content == artifact
     assert request_paths == [
         "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content",
         "/skills/postman.primary.1774130709214-55706/1.0.0/content",
@@ -306,31 +313,32 @@ def test_list_skill_versions_uses_advisory_cache_for_repeat_reads(tmp_path) -> N
     assert request_count == 1
 
 
-def test_fetch_skill_content_uses_checksum_cache_key_when_available(tmp_path) -> None:
+def test_fetch_skill_artifact_uses_checksum_cache_key_when_available(tmp_path) -> None:
+    artifact = b"cached artifact bytes"
     request_count = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal request_count
         request_count += 1
-        return httpx.Response(200, text="# Cached content\n")
+        return httpx.Response(200, content=artifact)
 
     client = _client(handler, cache_dir=tmp_path / "cache")
 
-    first = client.fetch_skill_content(
+    first = client.fetch_skill_artifact(
         "python.lint",
         "1.2.3",
         checksum_algorithm="sha256",
         checksum_digest="digest-123",
     )
-    second = client.fetch_skill_content(
+    second = client.fetch_skill_artifact(
         "python.lint",
         "1.2.3",
         checksum_algorithm="sha256",
         checksum_digest="digest-123",
     )
 
-    assert first == "# Cached content\n"
-    assert second == "# Cached content\n"
+    assert first == artifact
+    assert second == artifact
     assert request_count == 1
 
 

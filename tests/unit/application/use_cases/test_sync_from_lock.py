@@ -16,26 +16,31 @@ from aptitude_resolver.domain.models import (
 )
 from aptitude_resolver.domain.policy import SelectionPreferences
 from aptitude_resolver.lockfile import build_lockfile, serialize_lockfile
+from tests.unit.artifact_helpers import make_tar_zst
 
 
 class FakeRegistryClient:
-    def __init__(self, content_by_coordinate: dict[tuple[str, str], str]) -> None:
-        self.content_by_coordinate = content_by_coordinate
-        self.content_calls: list[tuple[str, str]] = []
+    def __init__(self, artifact_by_coordinate: dict[tuple[str, str], bytes]) -> None:
+        self.artifact_by_coordinate = artifact_by_coordinate
+        self.artifact_calls: list[tuple[str, str]] = []
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ) -> str:
-        self.content_calls.append((slug, version))
-        return self.content_by_coordinate[(slug, version)]
+    ) -> bytes:
+        self.artifact_calls.append((slug, version))
+        return self.artifact_by_coordinate[(slug, version)]
 
 
-def _node(slug: str, version: str, content: str) -> ResolvedSkillNode:
+def _artifact(content: str) -> bytes:
+    return make_tar_zst({"content.md": content})
+
+
+def _node(slug: str, version: str, artifact: bytes) -> ResolvedSkillNode:
     return ResolvedSkillNode(
         coordinate=SkillCoordinate(slug=slug, version=version),
         name=slug,
@@ -47,8 +52,8 @@ def _node(slug: str, version: str, content: str) -> ResolvedSkillNode:
         trust_tier="internal",
         published_at="2026-03-18T00:00:00Z",
         content_checksum_algorithm="sha256",
-        content_checksum_digest=hashlib.sha256(content.encode("utf-8")).hexdigest(),
-        content_size_bytes=len(content.encode("utf-8")),
+        content_checksum_digest=hashlib.sha256(artifact).hexdigest(),
+        content_size_bytes=len(artifact),
         token_estimate=100,
         maturity_score=0.9,
         security_score=0.95,
@@ -57,8 +62,8 @@ def _node(slug: str, version: str, content: str) -> ResolvedSkillNode:
 
 def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): "# Python Base\n",
-        ("python.lint", "1.2.3"): "# Python Lint\n",
+        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     dependency = SkillCoordinate(slug="python.base", version="1.0.0")
     root = SkillCoordinate(slug="python.lint", version="1.2.3")
@@ -110,7 +115,7 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
         "python.base@1.0.0",
         "python.lint@1.2.3",
     ]
-    assert registry_client.content_calls == [
+    assert registry_client.artifact_calls == [
         ("python.base", "1.0.0"),
         ("python.lint", "1.2.3"),
     ]
@@ -129,8 +134,8 @@ def test_sync_from_lock_use_case_raises_for_missing_lockfile(tmp_path) -> None:
 
 def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): "# Python Base\n",
-        ("python.lint", "1.2.3"): "# Python Lint\n",
+        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     dependency = SkillCoordinate(slug="python.base", version="1.0.0")
     root = SkillCoordinate(slug="python.lint", version="1.2.3")
@@ -183,7 +188,7 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
     )
 
     assert result.status == "synced"
-    assert registry_client.content_calls == [
+    assert registry_client.artifact_calls == [
         ("python.base", "1.0.0"),
         ("python.lint", "1.2.3"),
     ]

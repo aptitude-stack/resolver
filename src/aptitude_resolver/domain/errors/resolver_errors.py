@@ -169,6 +169,23 @@ class ContentChecksumMismatchError(AptitudeResolverError):
         return payload
 
 
+class InvalidArtifactError(AptitudeResolverError):
+    """Raised when a downloaded skill artifact cannot be safely materialized."""
+
+    def __init__(self, slug: str, version: str, details: str) -> None:
+        self.slug = slug
+        self.version = version
+        self.details = details
+        super().__init__(f"Invalid skill artifact for {slug}@{version}: {details}")
+
+    def to_payload(self) -> dict[str, object]:
+        payload = super().to_payload()
+        payload["slug"] = self.slug
+        payload["version"] = self.version
+        payload["details"] = self.details
+        return payload
+
+
 class UnsupportedDependencyShapeError(AptitudeResolverError):
     """Raised when the current resolver cannot interpret a dependency selector."""
 

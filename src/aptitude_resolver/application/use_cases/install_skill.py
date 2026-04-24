@@ -46,14 +46,14 @@ class InstallRegistryPort(Protocol):
 
     def fetch_direct_dependencies(self, slug: str, version: str): ...
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ): ...
+    ) -> bytes: ...
 
 
 class InstallSkillUseCase:

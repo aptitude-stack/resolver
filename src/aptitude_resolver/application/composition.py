@@ -288,15 +288,20 @@ def _effective_policy_context_from_layers(
 def _effective_materialization_options_from_layers(
     layers: list[_ConfigLayerState],
 ) -> MaterializationOptions:
+    concurrent_downloads: int | None = None
     concurrent_installs: int | None = None
     for layer in layers:
         execution_config = layer.execution
-        if (
-            execution_config is not None
-            and execution_config.concurrent_installs is not None
-        ):
+        if execution_config is None:
+            continue
+        if execution_config.concurrent_downloads is not None:
+            concurrent_downloads = execution_config.concurrent_downloads
+        if execution_config.concurrent_installs is not None:
             concurrent_installs = execution_config.concurrent_installs
-    return MaterializationOptions(concurrent_installs=concurrent_installs)
+    return MaterializationOptions(
+        concurrent_downloads=concurrent_downloads,
+        concurrent_installs=concurrent_installs,
+    )
 
 
 def _effective_selection_preferences(

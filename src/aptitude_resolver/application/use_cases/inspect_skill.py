@@ -17,6 +17,7 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
     version_to_inspect_dto,
 )
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
+from aptitude_resolver.execution.archive import preview_tar_zstd_artifact
 from aptitude_resolver.resolution.solver import select_final_candidate
 
 
@@ -31,14 +32,14 @@ class InspectRegistryPort(Protocol):
 
     def fetch_skill_metadata(self, slug: str, version: str): ...
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ): ...
+    ) -> bytes: ...
 
 
 class InspectSkillUseCase:
@@ -92,13 +93,18 @@ class InspectSkillUseCase:
             candidate.slug,
             candidate.selected_coordinate.version,
         )
-        content = self._registry_client.fetch_skill_content(
+        artifact = self._registry_client.fetch_skill_artifact(
             candidate.slug,
             candidate.selected_coordinate.version,
             checksum_algorithm=metadata.content_checksum_algorithm,
             checksum_digest=metadata.content_checksum_digest,
         )
-        preview, truncated = _content_preview(content, limit=request.preview_char_limit)
+        preview, truncated = preview_tar_zstd_artifact(
+            slug=candidate.slug,
+            version=candidate.selected_coordinate.version,
+            artifact=artifact,
+            limit=request.preview_char_limit,
+        )
         available_versions = self._registry_client.list_skill_versions(candidate.slug)
 
         return InspectSkillResultDto(
@@ -112,18 +118,10 @@ class InspectSkillUseCase:
                 version=candidate.selected_coordinate.version,
             ),
             skill=metadata_to_dto(metadata),
-            available_versions=[version_to_inspect_dto(item) for item in available_versions],
+            available_versions=[
+                version_to_inspect_dto(item) for item in available_versions
+            ],
             content_preview=preview,
             content_preview_truncated=truncated,
             trace=[trace_to_dto(item) for item in trace],
         )
-
-
-def _content_preview(content: str, *, limit: int) -> tuple[str, bool]:
-    """Return a bounded preview for terminal inspection surfaces."""
-
-    if len(content) <= limit:
-        return content, False
-    if limit <= 3:
-        return content[:limit], True
-    return content[: limit - 3].rstrip() + "...", True

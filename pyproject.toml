@@ -16,6 +16,7 @@ dependencies = [
     "tenacity>=9.0",
     "tomli>=2.0; python_version < '3.11'",
     "typer>=0.12",
+    "zstandard>=0.23; python_version < '3.14'",
 ]
 
 [project.optional-dependencies]
@@ -52,7 +53,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["diskcache", "tomli"]
+module = ["diskcache", "tomli", "zstandard"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -6,7 +6,10 @@ from pathlib import Path
 
 import httpx
 import pytest
-from integration.registry.support import build_publish_payload, ensure_publish_ready
+from tests.integration.registry.support import (
+    build_publish_payload,
+    ensure_publish_ready,
+)
 
 
 def _load_registry_conftest():

@@ -14,6 +14,7 @@ from typing import Protocol
 
 from aptitude_resolver.domain.errors import ContentChecksumMismatchError
 from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.execution.archive import extract_tar_zstd_artifact
 from aptitude_resolver.execution.plan import (
     ExecutionPlan,
     build_execution_plan,
@@ -30,14 +31,14 @@ from aptitude_resolver.lockfile import (
 class RegistryContentPort(Protocol):
     """Artifact content reads required for materialization."""
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ) -> str: ...
+    ) -> bytes: ...
 
 
 @dataclass(frozen=True)
@@ -63,11 +64,23 @@ class MaterializationResult:
 class MaterializationOptions:
     """Execution-time controls for lockfile materialization."""
 
+    concurrent_downloads: int | None = None
     concurrent_installs: int | None = None
 
     def __post_init__(self) -> None:
+        if self.concurrent_downloads is not None and self.concurrent_downloads < 1:
+            raise ValueError("concurrent_downloads must be greater than or equal to 1.")
         if self.concurrent_installs is not None and self.concurrent_installs < 1:
             raise ValueError("concurrent_installs must be greater than or equal to 1.")
+
+
+@dataclass(frozen=True)
+class _DownloadedArtifact:
+    """One downloaded and checksum-verified locked artifact."""
+
+    index: int
+    node: LockedSkill
+    artifact: bytes
 
 
 @dataclass(frozen=True)
@@ -101,10 +114,14 @@ def materialize_lockfile(
         prefix=f".{target.name}-", dir=target.parent
     ) as temp_dir:
         staging_root = Path(temp_dir)
-        materialized_results = _materialize_locked_skills(
+        downloaded_artifacts = _download_locked_artifacts(
             install_order=replayed.install_order,
-            staging_root=staging_root,
             registry_client=registry_client,
+            options=materialization_options,
+        )
+        materialized_results = _materialize_locked_skills(
+            downloaded_artifacts=downloaded_artifacts,
+            staging_root=staging_root,
             options=materialization_options,
         )
         installed_skills = [item.skill for item in materialized_results]
@@ -133,38 +150,35 @@ def materialize_lockfile(
     )
 
 
-def _materialize_locked_skills(
+def _download_locked_artifacts(
     *,
     install_order: list[LockedSkill],
-    staging_root: Path,
     registry_client: RegistryContentPort,
     options: MaterializationOptions,
-) -> list[_MaterializedSkillResult]:
-    worker_count = _resolve_worker_count(options, len(install_order))
+) -> list[_DownloadedArtifact]:
+    worker_count = _resolve_download_worker_count(options, len(install_order))
     if worker_count <= 1:
         return [
-            _materialize_locked_skill(
+            _download_locked_artifact(
                 index=index,
                 node=node,
-                staging_root=staging_root,
                 registry_client=registry_client,
             )
             for index, node in enumerate(install_order)
         ]
 
-    results: list[_MaterializedSkillResult | None] = [None] * len(install_order)
+    results: list[_DownloadedArtifact | None] = [None] * len(install_order)
     executor = ThreadPoolExecutor(
         max_workers=worker_count,
-        thread_name_prefix="aptitude-materialize",
+        thread_name_prefix="aptitude-download",
     )
-    futures: list[Future[_MaterializedSkillResult]] = []
+    futures: list[Future[_DownloadedArtifact]] = []
     try:
         futures = [
             executor.submit(
-                _materialize_locked_skill,
+                _download_locked_artifact,
                 index=index,
                 node=node,
-                staging_root=staging_root,
                 registry_client=registry_client,
             )
             for index, node in enumerate(install_order)
@@ -182,30 +196,84 @@ def _materialize_locked_skills(
     return [result for result in results if result is not None]
 
 
-def _materialize_locked_skill(
+def _download_locked_artifact(
     *,
     index: int,
     node: LockedSkill,
-    staging_root: Path,
     registry_client: RegistryContentPort,
-) -> _MaterializedSkillResult:
-    content = registry_client.fetch_skill_content(
+) -> _DownloadedArtifact:
+    artifact = registry_client.fetch_skill_artifact(
         node.slug,
         node.version,
         checksum_algorithm=node.content_checksum_algorithm,
         checksum_digest=node.content_checksum_digest,
     )
-    _verify_checksum(node, content)
+    _verify_checksum(node, artifact)
+    return _DownloadedArtifact(index=index, node=node, artifact=artifact)
 
+
+def _materialize_locked_skills(
+    *,
+    downloaded_artifacts: list[_DownloadedArtifact],
+    staging_root: Path,
+    options: MaterializationOptions,
+) -> list[_MaterializedSkillResult]:
+    worker_count = _resolve_install_worker_count(options, len(downloaded_artifacts))
+    if worker_count <= 1:
+        return [
+            _materialize_locked_skill(
+                downloaded_artifact=downloaded_artifact,
+                staging_root=staging_root,
+            )
+            for downloaded_artifact in downloaded_artifacts
+        ]
+
+    results: list[_MaterializedSkillResult | None] = [None] * len(downloaded_artifacts)
+    executor = ThreadPoolExecutor(
+        max_workers=worker_count,
+        thread_name_prefix="aptitude-materialize",
+    )
+    futures: list[Future[_MaterializedSkillResult]] = []
+    try:
+        futures = [
+            executor.submit(
+                _materialize_locked_skill,
+                downloaded_artifact=downloaded_artifact,
+                staging_root=staging_root,
+            )
+            for downloaded_artifact in downloaded_artifacts
+        ]
+        for future in as_completed(futures):
+            result = future.result()
+            results[result.index] = result
+    except BaseException:
+        for future in futures:
+            future.cancel()
+        raise
+    finally:
+        executor.shutdown(cancel_futures=True)
+
+    return [result for result in results if result is not None]
+
+
+def _materialize_locked_skill(
+    *,
+    downloaded_artifact: _DownloadedArtifact,
+    staging_root: Path,
+) -> _MaterializedSkillResult:
+    node = downloaded_artifact.node
     skill_dir = staging_root / "skills" / node.slug / node.version
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "content.md").write_text(content, encoding="utf-8")
+    extracted_paths = extract_tar_zstd_artifact(
+        node=node,
+        artifact=downloaded_artifact.artifact,
+        target_dir=skill_dir,
+    )
     (skill_dir / "metadata.json").write_text(
         json.dumps(_metadata_to_dict(node), indent=2),
         encoding="utf-8",
     )
     return _MaterializedSkillResult(
-        index=index,
+        index=downloaded_artifact.index,
         skill=MaterializedSkill(
             slug=node.slug,
             version=node.version,
@@ -218,23 +286,44 @@ def _materialize_locked_skill(
             data={
                 "node_id": node.node_id,
                 "install_path": str(skill_dir),
+                "extracted_paths": extracted_paths,
             },
         ),
     )
 
 
-def _resolve_worker_count(options: MaterializationOptions, install_count: int) -> int:
-    if install_count <= 0:
+def _resolve_download_worker_count(
+    options: MaterializationOptions,
+    artifact_count: int,
+) -> int:
+    if artifact_count <= 0:
         return 1
-    configured = options.concurrent_installs
-    worker_count = configured if configured is not None else (os.cpu_count() or 1)
-    return max(1, min(worker_count, install_count))
+    worker_count = (
+        options.concurrent_downloads
+        if options.concurrent_downloads is not None
+        else 8
+    )
+    return max(1, min(worker_count, artifact_count))
 
 
-def _verify_checksum(node: LockedSkill, content: str) -> None:
+def _resolve_install_worker_count(
+    options: MaterializationOptions,
+    artifact_count: int,
+) -> int:
+    if artifact_count <= 0:
+        return 1
+    worker_count = (
+        options.concurrent_installs
+        if options.concurrent_installs is not None
+        else min(os.cpu_count() or 1, 4)
+    )
+    return max(1, min(worker_count, artifact_count))
+
+
+def _verify_checksum(node: LockedSkill, artifact: bytes) -> None:
     actual_digest = hashlib.new(
         node.content_checksum_algorithm,
-        content.encode("utf-8"),
+        artifact,
     ).hexdigest()
     if actual_digest != node.content_checksum_digest:
         raise ContentChecksumMismatchError(

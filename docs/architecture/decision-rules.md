@@ -27,9 +27,14 @@ Do not:
 Execution must operate from lock data only.
 
 Parallel materialization is allowed only after a lockfile has defined the
-install order. Workers may fetch, verify, and write independent locked artifacts
-inside a staging directory, but final result ordering and trace ordering must be
-derived from the lock install order rather than worker completion order.
+install order. Workers may fetch compressed locked artifacts and extract verified
+archives inside a staging directory, but final result ordering and trace ordering
+must be derived from the lock install order rather than worker completion order.
+
+Artifact checksums must be verified against downloaded compressed bytes before
+archive extraction unless the registry metadata explicitly defines a different
+checksum scope. Archive extraction must reject unsafe paths, links, device
+members, and any member that could escape the target skill directory.
 
 Do not:
 
