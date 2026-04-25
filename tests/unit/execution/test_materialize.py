@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+from pathlib import Path
 import tarfile
 import threading
 import time
@@ -29,6 +30,7 @@ from aptitude_resolver.execution import (
     materialize_lockfile,
     write_install_debug_artifacts,
 )
+from aptitude_resolver.execution.archive import preview_tar_zstd_artifact
 from aptitude_resolver.lockfile import SelectionSnapshot, build_lockfile, load_lockfile
 from tests.unit.artifact_helpers import compress_zstd, make_tar_zst
 
@@ -254,6 +256,71 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
         "materialize_locked_skill",
         "materialize_locked_skill",
     ]
+    assert result.installed_skills[0].install_path == str(
+        materialized_root / "skills" / "python.base" / "1.0.0"
+    )
+    assert result.installed_skills[1].install_path == str(
+        materialized_root / "skills" / "python.lint" / "1.2.3"
+    )
+    assert result.trace[0].data["install_path"] == str(
+        materialized_root / "skills" / "python.base" / "1.0.0"
+    )
+
+
+def test_materialize_lockfile_preserves_existing_target_when_promotion_fails(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    target = tmp_path / "skill_demo"
+    target.mkdir()
+    (target / "keep.txt").write_text("keep me\n", encoding="utf-8")
+    (target / "locked.txt").write_text("locked\n", encoding="utf-8")
+    content_by_coordinate = {
+        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+    }
+    lockfile = _lockfile(content_by_coordinate)
+    registry_client = FakeRegistryClient(content_by_coordinate)
+    original_rmtree = materialize_module.shutil.rmtree
+    original_replace = Path.replace
+
+    def _partial_delete_then_fail(path, *args, **kwargs):
+        if Path(path) == target:
+            (target / "locked.txt").unlink()
+            raise PermissionError("target contains a locked file")
+        return original_rmtree(path, *args, **kwargs)
+
+    def _fail_target_move(self, target_path):
+        if self == target:
+            raise PermissionError("target contains a locked file")
+        return original_replace(self, target_path)
+
+    monkeypatch.setattr(materialize_module.shutil, "rmtree", _partial_delete_then_fail)
+    monkeypatch.setattr(Path, "replace", _fail_target_move)
+
+    with pytest.raises(PermissionError, match="locked file"):
+        materialize_lockfile(
+            target=target,
+            lockfile=lockfile,
+            registry_client=registry_client,
+        )
+
+    assert (target / "keep.txt").read_text(encoding="utf-8") == "keep me\n"
+    assert (target / "locked.txt").read_text(encoding="utf-8") == "locked\n"
+
+
+def test_preview_tar_zstd_artifact_reads_skill_markdown_bundle_entry() -> None:
+    artifact = make_tar_zst({"skill-bundle/SKILL.md": "# Python Base Runtime\n"})
+
+    preview, truncated = preview_tar_zstd_artifact(
+        slug="python.base",
+        version="1.1.0",
+        artifact=artifact,
+        limit=100,
+    )
+
+    assert preview == "# Python Base Runtime\n"
+    assert truncated is False
 
 
 def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> None:

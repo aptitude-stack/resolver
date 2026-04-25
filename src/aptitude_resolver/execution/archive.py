@@ -14,7 +14,7 @@ from typing import BinaryIO, cast
 from aptitude_resolver.domain.errors import InvalidArtifactError
 from aptitude_resolver.lockfile import LockedSkill
 
-PREVIEW_FILENAMES = ("content.md", "README.md", "readme.md")
+PREVIEW_FILENAMES = ("SKILL.md", "content.md", "README.md", "readme.md")
 
 
 def extract_tar_zstd_artifact(

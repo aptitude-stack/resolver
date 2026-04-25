@@ -5,7 +5,13 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Protocol
 
-from aptitude_resolver.domain.errors import DependencyCycleError
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+
+from aptitude_resolver.domain.errors import (
+    DependencyCycleError,
+    SkillNotFoundError,
+    UnsupportedDependencyShapeError,
+)
 from aptitude_resolver.domain.models import (
     DependencyEdge,
     DependencySpec,
@@ -13,10 +19,12 @@ from aptitude_resolver.domain.models import (
     ResolvedSkillNode,
     SkillCoordinate,
     SkillMetadata,
+    VersionSummary,
 )
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.resolution.conflict import ensure_no_version_conflict
 from aptitude_resolver.resolution.normalizer import normalize_dependency_selector
+from aptitude_resolver.resolution.solver import select_preferred_version
 
 
 class RegistryResolvePort(Protocol):
@@ -27,6 +35,8 @@ class RegistryResolvePort(Protocol):
     def fetch_direct_dependencies(
         self, slug: str, version: str
     ) -> list[DependencySpec]: ...
+
+    def list_skill_versions(self, slug: str) -> list[VersionSummary]: ...
 
 
 def resolve_recursive_graph(
@@ -126,7 +136,13 @@ def resolve_recursive_graph(
         selected_versions[coordinate.slug] = coordinate
 
         for index, dependency in enumerate(dependencies, start=1):
-            target = normalize_dependency_selector(coordinate, dependency)
+            target, selection_trace = _resolve_dependency_coordinate(
+                coordinate,
+                dependency,
+                registry_client,
+                selected_versions,
+            )
+            trace.extend(selection_trace)
             trace.append(
                 TraceEntry(
                     stage="resolver",
@@ -217,6 +233,90 @@ def resolve_recursive_graph(
         install_order=install_order,
     )
     return graph, trace
+
+
+def _resolve_dependency_coordinate(
+    source: SkillCoordinate,
+    dependency: DependencySpec,
+    registry_client: RegistryResolvePort,
+    selected_versions: dict[str, SkillCoordinate],
+) -> tuple[SkillCoordinate, list[TraceEntry]]:
+    if dependency.version is not None:
+        return normalize_dependency_selector(source, dependency), []
+
+    if dependency.version_constraint is None:
+        raise UnsupportedDependencyShapeError(
+            source.slug,
+            source.version,
+            "dependency selectors must include an exact version or version constraint",
+        )
+
+    specifier = _parse_dependency_constraint(source, dependency)
+    selected = selected_versions.get(dependency.slug)
+    if selected is not None:
+        if specifier.contains(selected.version, prereleases=True):
+            return selected, []
+        raise UnsupportedDependencyShapeError(
+            source.slug,
+            source.version,
+            (
+                f"selected dependency {dependency.slug}@{selected.version} does not "
+                f"satisfy constraint {dependency.version_constraint}"
+            ),
+        )
+
+    versions = registry_client.list_skill_versions(dependency.slug)
+    matching_versions = [
+        version
+        for version in versions
+        if specifier.contains(version.coordinate.version, prereleases=True)
+    ]
+    if not matching_versions:
+        raise SkillNotFoundError(
+            "No versions for "
+            f"{dependency.slug} satisfy constraint {dependency.version_constraint} "
+            f"required by {source.slug}@{source.version}."
+        )
+
+    selected_version = select_preferred_version(matching_versions)
+    trace = [
+        TraceEntry(
+            stage="resolver",
+            action="select_dependency_version",
+            message=(
+                f"Selected {dependency.slug}@{selected_version.coordinate.version} "
+                f"for constraint {dependency.version_constraint}."
+            ),
+            data={
+                "source_slug": source.slug,
+                "source_version": source.version,
+                "dependency_slug": dependency.slug,
+                "version_constraint": dependency.version_constraint,
+                "resolved_version": selected_version.coordinate.version,
+                "candidate_versions": [
+                    item.coordinate.version for item in matching_versions
+                ],
+            },
+        )
+    ]
+    return selected_version.coordinate, trace
+
+
+def _parse_dependency_constraint(
+    source: SkillCoordinate,
+    dependency: DependencySpec,
+) -> SpecifierSet:
+    try:
+        return SpecifierSet(dependency.version_constraint or "")
+    except InvalidSpecifier as exc:
+        raise UnsupportedDependencyShapeError(
+            source.slug,
+            source.version,
+            (
+                f"invalid dependency constraint for {dependency.slug}: "
+                f"{dependency.version_constraint}"
+            ),
+        ) from exc
 
 
 def _dependency_sort_key(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TransportChecksum(BaseModel):
@@ -66,6 +66,13 @@ class DependencySelector(BaseModel):
     version_constraint: str | None = None
     optional: bool = False
     markers: list[str] = Field(default_factory=list)
+
+    @field_validator("optional", mode="before")
+    @classmethod
+    def _default_null_optional(cls, value: object) -> object:
+        if value is None:
+            return False
+        return value
 
 
 class DirectDependenciesResponse(BaseModel):

@@ -80,7 +80,7 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 - `domain/`: models, policy types, tracing models, resolver-owned errors
 - `execution/`: lock-driven execution planning, artifact verification, safe archive extraction, and materialization
 - `governance/`: legality checks before lock generation
-- `interfaces/`: CLI, wizard-oriented interface helpers, and shared interface support
+- `interfaces/`: CLI, MCP, wizard-oriented interface helpers, and shared interface support
 - `lockfile/`: lock schema, serializer, parser, and replay helpers
 - `registry/`: Aptitude Server transport boundary and transport-to-domain mapping
 - `resolution/`: deterministic version choice, root selection, dependency expansion, and validation
@@ -120,4 +120,3 @@ The currently deferred areas are:
 - broader governance and explanation refinement
 - plugins
 - SDK surface
-- MCP surface

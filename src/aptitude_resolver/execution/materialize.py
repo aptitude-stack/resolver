@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import tempfile
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -124,9 +125,6 @@ def materialize_lockfile(
             staging_root=staging_root,
             options=materialization_options,
         )
-        installed_skills = [item.skill for item in materialized_results]
-        trace = [item.trace for item in materialized_results]
-
         resolution_dir = staging_root / "resolution"
         resolution_dir.mkdir(parents=True, exist_ok=True)
         (resolution_dir / "aptitude.lock.json").write_text(
@@ -138,9 +136,15 @@ def materialize_lockfile(
             encoding="utf-8",
         )
 
-        if target.exists():
-            shutil.rmtree(target)
-        staging_root.replace(target)
+        _promote_staging_root(staging_root=staging_root, target=target)
+        installed_skills = _final_installed_skills(
+            materialized_results=materialized_results,
+            target=target,
+        )
+        trace = _final_trace_entries(
+            materialized_results=materialized_results,
+            target=target,
+        )
 
     return MaterializationResult(
         installed_skills=installed_skills,
@@ -148,6 +152,68 @@ def materialize_lockfile(
         execution_plan=execution_plan,
         trace=trace,
     )
+
+
+def _promote_staging_root(*, staging_root: Path, target: Path) -> None:
+    """Promote staging without destructively deleting an existing target first."""
+
+    if not target.exists():
+        staging_root.replace(target)
+        return
+
+    backup = _unique_backup_path(target)
+    target.replace(backup)
+    try:
+        staging_root.replace(target)
+    except BaseException:
+        if backup.exists() and not target.exists():
+            backup.replace(target)
+        raise
+
+    if backup.exists():
+        shutil.rmtree(backup, ignore_errors=True)
+
+
+def _unique_backup_path(target: Path) -> Path:
+    while True:
+        candidate = target.with_name(f".{target.name}.previous-{uuid.uuid4().hex}")
+        if not candidate.exists():
+            return candidate
+
+
+def _final_installed_skills(
+    *,
+    materialized_results: list[_MaterializedSkillResult],
+    target: Path,
+) -> list[MaterializedSkill]:
+    return [
+        MaterializedSkill(
+            slug=item.skill.slug,
+            version=item.skill.version,
+            install_path=str(target / "skills" / item.skill.slug / item.skill.version),
+        )
+        for item in materialized_results
+    ]
+
+
+def _final_trace_entries(
+    *,
+    materialized_results: list[_MaterializedSkillResult],
+    target: Path,
+) -> list[TraceEntry]:
+    trace: list[TraceEntry] = []
+    for item in materialized_results:
+        data = dict(item.trace.data)
+        data["install_path"] = str(target / "skills" / item.skill.slug / item.skill.version)
+        trace.append(
+            TraceEntry(
+                stage=item.trace.stage,
+                action=item.trace.action,
+                message=item.trace.message,
+                data=data,
+            )
+        )
+    return trace
 
 
 def _download_locked_artifacts(

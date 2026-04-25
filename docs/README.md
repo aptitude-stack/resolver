@@ -24,6 +24,7 @@ Related entrypoints outside this directory:
 - [architecture/README.md](architecture/README.md): architecture reading order and normative docs
 - [architecture/system-overview.md](architecture/system-overview.md): high-level system shape
 - [architecture/cli-interface.md](architecture/cli-interface.md): current CLI command, wizard, and rendering contract
+- [architecture/mcp-interface.md](architecture/mcp-interface.md): current local MCP server contract
 - [architecture/server-resolver-boundary.md](architecture/server-resolver-boundary.md): hard ownership split with the registry and server-side facts
 - [architecture/decision-rules.md](architecture/decision-rules.md): implementation invariants and doc-sync rules
 
@@ -40,6 +41,7 @@ Related entrypoints outside this directory:
 - [reference/README.md](reference/README.md): reference index
 - [reference/cli-command-reference.md](reference/cli-command-reference.md): full user-facing CLI command reference
 - [reference/api-contract.md](reference/api-contract.md): canonical HTTP contract
+- [reference/mcp-server-guide.md](reference/mcp-server-guide.md): MCP setup, tools, usage, and engineering explanation
 - [reference/schema.md](reference/schema.md): canonical local schema surfaces
 - [reference/storage-strategy.md](reference/storage-strategy.md): current storage strategy
 - [reference/archive-artifact-materialization.md](reference/archive-artifact-materialization.md): tar.zst artifact materialization from user and engineer viewpoints

@@ -3,10 +3,11 @@ name = "aptitude-resolver"
 version = "0.0.9"
 description = "Deterministic package-manager-style resolver for AI skills"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "diskcache>=5.6",
     "httpx>=0.27",
+    "mcp>=1.27,<2",
     "packaging>=24.0",
     "prompt-toolkit>=3.0",
     "pydantic>=2.0",
@@ -15,6 +16,7 @@ dependencies = [
     "structlog>=25.0",
     "tenacity>=9.0",
     "tomli>=2.0; python_version < '3.11'",
+    "toons>=0.5,<1",
     "typer>=0.12",
     "zstandard>=0.23; python_version < '3.14'",
 ]
@@ -30,6 +32,7 @@ dev = [
 [project.scripts]
 aptitude-resolver = "aptitude_resolver.interfaces.cli.main:main"
 aptitude = "aptitude_resolver.interfaces.cli.main:main"
+aptitude-mcp = "aptitude_resolver.interfaces.mcp.main:main"
 
 [build-system]
 requires = ["uv_build>=0.10.8,<0.11.0"]
@@ -47,7 +50,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 files = ["src", "tests"]
 show_error_codes = true
 pretty = true

@@ -88,8 +88,8 @@ class RegistryClient:
 
         payload = self._get_json_with_fallback_paths(
             metadata_key(slug, version),
-            primary_path=f"/skills/{slug}/versions/{version}",
-            fallback_paths=[f"/skills/{slug}/{version}"],
+            primary_path=f"/skills/{slug}/{version}",
+            fallback_paths=[f"/skills/{slug}/versions/{version}"],
             expire=METADATA_CACHE_TTL_SECONDS,
         )
         try:
@@ -105,8 +105,8 @@ class RegistryClient:
 
         payload = self._get_json_with_fallback_paths(
             version_list_key(slug),
-            primary_path=f"/skills/{slug}/versions",
-            fallback_paths=[f"/skills/{slug}"],
+            primary_path=f"/skills/{slug}",
+            fallback_paths=[f"/skills/{slug}/versions"],
             expire=VERSION_LIST_CACHE_TTL_SECONDS,
         )
         try:
@@ -208,8 +208,8 @@ class RegistryClient:
             return cached
 
         content = self._get_text_with_fallback_paths(
-            primary_path=f"/skills/{slug}/versions/{version}/content",
-            fallback_paths=[f"/skills/{slug}/{version}/content"],
+            primary_path=f"/skills/{slug}/{version}/content",
+            fallback_paths=[f"/skills/{slug}/versions/{version}/content"],
         )
         self._cache_store.set(cache_key, content, expire=None)
         return content
@@ -234,8 +234,8 @@ class RegistryClient:
             return base64.b64decode(cached.encode("ascii"))
 
         artifact = self._get_bytes_with_fallback_paths(
-            primary_path=f"/skills/{slug}/versions/{version}/content",
-            fallback_paths=[f"/skills/{slug}/{version}/content"],
+            primary_path=f"/skills/{slug}/{version}/content",
+            fallback_paths=[f"/skills/{slug}/versions/{version}/content"],
         )
         self._cache_store.set(
             cache_key,
@@ -447,8 +447,23 @@ class RegistryClient:
 
     def _raise_for_error_response(self, response: httpx.Response) -> None:
         try:
-            envelope = ErrorEnvelope.model_validate(response.json())
-        except (ValueError, ValidationError) as exc:
+            payload = response.json()
+        except ValueError as exc:
+            raise UnexpectedRegistryResponseError(
+                "Registry returned a malformed error response."
+            ) from exc
+
+        try:
+            envelope = ErrorEnvelope.model_validate(payload)
+        except ValidationError as exc:
+            if (
+                response.status_code == 404
+                and isinstance(payload, dict)
+                and payload.get("detail") == "Not Found"
+            ):
+                raise InvalidCoordinateError(
+                    "Registry route did not match the supplied coordinate."
+                ) from exc
             raise UnexpectedRegistryResponseError(
                 "Registry returned a malformed error response."
             ) from exc

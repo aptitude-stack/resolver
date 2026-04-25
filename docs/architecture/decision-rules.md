@@ -17,6 +17,7 @@ You must:
 Do not:
 
 - put business logic in CLI or wizard handlers
+- put business logic in MCP tools or resources
 - put solver logic in `application/`
 - let `discovery/` perform final root selection
 - let `execution/` re-resolve dependencies
@@ -79,6 +80,7 @@ When behavior or boundaries change, update the canonical docs in the same change
 
 - [system-overview.md](system-overview.md)
 - [decision-rules.md](decision-rules.md)
+- [mcp-interface.md](mcp-interface.md) when MCP tools, resources, prompts, transport, or output formatting change
 - [selection-and-governance.md](selection-and-governance.md) when applicable
 
 Also update supporting docs when needed:

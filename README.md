@@ -1,6 +1,6 @@
 # Aptitude Resolver
 
-![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-managed-6E56CF?style=for-the-badge&logo=uv&logoColor=white)
 ![Pydantic](https://img.shields.io/badge/pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
 ![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
@@ -23,12 +23,15 @@ Primary commands:
 - `aptitude policy show`
 - `aptitude sync --lock aptitude.lock.json`
 - `aptitude manifest`
+- `aptitude-mcp`
 
 Internal preview command:
 
 - `aptitude resolve "<query>"`
 
 Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
+
+`aptitude-mcp` starts the local stdio MCP server for agent hosts.
 
 ## How To Install
 
@@ -47,7 +50,7 @@ This project builds and publishes as a normal Python package. `uv` is the build 
 The packaging metadata lives in `pyproject.toml`:
 
 - `[project]` defines the package name, version, dependencies, and console entry point
-- `[project.scripts]` exposes both `aptitude-resolver` and `aptitude`, both mapped to `aptitude_resolver.interfaces.cli.main:main`
+- `[project.scripts]` exposes `aptitude-resolver` and `aptitude`, both mapped to `aptitude_resolver.interfaces.cli.main:main`, plus `aptitude-mcp` mapped to `aptitude_resolver.interfaces.mcp.main:main`
 - `[build-system]` tells `uv` to build the package with `uv_build`
 
 Build the package artifacts locally:
@@ -137,6 +140,7 @@ PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Sk
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver policy show
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
+uv run aptitude-mcp
 ```
 
 The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
@@ -159,6 +163,43 @@ uvx aptitude-resolver install "Postman Primary Skill"
 uvx aptitude-resolver policy show
 uvx aptitude-resolver sync
 ```
+
+## MCP Server
+
+Aptitude ships a local MCP server for agents and MCP-compatible apps. It uses stdio by default and exposes tools for search, inspect, resolve, policy inspection, install, and sync.
+
+For Claude Desktop-style local configuration, point the MCP client at the package entrypoint:
+
+```json
+{
+  "mcpServers": {
+    "aptitude": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:\\Dev\\apptitude-client\\aptitude-client",
+        "run",
+        "aptitude-mcp"
+      ]
+    }
+  }
+}
+```
+
+For coding-agent clients that accept command/args MCP definitions, use the same command:
+
+```text
+command: uv
+args: --directory C:\Dev\apptitude-client\aptitude-client run aptitude-mcp
+```
+
+Inspect the server locally:
+
+```bash
+npx -y @modelcontextprotocol/inspector uv --directory C:\Dev\apptitude-client\aptitude-client run aptitude-mcp
+```
+
+Mutating MCP tools are explicit: `aptitude_install_skill` and `aptitude_sync_lock` require target paths and are annotated as destructive. Read-only tools are available for planning and review before materialization.
 
 ## What Works Today
 
@@ -186,7 +227,7 @@ uvx aptitude-resolver sync
 - broader organization-specific rules are not implemented yet
 - winner-vs-runner-up explanation still derives from parallel explanation logic instead of directly from reranker output
 - `plugins/` extensibility is not implemented yet
-- MCP and SDK interfaces are not implemented yet
+- SDK interface is not implemented yet
 
 ## Selection, Governance, And Integrity Direction
 
@@ -307,6 +348,7 @@ src/aptitude_resolver/
   governance/
   interfaces/
     cli/
+    mcp/
   lockfile/
   registry/
   resolution/
@@ -345,7 +387,7 @@ The resolver treats the server as a source of immutable facts and candidate gene
 
 Requirements:
 
-- Python `>=3.9`
+- Python `>=3.10`
 
 Run the CLI:
 
@@ -384,8 +426,9 @@ The canonical architecture pair for future implementation work is:
 
 - [docs/architecture/system-overview.md](docs/architecture/system-overview.md)
 - [docs/architecture/decision-rules.md](docs/architecture/decision-rules.md)
+- [docs/architecture/mcp-interface.md](docs/architecture/mcp-interface.md)
 
-Before any non-trivial implementation or refactor, read both.
+Before any non-trivial implementation or refactor, read the relevant architecture docs.
 
 Supporting docs:
 
