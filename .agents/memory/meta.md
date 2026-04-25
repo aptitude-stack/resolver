@@ -1,8 +1,55 @@
 # Repo Meta Memory
 
-- Product: Aptitude skill repository.
-- Runtime: Go service (primary).
-- Core principles: immutability, determinism, explicit relationships, governance, auditability.
-- Architecture source of truth: `docs/overview.md`.
-- Planning location: `.agents/plans/`.
-- Layering rule: `interface -> core` and persistence access only via core ports, wired in `app/main.py`.
+- Product: `aptitude-resolver`, a Python resolver for discovery-backed skill resolution, deterministic dependency solving, governance, lock generation, and lock-driven execution planning.
+- Runtime: Python `>=3.9`.
+- Current public CLI: `install`, `sync`.
+- Current hidden internal CLI: `resolve`.
+- Current package root: `src/aptitude_resolver/`.
+- Current package structure:
+  - `src/aptitude_resolver/application/`
+  - `src/aptitude_resolver/cache/`
+  - `src/aptitude_resolver/discovery/`
+  - `src/aptitude_resolver/domain/`
+  - `src/aptitude_resolver/execution/`
+  - `src/aptitude_resolver/governance/`
+  - `src/aptitude_resolver/interfaces/`
+  - `src/aptitude_resolver/lockfile/`
+  - `src/aptitude_resolver/registry/`
+  - `src/aptitude_resolver/resolution/`
+  - `src/aptitude_resolver/shared/`
+  - `src/aptitude_resolver/telemetry/`
+- Reserved but not yet implemented as top-level packages:
+  - `plugins/`
+- Canonical docs:
+  - `docs/README.md`
+  - `docs/architecture/system-overview.md`
+  - `docs/architecture/decision-rules.md`
+- Supporting docs:
+  - `README.md`
+  - `docs/contributors/README.md`
+  - `docs/reference/recommended-libraries.md`
+  - `.agents/rules/repo.md`
+- Core principles:
+  - deterministic behavior
+  - strict layering
+  - resolver-owned decisions
+  - lock as the execution source of truth
+  - traceable decision-making
+- Important reality checks:
+  - `install` plans and materializes from a newly generated lock
+  - `sync --lock` replays an existing lock without discovery or resolution
+  - Governance Phase 1 is implemented: candidate pre-filtering and graph governance cover lifecycle, trust, and optional resource ceilings
+  - workspace policy loading from `aptitude.toml` is implemented with stricter-only merge semantics
+  - aggregate graph token and content-size ceilings are implemented
+  - `cache/` and `telemetry/` are implemented top-level packages
+  - the canonical architecture now requires two governance phases:
+    - candidate-policy filtering before final ranking and root selection
+    - graph governance after resolution and before lock generation
+  - policy is resolver-owned; trust, lifecycle, token, size, and checksum metadata are server-owned facts
+  - phase 1 checksum contract is explicit: server publishes `sha256`, resolver verifies it during materialization, lock records it
+  - materialization installs verified `tar.zst` artifact bytes, not single markdown content responses
+  - execution config supports `concurrent_downloads` and `concurrent_installs`; defaults are 8 downloads and `min(os.cpu_count() or 1, 4)` installs
+  - the lock stores governance outcomes, the minimal policy snapshot, and optional selection explainability metadata
+  - `docs/reference/openapi/` is reference material, not the sole runtime truth
+  - historical milestone plans under `.agents/plans/` are not the architecture source of truth
+  - future non-trivial implementation work must read the canonical architecture docs first
