@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from typing import Any
 
 import httpx
@@ -15,7 +16,9 @@ from tenacity import (
 
 from aptitude_resolver.cache import (
     CacheStore,
+    artifact_key,
     content_key,
+    coordinate_artifact_key,
     coordinate_content_key,
     discovery_key,
     metadata_key,
@@ -85,8 +88,8 @@ class RegistryClient:
 
         payload = self._get_json_with_fallback_paths(
             metadata_key(slug, version),
-            primary_path=f"/skills/{slug}/versions/{version}",
-            fallback_paths=[f"/skills/{slug}/{version}"],
+            primary_path=f"/skills/{slug}/{version}",
+            fallback_paths=[f"/skills/{slug}/versions/{version}"],
             expire=METADATA_CACHE_TTL_SECONDS,
         )
         try:
@@ -102,8 +105,8 @@ class RegistryClient:
 
         payload = self._get_json_with_fallback_paths(
             version_list_key(slug),
-            primary_path=f"/skills/{slug}/versions",
-            fallback_paths=[f"/skills/{slug}"],
+            primary_path=f"/skills/{slug}",
+            fallback_paths=[f"/skills/{slug}/versions"],
             expire=VERSION_LIST_CACHE_TTL_SECONDS,
         )
         try:
@@ -205,11 +208,41 @@ class RegistryClient:
             return cached
 
         content = self._get_text_with_fallback_paths(
-            primary_path=f"/skills/{slug}/versions/{version}/content",
-            fallback_paths=[f"/skills/{slug}/{version}/content"],
+            primary_path=f"/skills/{slug}/{version}/content",
+            fallback_paths=[f"/skills/{slug}/versions/{version}/content"],
         )
         self._cache_store.set(cache_key, content, expire=None)
         return content
+
+    def fetch_skill_artifact(
+        self,
+        slug: str,
+        version: str,
+        *,
+        checksum_algorithm: str | None = None,
+        checksum_digest: str | None = None,
+    ) -> bytes:
+        """Fetch canonical immutable tar.zst artifact bytes for one coordinate."""
+
+        cache_key = (
+            artifact_key(algorithm=checksum_algorithm, digest=checksum_digest)
+            if checksum_algorithm is not None and checksum_digest is not None
+            else coordinate_artifact_key(slug, version)
+        )
+        cached = self._cache_store.get(cache_key)
+        if isinstance(cached, str):
+            return base64.b64decode(cached.encode("ascii"))
+
+        artifact = self._get_bytes_with_fallback_paths(
+            primary_path=f"/skills/{slug}/{version}/content",
+            fallback_paths=[f"/skills/{slug}/versions/{version}/content"],
+        )
+        self._cache_store.set(
+            cache_key,
+            base64.b64encode(artifact).decode("ascii"),
+            expire=None,
+        )
+        return artifact
 
     def close(self) -> None:
         """Close the owned HTTP client."""
@@ -325,6 +358,10 @@ class RegistryClient:
         response = self._request("GET", path)
         return response.text
 
+    def _get_bytes(self, path: str) -> bytes:
+        response = self._request("GET", path)
+        return response.content
+
     def _get_text_with_fallback_paths(
         self,
         *,
@@ -338,6 +375,26 @@ class RegistryClient:
         for index, path in enumerate(paths):
             try:
                 return self._get_text(path)
+            except (InvalidCoordinateError, UnexpectedRegistryResponseError) as exc:
+                last_error = exc
+                if index == len(paths) - 1:
+                    raise
+        assert last_error is not None
+        raise last_error
+
+    def _get_bytes_with_fallback_paths(
+        self,
+        *,
+        primary_path: str,
+        fallback_paths: list[str],
+    ) -> bytes:
+        """Try one binary path and fall back to legacy runtime paths."""
+
+        paths = [primary_path, *fallback_paths]
+        last_error: AptitudeResolverError | None = None
+        for index, path in enumerate(paths):
+            try:
+                return self._get_bytes(path)
             except (InvalidCoordinateError, UnexpectedRegistryResponseError) as exc:
                 last_error = exc
                 if index == len(paths) - 1:
@@ -390,8 +447,23 @@ class RegistryClient:
 
     def _raise_for_error_response(self, response: httpx.Response) -> None:
         try:
-            envelope = ErrorEnvelope.model_validate(response.json())
-        except (ValueError, ValidationError) as exc:
+            payload = response.json()
+        except ValueError as exc:
+            raise UnexpectedRegistryResponseError(
+                "Registry returned a malformed error response."
+            ) from exc
+
+        try:
+            envelope = ErrorEnvelope.model_validate(payload)
+        except ValidationError as exc:
+            if (
+                response.status_code == 404
+                and isinstance(payload, dict)
+                and payload.get("detail") == "Not Found"
+            ):
+                raise InvalidCoordinateError(
+                    "Registry route did not match the supplied coordinate."
+                ) from exc
             raise UnexpectedRegistryResponseError(
                 "Registry returned a malformed error response."
             ) from exc

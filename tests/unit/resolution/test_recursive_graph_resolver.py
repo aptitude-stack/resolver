@@ -11,6 +11,7 @@ from aptitude_resolver.domain.models import (
     DependencySpec,
     SkillCoordinate,
     SkillMetadata,
+    VersionSummary,
 )
 from aptitude_resolver.resolution.graph import resolve_recursive_graph
 
@@ -21,6 +22,7 @@ class FakeRegistryClient:
         self.dependencies_by_coordinate: dict[
             tuple[str, str], list[DependencySpec]
         ] = {}
+        self.versions_by_slug: dict[str, list[VersionSummary]] = {}
 
     def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
         try:
@@ -34,6 +36,9 @@ class FakeRegistryClient:
         self, slug: str, version: str
     ) -> list[DependencySpec]:
         return list(self.dependencies_by_coordinate.get((slug, version), []))
+
+    def list_skill_versions(self, slug: str) -> list[VersionSummary]:
+        return list(self.versions_by_slug.get(slug, []))
 
 
 def _metadata(slug: str, version: str, *, name: str) -> SkillMetadata:
@@ -55,6 +60,33 @@ def _metadata(slug: str, version: str, *, name: str) -> SkillMetadata:
         lifecycle_status="published",
         trust_tier="internal",
         published_at="2026-03-18T00:00:00Z",
+    )
+
+
+def _version_summary(
+    slug: str,
+    version: str,
+    *,
+    is_current_default: bool = False,
+) -> VersionSummary:
+    metadata = _metadata(slug, version, name=slug.replace(".", " ").title())
+    return VersionSummary(
+        coordinate=metadata.coordinate,
+        name=metadata.name,
+        description=metadata.description,
+        tags=list(metadata.tags),
+        headers=dict(metadata.headers),
+        rendered_summary=metadata.rendered_summary,
+        lifecycle_status=metadata.lifecycle_status,
+        trust_tier=metadata.trust_tier,
+        published_at=metadata.published_at,
+        content_checksum_algorithm=metadata.content_checksum_algorithm,
+        content_checksum_digest=metadata.content_checksum_digest,
+        content_size_bytes=metadata.content_size_bytes,
+        token_estimate=metadata.token_estimate,
+        maturity_score=metadata.maturity_score,
+        security_score=metadata.security_score,
+        is_current_default=is_current_default,
     )
 
 
@@ -131,6 +163,61 @@ def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
         "resolved_version": "1.0.0",
         "optional": False,
         "markers": [],
+    }
+
+
+def test_recursive_graph_resolver_selects_version_for_dependency_constraint() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.metadata_by_coordinate[("python.test", "1.0.0")] = _metadata(
+        "python.test",
+        "1.0.0",
+        name="Python Test",
+    )
+    registry_client.metadata_by_coordinate[("python.lint", "2.1.0")] = _metadata(
+        "python.lint",
+        "2.1.0",
+        name="Python Lint",
+    )
+    registry_client.metadata_by_coordinate[("python.lint", "3.0.0")] = _metadata(
+        "python.lint",
+        "3.0.0",
+        name="Python Lint",
+    )
+    registry_client.versions_by_slug["python.lint"] = [
+        _version_summary("python.lint", "3.0.0", is_current_default=True),
+        _version_summary("python.lint", "2.1.0"),
+    ]
+    registry_client.dependencies_by_coordinate[("python.test", "1.0.0")] = [
+        DependencySpec(
+            slug="python.lint",
+            version_constraint=">=2.0.0,<3.0.0",
+        )
+    ]
+
+    graph, trace = resolve_recursive_graph(
+        SkillCoordinate(slug="python.test", version="1.0.0"),
+        registry_client,
+    )
+
+    assert [item.coordinate for item in graph.nodes] == [
+        SkillCoordinate(slug="python.lint", version="2.1.0"),
+        SkillCoordinate(slug="python.test", version="1.0.0"),
+    ]
+    assert graph.edges[0].target == SkillCoordinate(slug="python.lint", version="2.1.0")
+    assert [item.slug for item in graph.install_order] == [
+        "python.lint",
+        "python.test",
+    ]
+    constraint_trace = next(
+        item for item in trace if item.action == "select_dependency_version"
+    )
+    assert constraint_trace.data == {
+        "source_slug": "python.test",
+        "source_version": "1.0.0",
+        "dependency_slug": "python.lint",
+        "version_constraint": ">=2.0.0,<3.0.0",
+        "resolved_version": "2.1.0",
+        "candidate_versions": ["2.1.0"],
     }
 
 

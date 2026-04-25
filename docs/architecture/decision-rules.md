@@ -17,6 +17,7 @@ You must:
 Do not:
 
 - put business logic in CLI or wizard handlers
+- put business logic in MCP tools or resources
 - put solver logic in `application/`
 - let `discovery/` perform final root selection
 - let `execution/` re-resolve dependencies
@@ -25,6 +26,19 @@ Do not:
 ## Execution Rules
 
 Execution must operate from lock data only.
+
+Parallel materialization is allowed only after a lockfile has defined the
+install order. Workers may fetch compressed locked artifacts and extract verified
+archives inside a staging directory, but final result ordering and trace ordering
+must be derived from the lock install order rather than worker completion order.
+Download concurrency and extraction concurrency are separate execution controls;
+do not add normal install/sync CLI flags for these knobs unless the CLI contract
+is intentionally expanded.
+
+Artifact checksums must be verified against downloaded compressed bytes before
+archive extraction unless the registry metadata explicitly defines a different
+checksum scope. Archive extraction must reject unsafe paths, links, device
+members, and any member that could escape the target skill directory.
 
 Do not:
 
@@ -66,6 +80,7 @@ When behavior or boundaries change, update the canonical docs in the same change
 
 - [system-overview.md](system-overview.md)
 - [decision-rules.md](decision-rules.md)
+- [mcp-interface.md](mcp-interface.md) when MCP tools, resources, prompts, transport, or output formatting change
 - [selection-and-governance.md](selection-and-governance.md) when applicable
 
 Also update supporting docs when needed:

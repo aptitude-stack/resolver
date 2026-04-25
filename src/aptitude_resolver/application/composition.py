@@ -24,9 +24,11 @@ from aptitude_resolver.application.use_cases import (
 )
 from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
+from aptitude_resolver.execution import MaterializationOptions
 from aptitude_resolver.registry import RegistryClient
 from aptitude_resolver.shared.config import (
     AptitudeConfig,
+    ExecutionConfig,
     PolicyConfig,
     SelectionConfig,
     Settings,
@@ -35,6 +37,7 @@ from aptitude_resolver.shared.config import (
     load_system_aptitude_config,
     load_user_aptitude_config,
     load_workspace_aptitude_config,
+    read_env_execution_overrides,
     read_env_selection_overrides,
     resolve_system_config_path,
     resolve_user_config_path,
@@ -67,6 +70,7 @@ class _ConfigLayerState:
     path: Path | None = None
     selection: SelectionConfig | None = None
     policy: PolicyConfig | None = None
+    execution: ExecutionConfig | None = None
 
 
 def build_registry_client() -> tuple[RegistryClient, Callable[[], None]]:
@@ -103,6 +107,10 @@ def _default_policy_config() -> PolicyConfig:
     )
 
 
+def _default_execution_config() -> ExecutionConfig:
+    return ExecutionConfig()
+
+
 def _load_optional_config(
     loader: Callable[[], AptitudeConfig | None],
     source_name: str,
@@ -128,6 +136,7 @@ def _file_config_layer(
         active=config is not None,
         selection=None if config is None else config.selection,
         policy=None if config is None else config.policy,
+        execution=None if config is None else config.execution,
     )
 
 
@@ -142,6 +151,11 @@ def _config_layers(
     max_content_size_bytes_override: int | None = None,
 ) -> list[_ConfigLayerState]:
     workspace_path = discover_workspace_config_path(cwd)
+    try:
+        env_execution = read_env_execution_overrides()
+    except ValueError as exc:
+        raise InvalidResolverConfigurationError("environment", str(exc)) from exc
+    env_selection = read_env_selection_overrides()
     cli_selection = (
         SelectionConfig(
             profile=selection_profile_override,
@@ -177,6 +191,7 @@ def _config_layers(
             active=True,
             selection=_default_selection_config(),
             policy=_default_policy_config(),
+            execution=_default_execution_config(),
         ),
         _file_config_layer(
             source="system_config",
@@ -199,8 +214,9 @@ def _config_layers(
         _ConfigLayerState(
             source="environment",
             label="environment",
-            active=read_env_selection_overrides() is not None,
-            selection=read_env_selection_overrides(),
+            active=env_selection is not None or env_execution is not None,
+            selection=env_selection,
+            execution=env_execution,
         ),
         _ConfigLayerState(
             source="cli_override",
@@ -269,6 +285,25 @@ def _effective_policy_context_from_layers(
     return policy
 
 
+def _effective_materialization_options_from_layers(
+    layers: list[_ConfigLayerState],
+) -> MaterializationOptions:
+    concurrent_downloads: int | None = None
+    concurrent_installs: int | None = None
+    for layer in layers:
+        execution_config = layer.execution
+        if execution_config is None:
+            continue
+        if execution_config.concurrent_downloads is not None:
+            concurrent_downloads = execution_config.concurrent_downloads
+        if execution_config.concurrent_installs is not None:
+            concurrent_installs = execution_config.concurrent_installs
+    return MaterializationOptions(
+        concurrent_downloads=concurrent_downloads,
+        concurrent_installs=concurrent_installs,
+    )
+
+
 def _effective_selection_preferences(
     *,
     selection_profile_override: str | None = None,
@@ -282,6 +317,13 @@ def _effective_selection_preferences(
             interaction_mode_override=interaction_mode_override,
         )
     )
+
+
+def _effective_materialization_options(
+    *,
+    cwd: Path | None = None,
+) -> MaterializationOptions:
+    return _effective_materialization_options_from_layers(_config_layers(cwd=cwd))
 
 
 def _effective_policy_context(
@@ -539,10 +581,12 @@ def build_install_use_case(
 ) -> tuple[InstallSkillUseCase, Callable[[], None]]:
     """Create the install use case and its cleanup hook."""
 
+    materialization_options = _effective_materialization_options(cwd=cwd)
     registry_client, close = build_registry_client()
     return (
         InstallSkillUseCase(
             registry_client,
+            materialization_options=materialization_options,
             policy_context=_effective_policy_context(
                 allowed_trust_tiers_override=allowed_trust_tiers_override,
                 allowed_lifecycle_statuses_override=allowed_lifecycle_statuses_override,
@@ -626,8 +670,18 @@ def build_inspect_use_case(
     )
 
 
-def build_sync_use_case() -> tuple[SyncFromLockUseCase, Callable[[], None]]:
+def build_sync_use_case(
+    *,
+    cwd: Path | None = None,
+) -> tuple[SyncFromLockUseCase, Callable[[], None]]:
     """Create the sync use case and its cleanup hook."""
 
+    materialization_options = _effective_materialization_options(cwd=cwd)
     registry_client, close = build_registry_client()
-    return SyncFromLockUseCase(registry_client), close
+    return (
+        SyncFromLockUseCase(
+            registry_client,
+            materialization_options=materialization_options,
+        ),
+        close,
+    )

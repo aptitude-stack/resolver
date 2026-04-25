@@ -17,7 +17,11 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
 )
 from aptitude_resolver.domain.errors import InvalidLockfileError
 from aptitude_resolver.domain.tracing import TraceEntry
-from aptitude_resolver.execution import build_execution_plan, materialize_lockfile
+from aptitude_resolver.execution import (
+    MaterializationOptions,
+    build_execution_plan,
+    materialize_lockfile,
+)
 from aptitude_resolver.lockfile import load_lockfile
 from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
@@ -25,21 +29,29 @@ from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 class SyncRegistryPort(Protocol):
     """Registry operations required for lock-driven sync."""
 
-    def fetch_skill_content(
+    def fetch_skill_artifact(
         self,
         slug: str,
         version: str,
         *,
         checksum_algorithm: str | None = None,
         checksum_digest: str | None = None,
-    ) -> str: ...
+    ) -> bytes: ...
 
 
 class SyncFromLockUseCase:
     """Materialize a locked system without discovery or resolution."""
 
-    def __init__(self, registry_client: SyncRegistryPort) -> None:
+    def __init__(
+        self,
+        registry_client: SyncRegistryPort,
+        *,
+        materialization_options: MaterializationOptions | None = None,
+    ) -> None:
         self._registry_client = registry_client
+        self._materialization_options = (
+            materialization_options or MaterializationOptions()
+        )
 
     def execute(self, request: SyncRequestDto) -> SyncResultDto:
         telemetry = TelemetryCollector()
@@ -68,6 +80,7 @@ class SyncFromLockUseCase:
                     lockfile=lockfile,
                     registry_client=self._registry_client,
                     execution_plan=execution_plan,
+                    options=self._materialization_options,
                 )
             trace.extend(materialization.trace)
 

@@ -23,7 +23,7 @@ Aptitude Resolver is a Python resolver for:
 - deterministic dependency resolution
 - governance before lock generation
 - lock generation, parse, and replay
-- lock-driven execution planning and materialization
+- lock-driven execution planning and verified `tar.zst` artifact materialization
 
 Current public CLI commands:
 
@@ -62,6 +62,7 @@ Planned but not yet implemented as packages:
 - keep application orchestration-focused
 - keep discovery separate from final selection and solving
 - keep execution lock-driven
+- treat materialization payloads as archive artifacts even when the endpoint path is named `/content`
 - treat the server as a source of facts, not the final decision-maker
 
 ## Documentation Discipline

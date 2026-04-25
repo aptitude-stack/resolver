@@ -1056,6 +1056,21 @@ def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailab
         "run_cli_wizard",
         lambda **kwargs: calls.append(kwargs),
     )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
+
+    result = runner.invoke(
+        app_module.app,
+        ["install", "python lint", "--target", str(target)],
+    )
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert "Installation Summary" in result.stdout
 
 
 def _policy_report() -> EffectivePolicyReportDto:
@@ -1154,21 +1169,6 @@ def _policy_report() -> EffectivePolicyReportDto:
             ),
         ),
     )
-    monkeypatch.setattr(
-        app_module,
-        "build_install_use_case",
-        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
-    )
-
-    result = runner.invoke(
-        app_module.app,
-        ["install", "python lint", "--target", str(target)],
-    )
-
-    assert result.exit_code == 0
-    assert calls == []
-    assert close_calls == ["closed"]
-    assert "Installation Summary" in result.stdout
 
 
 def test_cli_install_with_advanced_flags_bypasses_wizard_launch(

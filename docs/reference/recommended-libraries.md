@@ -19,6 +19,8 @@ These are already part of the resolver:
 - `tenacity`: transient retry handling
 - `structlog`: structured logging
 - `tomli`: compatibility parsing on older Python runtimes
+- `zstandard`: zstd fallback for Python versions before the Python 3.14
+  `compression.zstd` standard-library module
 
 ## Current Dev Dependencies
 

@@ -18,6 +18,9 @@ Common high-signal slices:
 - `tests/unit/application/`
 - `tests/unit/resolution/`
 - `tests/unit/lockfile/`
+- `tests/unit/execution/test_materialize.py`
+- `tests/unit/registry/test_client.py`
+- `tests/unit/shared/config/test_aptitude_config.py`
 - `tests/unit/shared/test_imports.py`
 
 ## Full Verification

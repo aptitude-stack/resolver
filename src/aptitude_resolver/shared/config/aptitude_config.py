@@ -7,7 +7,7 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -33,11 +33,19 @@ class PolicyConfig(BaseModel):
     max_total_content_size_bytes: int | None = None
 
 
+class ExecutionConfig(BaseModel):
+    """Raw execution config values loaded from files or environment."""
+
+    concurrent_downloads: int | None = Field(default=None, ge=1)
+    concurrent_installs: int | None = Field(default=None, ge=1)
+
+
 class AptitudeConfig(BaseModel):
     """Raw workspace or user config loaded from aptitude.toml."""
 
     selection: SelectionConfig | None = None
     policy: PolicyConfig | None = None
+    execution: ExecutionConfig | None = None
 
 
 def resolve_user_config_path(
@@ -189,3 +197,30 @@ def read_env_selection_overrides(
         profile=profile,
         interaction_mode=interaction_mode,
     )
+
+
+def read_env_execution_overrides(
+    env: Mapping[str, str] | None = None,
+) -> ExecutionConfig | None:
+    """Read execution preference overrides from environment variables."""
+
+    env_map = os.environ if env is None else env
+    concurrent_downloads = env_map.get("APTITUDE_CONCURRENT_DOWNLOADS")
+    concurrent_installs = env_map.get("APTITUDE_CONCURRENT_INSTALLS")
+    if concurrent_downloads is None and concurrent_installs is None:
+        return None
+    try:
+        return ExecutionConfig(
+            concurrent_downloads=(
+                None if concurrent_downloads is None else int(concurrent_downloads)
+            ),
+            concurrent_installs=(
+                None if concurrent_installs is None else int(concurrent_installs)
+            ),
+        )
+    except (ValueError, ValidationError) as exc:
+        raise ValueError(
+            "Invalid environment execution config: "
+            "APTITUDE_CONCURRENT_DOWNLOADS and APTITUDE_CONCURRENT_INSTALLS must be "
+            "integers greater than or equal to 1."
+        ) from exc

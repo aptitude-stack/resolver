@@ -15,6 +15,7 @@ from aptitude_resolver.application.use_cases import (
 from aptitude_resolver.domain.errors import InvalidResolverConfigurationError
 from aptitude_resolver.shared.config.aptitude_config import (
     AptitudeConfig,
+    ExecutionConfig,
     PolicyConfig,
     SelectionConfig,
 )
@@ -71,6 +72,44 @@ def test_build_install_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
 
     close()
 
+    assert FakeRegistryClient.instances[0].closed is True
+
+
+def test_build_install_use_case_applies_effective_materialization_options(
+    monkeypatch,
+) -> None:
+    FakeRegistryClient.instances = []
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+    monkeypatch.setattr(
+        composition,
+        "load_user_aptitude_config",
+        lambda: AptitudeConfig(
+            execution=ExecutionConfig(concurrent_downloads=2, concurrent_installs=2)
+        ),
+    )
+    monkeypatch.setattr(
+        composition,
+        "load_workspace_aptitude_config",
+        lambda cwd=None: AptitudeConfig(
+            execution=ExecutionConfig(concurrent_downloads=4, concurrent_installs=4)
+        ),
+    )
+    monkeypatch.setattr(
+        composition,
+        "read_env_execution_overrides",
+        lambda env=None: ExecutionConfig(
+            concurrent_downloads=8,
+            concurrent_installs=6,
+        ),
+    )
+
+    use_case, close = composition.build_install_use_case()
+
+    assert use_case._materialization_options.concurrent_downloads == 8
+    assert use_case._materialization_options.concurrent_installs == 6
+
+    close()
     assert FakeRegistryClient.instances[0].closed is True
 
 
@@ -585,3 +624,21 @@ def test_build_sync_use_case_wires_registry_and_cleanup(monkeypatch) -> None:
     close()
 
     assert FakeRegistryClient.instances[0].closed is True
+
+
+def test_build_sync_use_case_raises_for_invalid_execution_environment(
+    monkeypatch,
+) -> None:
+    FakeRegistryClient.instances = []
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+    monkeypatch.setattr(
+        composition,
+        "read_env_execution_overrides",
+        lambda env=None: (_ for _ in ()).throw(ValueError("bad execution config")),
+    )
+
+    with pytest.raises(InvalidResolverConfigurationError) as exc_info:
+        composition.build_sync_use_case()
+
+    assert exc_info.value.source == "environment"

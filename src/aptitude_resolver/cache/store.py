@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,7 @@ class CacheStore:
         self._cache_dir = (cache_dir or default_cache_dir()).resolve()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._cache = Cache(str(self._cache_dir), disk=JSONDisk)
+        self._lock = threading.RLock()
 
     @property
     def cache_dir(self) -> Path:
@@ -57,10 +59,13 @@ class CacheStore:
         return type(self._cache.disk)
 
     def get(self, key: str) -> Any | None:
-        return self._cache.get(key, default=None)
+        with self._lock:
+            return self._cache.get(key, default=None)
 
     def set(self, key: str, value: Any, *, expire: int | None = None) -> None:
-        self._cache.set(key, value, expire=expire)
+        with self._lock:
+            self._cache.set(key, value, expire=expire)
 
     def close(self) -> None:
-        self._cache.close()
+        with self._lock:
+            self._cache.close()

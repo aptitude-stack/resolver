@@ -22,6 +22,8 @@ class SearchRegistryPort(Protocol):
 
     def list_skill_versions(self, slug: str): ...
 
+    def fetch_skill_metadata(self, slug: str, version: str): ...
+
 
 class SearchSkillsUseCase:
     """Search skills without materializing or resolving a dependency graph."""

@@ -32,3 +32,11 @@ def content_key(*, algorithm: str, digest: str) -> str:
 
 def coordinate_content_key(slug: str, version: str) -> str:
     return f"content-coordinate:{slug}@{version}"
+
+
+def artifact_key(*, algorithm: str, digest: str) -> str:
+    return f"artifact:{algorithm}:{digest}"
+
+
+def coordinate_artifact_key(slug: str, version: str) -> str:
+    return f"artifact-coordinate:{slug}@{version}"

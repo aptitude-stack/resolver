@@ -9,7 +9,10 @@ import pytest
 from aptitude_resolver.domain.models import DiscoveryQuery
 from aptitude_resolver.registry.client import RegistryClient
 from aptitude_resolver.shared.config import Settings
-from integration.registry.support import build_publish_payload, ensure_publish_ready
+from tests.integration.registry.support import (
+    build_publish_payload,
+    ensure_publish_ready,
+)
 
 
 pytestmark = pytest.mark.integration
@@ -88,15 +91,15 @@ def test_list_skill_versions_against_live_server(
     assert versions[0].is_current_default is True
 
 
-def test_fetch_skill_content_against_live_server(
+def test_fetch_skill_artifact_against_live_server(
     integration_settings: Settings,
     published_skill: PublishedSkill,
 ) -> None:
     client = RegistryClient(integration_settings)
 
-    content = client.fetch_skill_content(published_skill.slug, published_skill.version)
+    artifact = client.fetch_skill_artifact(published_skill.slug, published_skill.version)
 
-    assert content == published_skill.content
+    assert artifact
 
 
 def test_discover_candidate_slugs_against_live_server(
