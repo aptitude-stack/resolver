@@ -1,14 +1,3 @@
-# Aptitude Resolver
-
-Aptitude Resolver is a deterministic, package-manager-style resolver for AI skills.
-
-It turns a human request for a skill into a governed install plan: discovery, candidate selection, dependency resolution, policy checks, lockfile generation, and local materialization.
-
-The resolver is the client-side half of Aptitude:
-
-- Aptitude Server owns registry data, metadata, immutable artifacts, and discovery indexes.
-- Aptitude Resolver owns intent handling, candidate selection, dependency solving, governance, lock generation, and execution planning.
-
 ## Install
 
 Install the published package as a CLI tool:

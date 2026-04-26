@@ -31,7 +31,7 @@ Internal preview command:
 
 Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
-`aptitude mcp` starts the local stdio MCP server for agent hosts. For published, no-install MCP use, launch it as `uvx aptitude-resolver mcp`.
+`aptitude mcp` starts the local stdio MCP server for agent hosts. For published, no-install MCP use, launch the PyPI distribution as `uvx aptitude-resolver mcp`.
 
 ## How To Install
 
