@@ -23,8 +23,10 @@ The MCP server does not redefine resolver, governance, lockfile, registry, or ex
 The public entrypoint is:
 
 ```bash
-aptitude-mcp
+uvx aptitude-resolver mcp
 ```
+
+The direct installed-tool entrypoint remains `aptitude-mcp`.
 
 The v1 transport is local `stdio`. This is the right fit for local desktop and coding-agent clients such as Claude Desktop, Claude Code, Cursor, Windsurf-style clients, and MCP Inspector.
 

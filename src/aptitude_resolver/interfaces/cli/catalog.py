@@ -284,6 +284,21 @@ COMMANDS = {
             "lists every supported command and flag the app exposes",
         ),
     ),
+    "mcp": CommandSurface(
+        name="mcp",
+        audience="public",
+        summary="run the local stdio MCP server",
+        usage="{cli} mcp",
+        description="Run the local stdio MCP server for MCP-compatible agent hosts.",
+        examples=(
+            "{cli} mcp",
+            "uvx aptitude-resolver mcp",
+        ),
+        note_lines=(
+            "intended for MCP hosts, not an interactive human terminal",
+            "uses stdio transport and keeps diagnostics off stdout",
+        ),
+    ),
     "policy": CommandSurface(
         name="policy",
         audience="public",
@@ -386,6 +401,7 @@ def build_root_help(program_name: str | None = None) -> str:
         COMMANDS["sync"],
         COMMANDS["policy"],
         COMMANDS["manifest"],
+        COMMANDS["mcp"],
     )
     lines = [
         "Aptitude.",
@@ -431,8 +447,9 @@ def build_root_help(program_name: str | None = None) -> str:
                 program_name=program_name,
             ),
             "  " + _render_command_text("{cli} manifest", program_name=program_name),
+            "  " + _render_command_text("{cli} mcp", program_name=program_name),
             "",
-            "Use `install --help` or `sync --help` for command-specific options, or `manifest` for the full surface.",
+            "Use `install --help`, `sync --help`, or `mcp --help` for command-specific options, or `manifest` for the full surface.",
         ]
     )
     return "\n".join(lines)
@@ -488,6 +505,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
         COMMANDS["sync"],
         COMMANDS["policy"],
         COMMANDS["manifest"],
+        COMMANDS["mcp"],
     )
     advanced_commands = (COMMANDS["resolve"],)
     global_flags = (
@@ -568,6 +586,10 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
         Text(
             "manifest "
             + _render_command_text("{cli} manifest", program_name=program_name),
+            style=THEME.text_primary,
+        ),
+        Text(
+            "mcp      " + _render_command_text("{cli} mcp", program_name=program_name),
             style=THEME.text_primary,
         ),
         Text(

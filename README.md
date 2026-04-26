@@ -23,7 +23,7 @@ Primary commands:
 - `aptitude policy show`
 - `aptitude sync --lock aptitude.lock.json`
 - `aptitude manifest`
-- `aptitude-mcp`
+- `aptitude mcp`
 
 Internal preview command:
 
@@ -31,7 +31,7 @@ Internal preview command:
 
 Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
-`aptitude-mcp` starts the local stdio MCP server for agent hosts.
+`aptitude mcp` starts the local stdio MCP server for agent hosts. For published, no-install MCP use, launch the PyPI distribution as `uvx aptitude-resolver mcp`.
 
 ## How To Install
 
@@ -50,6 +50,7 @@ This project builds and publishes as a normal Python package. `uv` is the build 
 The packaging metadata lives in `pyproject.toml`:
 
 - `[project]` defines the package name, version, dependencies, and console entry point
+- `[project].readme` points at `PYPI.md`, which is the public project description rendered on PyPI
 - `[project.scripts]` exposes `aptitude-resolver` and `aptitude`, both mapped to `aptitude_resolver.interfaces.cli.main:main`, plus `aptitude-mcp` mapped to `aptitude_resolver.interfaces.mcp.main:main`
 - `[build-system]` tells `uv` to build the package with `uv_build`
 
@@ -67,6 +68,22 @@ dist/*.tar.gz
 ```
 
 The wheel is the main installable artifact. It contains the `aptitude_resolver` package, its dependency metadata, and both console scripts.
+
+### PyPI Project Ownership
+
+The public PyPI project is `aptitude-resolver`. Keep that package name when moving ownership into the `Aptitude` PyPI organization.
+
+If the project is still owned by a personal PyPI account, transfer that existing project into the `Aptitude` PyPI organization.
+
+Do not delete the personal project and recreate it under the organization. Deletion is disruptive for downstream users, and PyPI still prevents reusing previously uploaded distribution filenames.
+
+Recommended organization migration:
+
+1. Sign in to PyPI as an owner of `aptitude-resolver`.
+2. Open the `Aptitude` organization project settings.
+3. Use PyPI's transfer action to move the existing `aptitude-resolver` project into the organization.
+4. Reconfigure the trusted publisher on the transferred project for this GitHub repository, the workflow file `publish.yml`, and the GitHub Environment `pypi`.
+5. Publish only a new version. Never try to re-upload an already published version.
 
 For a local manual publish with a PyPI API token:
 
@@ -140,7 +157,7 @@ PYTHONPATH=src .venv/bin/python -m aptitude_resolver install "Postman Primary Sk
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver policy show
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver sync --lock aptitude.lock.json
 PYTHONPATH=src .venv/bin/python -m aptitude_resolver manifest
-uv run aptitude-mcp
+uv run aptitude-resolver mcp
 ```
 
 The no-args entrypoint launches the install-first wizard. Use `install` for fresh planning from a query, `policy show` to inspect the effective local client policy and config layers, `sync --lock` for replaying an existing lockfile, and `manifest` for the full capability map. For development, `python -m aptitude_resolver` is the canonical module entrypoint.
@@ -162,25 +179,28 @@ uvx aptitude-resolver
 uvx aptitude-resolver install "Postman Primary Skill"
 uvx aptitude-resolver policy show
 uvx aptitude-resolver sync
+uvx aptitude-resolver mcp
 ```
 
 ## MCP Server
 
 Aptitude ships a local MCP server for agents and MCP-compatible apps. It uses stdio by default and exposes tools for search, inspect, resolve, policy inspection, install, and sync.
 
-For Claude Desktop-style local configuration, point the MCP client at the package entrypoint:
+For Claude Desktop-style local configuration from the published PyPI package, point the MCP client at `uvx`:
 
 ```json
 {
   "mcpServers": {
     "aptitude": {
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "--directory",
-        "C:\\Dev\\apptitude-client\\aptitude-client",
-        "run",
-        "aptitude-mcp"
-      ]
+        "aptitude-resolver",
+        "mcp"
+      ],
+      "env": {
+        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
+        "APTITUDE_READ_TOKEN": "your-local-read-token"
+      }
     }
   }
 }
@@ -189,14 +209,21 @@ For Claude Desktop-style local configuration, point the MCP client at the packag
 For coding-agent clients that accept command/args MCP definitions, use the same command:
 
 ```text
-command: uv
-args: --directory C:\Dev\apptitude-client\aptitude-client run aptitude-mcp
+command: uvx
+args: aptitude-resolver mcp
+```
+
+If the package is installed as a persistent tool, the direct `aptitude-mcp` executable is still available:
+
+```text
+command: aptitude-mcp
+args:
 ```
 
 Inspect the server locally:
 
 ```bash
-npx -y @modelcontextprotocol/inspector uv --directory C:\Dev\apptitude-client\aptitude-client run aptitude-mcp
+npx -y @modelcontextprotocol/inspector uvx aptitude-resolver mcp
 ```
 
 Mutating MCP tools are explicit: `aptitude_install_skill` and `aptitude_sync_lock` require target paths and are annotated as destructive. Read-only tools are available for planning and review before materialization.
