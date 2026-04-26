@@ -90,6 +90,7 @@ def configure_help_surfaces(program_name: str | None = None) -> None:
         "install": "install",
         "sync": "sync",
         "manifest": "manifest",
+        "mcp": "mcp",
         "show_policy": "policy_show",
     }
     for command_info in app.registered_commands:
@@ -132,6 +133,15 @@ def main(
     ),
 ) -> None:
     """Aptitude CLI root command group."""
+
+
+@app.command(help=build_command_help("mcp"))
+def mcp() -> None:
+    """Run the local stdio MCP server."""
+
+    from aptitude_resolver.interfaces.mcp.main import main as run_mcp_server
+
+    run_mcp_server()
 
 
 def _format_error(error: AptitudeResolverError) -> str:

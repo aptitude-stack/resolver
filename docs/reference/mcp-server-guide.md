@@ -172,8 +172,8 @@ aptitude policy show
 6. Configure the MCP client:
 
 ```text
-command: aptitude-mcp
-args:
+command: uvx
+args: aptitude-resolver mcp
 ```
 
 ### What The User Needs From The Team
@@ -202,19 +202,21 @@ Do not run `aptitude-mcp` directly in a normal terminal expecting a human UI. It
 
 ## MCP Client Configuration
 
-For clients that accept a JSON MCP configuration, use:
+For clients that accept a JSON MCP configuration and should run the published PyPI package locally, use:
 
 ```json
 {
   "mcpServers": {
     "aptitude": {
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "--directory",
-        "C:\\Dev\\apptitude-client\\aptitude-client",
-        "run",
-        "aptitude-mcp"
-      ]
+        "aptitude-resolver",
+        "mcp"
+      ],
+      "env": {
+        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
+        "APTITUDE_READ_TOKEN": "your-local-read-token"
+      }
     }
   }
 }
@@ -223,11 +225,11 @@ For clients that accept a JSON MCP configuration, use:
 For clients that use command and args fields:
 
 ```text
-command: uv
-args: --directory C:\Dev\apptitude-client\aptitude-client run aptitude-mcp
+command: uvx
+args: aptitude-resolver mcp
 ```
 
-If Aptitude is installed as a tool or package, the command can be simplified to:
+If Aptitude is installed as a tool or package, the command can be simplified to the direct MCP entrypoint:
 
 ```text
 command: aptitude-mcp

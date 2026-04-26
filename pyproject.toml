@@ -1,8 +1,8 @@
 [project]
 name = "aptitude-resolver"
-version = "0.0.9"
+version = "0.0.12"
 description = "Deterministic package-manager-style resolver for AI skills"
-readme = "README.md"
+readme = "PYPI.md"
 requires-python = ">=3.10"
 dependencies = [
     "diskcache>=5.6",
