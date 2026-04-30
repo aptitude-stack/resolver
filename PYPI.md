@@ -46,14 +46,13 @@ uvx aptitude-resolver mcp
 
 ## Configure Registry Access
 
-Registry-backed commands need an Aptitude Server URL and read token:
+Registry-backed commands use the public Aptitude registry by default. Provide a read token:
 
 ```bash
-export APTITUDE_SERVER_BASE_URL=https://your-aptitude-server.example
 export APTITUDE_READ_TOKEN=your-read-token
 ```
 
-For local development against the default server:
+Override the registry URL only for local development or self-hosted registries:
 
 ```bash
 export APTITUDE_SERVER_BASE_URL=http://localhost:8000
@@ -112,7 +111,6 @@ Aptitude ships a local stdio MCP server for agents and MCP-compatible apps. The 
         "mcp"
       ],
       "env": {
-        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
         "APTITUDE_READ_TOKEN": "your-local-read-token"
       }
     }
@@ -133,7 +131,6 @@ If Aptitude is already installed as a persistent tool, MCP hosts can also use th
       "command": "aptitude-mcp",
       "args": [],
       "env": {
-        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
         "APTITUDE_READ_TOKEN": "your-local-read-token"
       }
     }

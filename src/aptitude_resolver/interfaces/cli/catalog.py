@@ -417,8 +417,9 @@ def build_root_help(program_name: str | None = None) -> str:
         [
             "",
             "Required environment:",
-            "  APTITUDE_SERVER_BASE_URL   registry base URL",
             "  APTITUDE_READ_TOKEN        registry read token",
+            "Optional environment:",
+            "  APTITUDE_SERVER_BASE_URL   registry URL override",
             "",
             "Examples:",
             "  "
