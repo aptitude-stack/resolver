@@ -1,6 +1,6 @@
 [project]
 name = "aptitude-resolver"
-version = "0.1.4"
+version = "0.1.6"
 description = "Deterministic package-manager-style resolver for AI skills"
 readme = "PYPI.md"
 requires-python = ">=3.10"
@@ -61,7 +61,7 @@ aptitude = "aptitude_resolver.interfaces.cli.main:main"
 aptitude-mcp = "aptitude_resolver.interfaces.mcp.main:main"
 
 [build-system]
-requires = ["uv_build>=0.10.8,<0.11.0"]
+requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
