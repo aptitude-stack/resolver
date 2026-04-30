@@ -1,6 +1,6 @@
 # Aptitude Resolver
 
-![Aptitude Resolver banner](https://raw.githubusercontent.com/aptitude-stack/resolver/dev/docs/assets/aptitude-resolver-banner.png)
+![Aptitude Resolver banner](https://raw.githubusercontent.com/aptitude-stack/resolver/master/docs/assets/aptitude-resolver-banner.png)
 
 [![PyPI](https://img.shields.io/badge/PyPI-aptitude--resolver-3775A9?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/aptitude-resolver/)
 [![GitHub](https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/aptitude-stack/resolver)
