@@ -30,9 +30,9 @@ Required:
 - Python `>=3.10`
 - `uv`
 - the Aptitude project checkout or the installed `aptitude-resolver` package
-- Aptitude Server connection settings:
-  - `APTITUDE_SERVER_BASE_URL`
+- Aptitude Server access:
   - `APTITUDE_READ_TOKEN`
+  - optional `APTITUDE_SERVER_BASE_URL` override for local or self-hosted registries
 
 Recommended for testing:
 
@@ -102,7 +102,7 @@ APTITUDE_SERVER_BASE_URL=http://localhost:8000
 APTITUDE_READ_TOKEN=reader-token
 ```
 
-Replace these example values with the real Aptitude Server URL and read token. Without these values, registry-backed tools such as search, inspect, resolve, install, and sync cannot talk to the server.
+For the public registry, omit `APTITUDE_SERVER_BASE_URL` and provide only the real read token. For local development, keep the localhost override above. Without a read token, registry-backed tools such as search, inspect, resolve, install, and sync cannot talk to the server.
 
 6. Verify the CLI can start.
 
@@ -151,14 +151,12 @@ uv tool install aptitude-resolver
 4. Configure environment variables in the shell or operating-system environment:
 
 ```bash
-export APTITUDE_SERVER_BASE_URL=https://your-aptitude-server.example
 export APTITUDE_READ_TOKEN=your-read-token
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:APTITUDE_SERVER_BASE_URL = "https://your-aptitude-server.example"
 $env:APTITUDE_READ_TOKEN = "your-read-token"
 ```
 
@@ -214,7 +212,6 @@ For clients that accept a JSON MCP configuration and should run the published Py
         "mcp"
       ],
       "env": {
-        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
         "APTITUDE_READ_TOKEN": "your-local-read-token"
       }
     }

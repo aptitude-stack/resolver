@@ -17,10 +17,11 @@ py -3 -m aptitude_resolver ...
 
 ## Required Environment
 
-Fresh-planning and registry-backed commands require:
+Fresh-planning and registry-backed commands use the public Aptitude registry by default and require:
 
-- `APTITUDE_SERVER_BASE_URL`
 - `APTITUDE_READ_TOKEN`
+
+Set `APTITUDE_SERVER_BASE_URL` only to override the public registry, such as for local development or a self-hosted registry.
 
 These commands need registry access:
 

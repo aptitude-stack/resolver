@@ -1,5 +1,4 @@
 UV ?= UV_CACHE_DIR=.uv-cache uv
-APTITUDE_SERVER_BASE_URL ?= https://aptitude-registry.vercel.app/
 REPOSITORY ?= pypi
 PUBLISH_DIST_DIR ?= .build-publish-dist
 
@@ -56,13 +55,12 @@ typecheck:
 	$(UV) run --extra dev python -m mypy src tests
 
 build:
-	APTITUDE_SERVER_BASE_URL="$(APTITUDE_SERVER_BASE_URL)" $(UV) build --no-sources
+	$(UV) build --no-sources
 
 build-publish:
 	@set -a; \
 	if [ -f .env ]; then . ./.env; fi; \
 	set +a; \
-	export APTITUDE_SERVER_BASE_URL="$${APTITUDE_SERVER_BASE_URL:-$(APTITUDE_SERVER_BASE_URL)}"; \
 	: "$${PYPI_API_TOKEN:=$(PYPI_API_TOKEN)}"; \
 	test -n "$$PYPI_API_TOKEN" || { \
 		printf "\033[1;31merror:\033[0m missing PYPI_API_TOKEN environment variable. Set it in .env or export it in your shell.\n"; \
@@ -75,7 +73,6 @@ build-publish:
 	printf "\033[1;36m==>\033[0m \033[1mBuilding Aptitude distributions\033[0m\n"; \
 	printf "\033[0;36m  Output:\033[0m %s\n" "$(PUBLISH_DIST_DIR)"; \
 	printf "\033[0;36m  Target:\033[0m %s\n\n" "$(REPOSITORY)"; \
-	printf "\033[0;36m  Registry:\033[0m %s\n\n" "$$APTITUDE_SERVER_BASE_URL"; \
 	$(UV) build --no-sources --clear --out-dir "$(PUBLISH_DIST_DIR)"; \
 	printf "\033[1;36m==>\033[0m \033[1mPublishing Aptitude distributions\033[0m\n"; \
 	printf "\033[0;36m  Upload:\033[0m %s\n" "$(PUBLISH_URL)"; \
