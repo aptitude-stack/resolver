@@ -1,3 +1,18 @@
+# Aptitude Resolver
+
+![Aptitude Resolver banner](https://raw.githubusercontent.com/aptitude-stack/resolver/dev/docs/assets/aptitude-resolver-banner.png)
+
+[![PyPI](https://img.shields.io/badge/PyPI-aptitude--resolver-3775A9?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/aptitude-resolver/)
+[![GitHub](https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/aptitude-stack/resolver)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![uv](https://img.shields.io/badge/uv-tooling-6E56CF?style=for-the-badge&logo=uv&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-stdio-111111?style=for-the-badge)
+![Typer](https://img.shields.io/badge/Typer-CLI-009485?style=for-the-badge)
+
+A deterministic, package-manager-style resolver for AI skills.
+
+---
+
 ## Install
 
 Install the published package as a CLI tool:
@@ -20,7 +35,14 @@ The package installs these console commands:
 - `aptitude-mcp`
 
 `aptitude` is the command most users should run.
-For MCP hosts that should launch the published package without a persistent install, use `uvx aptitude-resolver mcp`.
+
+For MCP hosts that should launch the published package without a persistent install, use:
+
+```bash
+uvx aptitude-resolver mcp
+```
+
+---
 
 ## Configure Registry Access
 
@@ -39,6 +61,8 @@ export APTITUDE_READ_TOKEN=reader-token
 ```
 
 `aptitude policy show` can still inspect local policy without contacting the registry.
+
+---
 
 ## Usage
 
@@ -71,6 +95,8 @@ Show the full command and flag surface:
 ```bash
 aptitude manifest
 ```
+
+---
 
 ## MCP Server
 
@@ -117,6 +143,8 @@ If Aptitude is already installed as a persistent tool, MCP hosts can also use th
 
 Replace `APTITUDE_READ_TOKEN` with a token accepted by the target Aptitude Server.
 
+---
+
 ## What Works Today
 
 - discovery-backed query resolution
@@ -127,6 +155,8 @@ Replace `APTITUDE_READ_TOKEN` with a token accepted by the target Aptitude Serve
 - archive-based skill materialization from verified `tar.zst` artifacts
 - local config loading from `aptitude.toml`
 - CLI and MCP interfaces
+
+---
 
 ## Source
 

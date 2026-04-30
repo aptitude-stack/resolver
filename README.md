@@ -1,5 +1,7 @@
 # Aptitude Resolver
 
+![Aptitude Resolver banner](docs/assets/aptitude-resolver-banner.png)
+
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-managed-6E56CF?style=for-the-badge&logo=uv&logoColor=white)
 ![Pydantic](https://img.shields.io/badge/pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
