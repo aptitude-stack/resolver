@@ -13,6 +13,7 @@ _ENVIRONMENT_VARIABLES_BY_FIELD = {
     "read_token": "APTITUDE_READ_TOKEN",
     "server_timeout_seconds": "APTITUDE_SERVER_TIMEOUT_SECONDS",
 }
+DEFAULT_SERVER_BASE_URL = "https://aptitude-registry.vercel.app/"
 
 
 class Settings(BaseSettings):
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    server_base_url: str
+    server_base_url: str = DEFAULT_SERVER_BASE_URL
     read_token: str
     server_timeout_seconds: float = Field(default=5.0, gt=0)
 

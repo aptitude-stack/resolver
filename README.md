@@ -1,3 +1,5 @@
+![Aptitude Resolver banner](docs/assets/aptitude-resolver-banner.png)
+
 # Aptitude Resolver
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -198,7 +200,6 @@ For Claude Desktop-style local configuration from the published PyPI package, po
         "mcp"
       ],
       "env": {
-        "APTITUDE_SERVER_BASE_URL": "http://localhost:8000",
         "APTITUDE_READ_TOKEN": "your-local-read-token"
       }
     }
