@@ -157,8 +157,8 @@ def test_build_registry_client_reports_missing_environment_variables_cleanly(
 
     assert exc_info.value.source == "environment"
     assert (
-        exc_info.value.details == "Missing required environment variables: "
-        "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN."
+        exc_info.value.details
+        == "Missing required environment variables: APTITUDE_READ_TOKEN."
     )
 
 

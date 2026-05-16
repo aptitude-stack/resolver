@@ -34,8 +34,7 @@ def test_format_cli_error_renders_environment_configuration_errors_for_humans() 
     rendered = support.format_cli_error(
         InvalidResolverConfigurationError(
             "environment",
-            "Missing required environment variables: "
-            "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN.",
+            "Missing required environment variables: APTITUDE_READ_TOKEN.",
         )
     )
 
@@ -43,7 +42,7 @@ def test_format_cli_error_renders_environment_configuration_errors_for_humans() 
     assert (
         "────────────────────────────────────────────────────────────────" in rendered
     )
-    assert "APTITUDE_SERVER_BASE_URL" in rendered
+    assert "APTITUDE_SERVER_BASE_URL" not in rendered
     assert "APTITUDE_READ_TOKEN" in rendered
     assert ".env" in rendered
 

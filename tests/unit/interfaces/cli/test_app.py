@@ -748,7 +748,7 @@ def test_cli_install_reports_missing_environment_variables_cleanly(
     assert result.exit_code == 1
     assert result.stdout == ""
     assert "Aptitude is not configured." in result.stderr
-    assert "APTITUDE_SERVER_BASE_URL" in result.stderr
+    assert "APTITUDE_SERVER_BASE_URL" not in result.stderr
     assert "APTITUDE_READ_TOKEN" in result.stderr
     assert ".env" in result.stderr
     assert "InvalidResolverConfigurationError" not in result.stderr
@@ -1351,13 +1351,12 @@ def test_format_error_renders_environment_configuration_errors_for_humans() -> N
     rendered = app_module._format_error(
         InvalidResolverConfigurationError(
             "environment",
-            "Missing required environment variables: "
-            "APTITUDE_SERVER_BASE_URL, APTITUDE_READ_TOKEN.",
+            "Missing required environment variables: APTITUDE_READ_TOKEN.",
         )
     )
 
     assert "Aptitude is not configured." in rendered
-    assert "APTITUDE_SERVER_BASE_URL" in rendered
+    assert "APTITUDE_SERVER_BASE_URL" not in rendered
     assert "APTITUDE_READ_TOKEN" in rendered
     assert ".env" in rendered
     assert "InvalidResolverConfigurationError" not in rendered

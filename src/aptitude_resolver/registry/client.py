@@ -433,7 +433,7 @@ class RegistryClient:
         try:
             response = self._http_client.request(
                 method,
-                f"{self._settings.server_base_url}{path}",
+                f"{self._settings.server_base_url.rstrip('/')}/{path.lstrip('/')}",
                 headers={"Authorization": f"Bearer {self._settings.read_token}"},
                 timeout=self._settings.server_timeout_seconds,
                 json=body,
