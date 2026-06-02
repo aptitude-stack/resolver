@@ -97,7 +97,9 @@ def test_fetch_skill_artifact_against_live_server(
 ) -> None:
     client = RegistryClient(integration_settings)
 
-    artifact = client.fetch_skill_artifact(published_skill.slug, published_skill.version)
+    artifact = client.fetch_skill_artifact(
+        published_skill.slug, published_skill.version
+    )
 
     assert artifact
 

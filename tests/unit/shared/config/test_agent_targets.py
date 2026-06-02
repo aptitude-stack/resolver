@@ -20,24 +20,32 @@ def test_supported_agent_targets_contains_the_phase_one_presets() -> None:
     ]
 
 
-def test_resolve_agent_install_root_supports_project_and_global_scopes(tmp_path) -> None:
+def test_resolve_agent_install_root_supports_project_and_global_scopes(
+    tmp_path,
+) -> None:
     cwd = tmp_path / "workspace"
     home = tmp_path / "home"
     cwd.mkdir()
     home.mkdir()
 
-    assert resolve_agent_install_root(
-        agent="codex",
-        scope="project",
-        cwd=cwd,
-        home=home,
-    ) == cwd / ".agents" / "skills"
-    assert resolve_agent_install_root(
-        agent="opencode",
-        scope="global",
-        cwd=cwd,
-        home=home,
-    ) == home / ".config" / "opencode" / "skills"
+    assert (
+        resolve_agent_install_root(
+            agent="codex",
+            scope="project",
+            cwd=cwd,
+            home=home,
+        )
+        == cwd / ".agents" / "skills"
+    )
+    assert (
+        resolve_agent_install_root(
+            agent="opencode",
+            scope="global",
+            cwd=cwd,
+            home=home,
+        )
+        == home / ".config" / "opencode" / "skills"
+    )
 
 
 def test_detect_available_agent_targets_prefers_existing_roots(tmp_path) -> None:

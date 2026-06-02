@@ -822,7 +822,9 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
 
     wizard.run()
 
-    expected_separator = wizard_module._render_step_separator(wizard._console.size.width)
+    expected_separator = wizard_module._render_step_separator(
+        wizard._console.size.width
+    )
     assert transcript.getvalue().count(expected_separator) >= 5
 
 

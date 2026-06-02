@@ -1287,7 +1287,10 @@ def test_cli_policy_show_renders_human_readable_report(monkeypatch) -> None:
     assert "allowed trust tiers: verified, internal" in result.stdout
     assert "System config: Not found" in result.stdout
     assert "selection: more specific values win" in result.stdout
-    assert "install/resolve flags like --allow-trust are one-off policy overrides" in result.stdout
+    assert (
+        "install/resolve flags like --allow-trust are one-off policy overrides"
+        in result.stdout
+    )
 
 
 def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
@@ -1300,7 +1303,10 @@ def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Config Sources" in result.stdout
     assert "How It Works" in result.stdout
     assert "CLI override" in result.stdout
-    assert "Install/resolve flags like --allow-trust are one-off policy overrides." in result.stdout
+    assert (
+        "Install/resolve flags like --allow-trust are one-off policy overrides."
+        in result.stdout
+    )
 
 
 def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:

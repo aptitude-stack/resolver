@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import hashlib
 
-from aptitude_resolver.application.dto import InspectSkillRequestDto, SearchSkillsRequestDto
-from aptitude_resolver.application.use_cases import InspectSkillUseCase, SearchSkillsUseCase
+from aptitude_resolver.application.dto import (
+    InspectSkillRequestDto,
+    SearchSkillsRequestDto,
+)
+from aptitude_resolver.application.use_cases import (
+    InspectSkillUseCase,
+    SearchSkillsUseCase,
+)
 from aptitude_resolver.domain.errors import SkillNotFoundError
 from aptitude_resolver.domain.models import (
     DiscoveryQuery,
@@ -213,9 +219,7 @@ def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> No
         name="PDF Reader",
         artifact=_artifact(content),
     )
-    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(
-        content
-    )
+    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(content)
 
     result = InspectSkillUseCase(registry_client).execute(
         InspectSkillRequestDto(query="pdf")
@@ -234,7 +238,9 @@ def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> No
     assert registry_client.artifact_calls == [("pdf.reader", "1.4.0")]
 
 
-def test_inspect_use_case_returns_selection_required_when_prompting_is_expected() -> None:
+def test_inspect_use_case_returns_selection_required_when_prompting_is_expected() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["pdf"] = ["pdf.reader", "pdf.forms"]
     registry_client.versions_by_slug["pdf.reader"] = [
@@ -285,9 +291,7 @@ def test_inspect_use_case_truncates_preview_when_requested() -> None:
         name="PDF Reader",
         artifact=_artifact(content),
     )
-    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(
-        content
-    )
+    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(content)
 
     result = InspectSkillUseCase(registry_client).execute(
         InspectSkillRequestDto(query="pdf", preview_char_limit=20)

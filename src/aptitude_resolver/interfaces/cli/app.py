@@ -576,8 +576,7 @@ def _render_layer_details(layer) -> list[str]:
             lines.append("trust " + _format_policy_list(policy.allowed_trust_tiers))
         if policy.allowed_lifecycle_statuses is not None:
             lines.append(
-                "lifecycle "
-                + _format_policy_list(policy.allowed_lifecycle_statuses)
+                "lifecycle " + _format_policy_list(policy.allowed_lifecycle_statuses)
             )
         if policy.max_token_estimate is not None:
             lines.append(f"skill tokens <= {policy.max_token_estimate}")
@@ -614,8 +613,7 @@ def _format_policy_layer(line_report: EffectivePolicyReportDto, layer) -> list[s
         lines.append("default: built-in defaults")
     elif layer.source == "workspace_config" and layer.path is None:
         lines.append(
-            "workspace config: no aptitude.toml found upward from "
-            f"{line_report.cwd}"
+            f"workspace config: no aptitude.toml found upward from {line_report.cwd}"
         )
     elif layer.path is not None and layer.active:
         lines.append(f"{layer.label}: {layer.path}")

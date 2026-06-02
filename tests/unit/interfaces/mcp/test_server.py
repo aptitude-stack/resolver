@@ -39,7 +39,9 @@ from aptitude_resolver.interfaces.mcp.server import (
 
 
 class RecordingUseCase:
-    def __init__(self, result: Any | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self, result: Any | None = None, error: Exception | None = None
+    ) -> None:
         self.result = result
         self.error = error
         self.requests: list[Any] = []
@@ -158,7 +160,9 @@ def test_resolve_skill_uses_non_interactive_mcp_selection_source() -> None:
     assert builder.closed is True
 
 
-def test_install_skill_resolves_explicit_target_and_closes_builder(tmp_path: Path) -> None:
+def test_install_skill_resolves_explicit_target_and_closes_builder(
+    tmp_path: Path,
+) -> None:
     use_case = RecordingUseCase(
         InstallResultDto(
             requested_query="postman",
@@ -232,7 +236,9 @@ def test_sync_lock_resolves_paths_and_closes_builder(tmp_path: Path) -> None:
 
 
 def test_adapter_returns_actionable_resolver_error_and_closes() -> None:
-    use_case = RecordingUseCase(error=InvalidLockfileError("Lockfile is not valid JSON."))
+    use_case = RecordingUseCase(
+        error=InvalidLockfileError("Lockfile is not valid JSON.")
+    )
     builder = RecordingBuilder(use_case)
     adapter = AptitudeMcpAdapter(sync_builder=builder)
 

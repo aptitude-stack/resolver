@@ -24,7 +24,4 @@ def test_pyproject_exposes_mcp_entrypoint_and_python_baseline() -> None:
     pyproject = pyproject_path.read_text(encoding="utf-8")
 
     assert 'requires-python = ">=3.10"' in pyproject
-    assert (
-        'aptitude-mcp = "aptitude_resolver.interfaces.mcp.main:main"'
-        in pyproject
-    )
+    assert 'aptitude-mcp = "aptitude_resolver.interfaces.mcp.main:main"' in pyproject

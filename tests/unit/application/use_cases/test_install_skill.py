@@ -149,7 +149,9 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
         DependencySpec(slug="python.base", version="1.0.0")
     ]
     registry_client.artifact_by_coordinate[("python.lint", "1.2.3")] = root_artifact
-    registry_client.artifact_by_coordinate[("python.base", "1.0.0")] = dependency_artifact
+    registry_client.artifact_by_coordinate[("python.base", "1.0.0")] = (
+        dependency_artifact
+    )
 
     result = InstallSkillUseCase(registry_client).execute(
         InstallRequestDto(

@@ -31,7 +31,9 @@ def test_seeded_aptitude_demo_artifact_downloads_as_tar_zst_against_live_server(
     try:
         metadata = client.fetch_skill_metadata(slug, version)
     except SkillNotFoundError:
-        pytest.skip(f"Seeded Aptitude demo coordinate is not present: {slug}@{version}.")
+        pytest.skip(
+            f"Seeded Aptitude demo coordinate is not present: {slug}@{version}."
+        )
 
     artifact = client.fetch_skill_artifact(
         slug,
