@@ -53,6 +53,9 @@ def test_export_materialized_skills_to_agent_root_writes_skill_md_and_sidecar(tm
     skill_dir = materialized_root / "skills" / "python.lint" / "1.2.3"
     skill_dir.mkdir(parents=True)
     (skill_dir / "content.md").write_text(content, encoding="utf-8")
+    (skill_dir / "references").mkdir()
+    (skill_dir / "references" / "guide.md").write_text("details", encoding="utf-8")
+    (skill_dir / "metadata.json").write_text("{}", encoding="utf-8")
     lockfile = _lockfile(content)
 
     result = export_materialized_skills_to_agent_root(
@@ -66,6 +69,8 @@ def test_export_materialized_skills_to_agent_root_writes_skill_md_and_sidecar(tm
     export_dir = tmp_path / ".codex" / "skills" / "python.lint"
     assert result.destination_root == str((tmp_path / ".codex" / "skills").resolve())
     assert (export_dir / "SKILL.md").read_text(encoding="utf-8") == content
+    assert (export_dir / "references" / "guide.md").read_text(encoding="utf-8") == "details"
+    assert not (export_dir / "metadata.json").exists()
     sidecar = json.loads((export_dir / APTITUDE_AGENT_SIDECAR).read_text(encoding="utf-8"))
     assert sidecar["agent"] == "codex"
     assert sidecar["scope"] == "global"
@@ -97,3 +102,31 @@ def test_export_materialized_skills_to_agent_root_overwrites_existing_skill_dir(
     )
 
     assert (existing_dir / "SKILL.md").read_text(encoding="utf-8") == content
+
+
+def test_export_materialized_skills_to_agent_root_temporarily_accepts_skill_bundle_dir(
+    tmp_path,
+) -> None:
+    materialized_root = tmp_path / "workspace"
+    skill_dir = materialized_root / "skills" / "python.lint" / "1.2.3"
+    bundle_dir = skill_dir / "skill-bundle"
+    bundle_dir.mkdir(parents=True)
+    content = "# Python Lint\n"
+    (bundle_dir / "SKILL.md").write_text(content, encoding="utf-8")
+    (bundle_dir / "resources.json").write_text("{}", encoding="utf-8")
+    (skill_dir / "metadata.json").write_text("{}", encoding="utf-8")
+
+    lockfile = _lockfile(content)
+
+    export_materialized_skills_to_agent_root(
+        materialized_root=materialized_root,
+        lockfile=lockfile,
+        destination_root=tmp_path / ".codex" / "skills",
+        agent="codex",
+        scope="project",
+    )
+
+    export_dir = tmp_path / ".codex" / "skills" / "python.lint"
+    assert (export_dir / "SKILL.md").read_text(encoding="utf-8") == content
+    assert (export_dir / "resources.json").read_text(encoding="utf-8") == "{}"
+    assert not (export_dir / "skill-bundle").exists()

@@ -35,6 +35,8 @@ This is the flow behind:
 - `aptitude install`
 - hidden `aptitude resolve`
 
+Fresh install materialization is internal Aptitude state. The user-facing install result is an agent-ready skill export. By default, Aptitude stores downloaded artifacts under the platform cache directory and lock/plan/trace/provenance state under the platform state directory. On Windows these are `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`. Project-scope installs also write a replayable `aptitude.lock.json` to the project root.
+
 ### Lock Replay
 
 Use this when the input is an existing lockfile.
@@ -78,7 +80,7 @@ The current package tree is rooted at `src/aptitude_resolver/`.
 - `cache/`: advisory caching helpers
 - `discovery/`: intent parsing, query building, non-final candidate shaping and reranking
 - `domain/`: models, policy types, tracing models, resolver-owned errors
-- `execution/`: lock-driven execution planning, artifact verification, safe archive extraction, and materialization
+- `execution/`: lock-driven execution planning, artifact verification, safe archive extraction, materialization, and agent export
 - `governance/`: legality checks before lock generation
 - `interfaces/`: CLI, MCP, wizard-oriented interface helpers, and shared interface support
 - `lockfile/`: lock schema, serializer, parser, and replay helpers
@@ -100,6 +102,8 @@ The current package tree is rooted at `src/aptitude_resolver/`.
   verifies the compressed-byte checksum, extracts only safe archive members into
   staging, and promotes the target workspace only after every locked skill is
   materialized successfully.
+- Agent export copies verified materialized skill content into selected
+  agent skill roots as unversioned `SKILL.md` packages with an Aptitude sidecar.
 - The server is a fact source, not the final decision-maker.
 - Explainability, telemetry, cache, and retry remain additive; they must not change correctness.
 

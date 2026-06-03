@@ -10,6 +10,9 @@ from contextlib import contextmanager
 from typing import cast
 
 import typer
+from rich import box
+from rich.panel import Panel
+from rich.text import Text
 
 from aptitude_resolver import resolve_package_version
 from aptitude_resolver.domain.errors import (
@@ -21,7 +24,7 @@ from aptitude_resolver.domain.errors import (
     PolicyViolationError,
     SelectionSlugNotFoundError,
 )
-from aptitude_resolver.interfaces.cli.catalog import HORIZONTAL_SEPARATOR
+from aptitude_resolver.interfaces.cli.catalog import HORIZONTAL_SEPARATOR, THEME
 from aptitude_resolver.interfaces.shared import (
     InteractionMode,
     InstallWorkflowOptions,
@@ -132,6 +135,55 @@ def format_cli_install_telemetry_line(stage_timings: list[StageTiming]) -> str |
         for timing in stage_timings
     )
     return " | ".join(segments)
+
+
+def _stream_supports_text(stream: object, text: str) -> bool:
+    """Return whether the given stream encoding can represent the sample text."""
+
+    encoding = getattr(stream, "encoding", None)
+    if not encoding:
+        return True
+
+    try:
+        text.encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        return False
+    return True
+
+
+def cli_panel_box_for_stream(stream: object) -> box.Box:
+    """Return the best available Rich box style for the current stream."""
+
+    if _stream_supports_text(stream, "╭╮╰╯│─"):
+        return box.ROUNDED
+    return box.ASCII
+
+
+def render_cli_error_panel(message: str, *, stream: object | None = None) -> Panel:
+    """Render one formatted CLI error message in a consistent frame."""
+
+    def is_separator(line: str) -> bool:
+        stripped = line.strip()
+        if stripped == HORIZONTAL_SEPARATOR:
+            return True
+        return bool(stripped) and set(stripped) <= {"-", "─"}
+
+    lines = [
+        line
+        for line in message.splitlines()
+        if line.strip() and not is_separator(line)
+    ]
+    title = lines[0] if lines else "Aptitude error."
+    body = "\n".join(lines[1:]).strip() if len(lines) > 1 else message
+    target_stream = sys.stderr if stream is None else stream
+    return Panel(
+        Text(body, style=THEME.text_body, overflow="fold"),
+        title=title,
+        title_align="left",
+        border_style="red",
+        box=cli_panel_box_for_stream(target_stream),
+        padding=(1, 1),
+    )
 
 
 def format_cli_error(error: AptitudeResolverError) -> str:

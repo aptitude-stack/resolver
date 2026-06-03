@@ -85,7 +85,7 @@ def test_install_use_case_raises_skill_not_found_for_missing_explicit_dotted_slu
         InstallSkillUseCase(registry_client).execute(
             InstallRequestDto(
                 query="postman.primary.1773823396197-11603",
-                target=tmp_path / "skill_demo",
+                target=tmp_path / "aptitude_state",
             )
         )
 

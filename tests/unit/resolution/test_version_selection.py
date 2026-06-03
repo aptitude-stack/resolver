@@ -141,6 +141,28 @@ def test_select_preferred_version_prefers_lifecycle_trust_and_semver() -> None:
     assert selected.coordinate.version == "2.0.1"
 
 
+def test_select_preferred_version_accepts_semver_prerelease_versions() -> None:
+    selected = select_preferred_version(
+        [
+            _version("docs.writer", "0.1.0-publish.20260515115306"),
+            _version("docs.writer", "0.1.0-publish.20260515115307"),
+        ]
+    )
+
+    assert selected.coordinate.version == "0.1.0-publish.20260515115307"
+
+
+def test_select_preferred_version_keeps_semver_final_above_prerelease() -> None:
+    selected = select_preferred_version(
+        [
+            _version("docs.writer", "0.1.0-publish.20260515115306"),
+            _version("docs.writer", "0.1.0"),
+        ]
+    )
+
+    assert selected.coordinate.version == "0.1.0"
+
+
 def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metadata() -> (
     None
 ):

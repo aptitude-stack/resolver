@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import (
@@ -23,6 +24,7 @@ from aptitude_resolver.execution import (
     materialize_lockfile,
 )
 from aptitude_resolver.lockfile import load_lockfile
+from aptitude_resolver.shared.config import default_sync_materialization_root
 from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
 
@@ -76,7 +78,7 @@ class SyncFromLockUseCase:
                 execution_plan = build_execution_plan(lockfile)
             with telemetry.measure("materialization"):
                 materialization = materialize_lockfile(
-                    target=request.target,
+                    target=_materialization_target(request),
                     lockfile=lockfile,
                     registry_client=self._registry_client,
                     execution_plan=execution_plan,
@@ -111,3 +113,11 @@ class SyncFromLockUseCase:
 def _selected_coordinate(node_id: str) -> ResolveCoordinateDto:
     slug, version = node_id.rsplit("@", maxsplit=1)
     return ResolveCoordinateDto(slug=slug, version=version)
+
+
+def _materialization_target(request: SyncRequestDto) -> Path:
+    return (
+        request.target.expanduser().resolve()
+        if request.target is not None
+        else default_sync_materialization_root().resolve()
+    )

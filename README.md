@@ -21,6 +21,8 @@ The system is intentionally split in two:
 
 Primary commands:
 
+- `aptitude search "<query>"`
+- `aptitude inspect "<query>"`
 - `aptitude install "<query>"`
 - `aptitude policy show`
 - `aptitude sync --lock aptitude.lock.json`
@@ -31,7 +33,7 @@ Internal preview command:
 
 - `aptitude resolve "<query>"`
 
-Running `aptitude` with no arguments launches the install-first wizard. `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
+Running `aptitude` with no arguments launches the install-first wizard. `search` and `inspect` support review-first discovery from the terminal, `install` and `sync` stay as the promoted task commands, `policy show` exposes the effective local client policy and config layers, and `manifest` exposes the complete command and flag surface. `resolve` still exists for preview, debugging, and CI, but it is hidden from normal CLI help.
 
 `aptitude mcp` starts the local stdio MCP server for agent hosts. For published, no-install MCP use, launch the PyPI distribution as `uvx aptitude-resolver mcp`.
 
@@ -168,7 +170,9 @@ For published usage, prefer the installed CLI:
 
 ```bash
 aptitude --help
-aptitude install "Postman Primary Skill"
+aptitude search "Documentation Writing"
+aptitude inspect "Documentation Writing"
+aptitude install "Postman Primary Skill" --agent codex --scope project
 aptitude policy show
 aptitude sync --lock aptitude.lock.json
 aptitude manifest
@@ -178,7 +182,9 @@ For one-off published usage without installation:
 
 ```bash
 uvx aptitude-resolver
-uvx aptitude-resolver install "Postman Primary Skill"
+uvx aptitude-resolver search "Documentation Writing"
+uvx aptitude-resolver inspect "Documentation Writing"
+uvx aptitude-resolver install "Postman Primary Skill" --agent codex --scope project
 uvx aptitude-resolver policy show
 uvx aptitude-resolver sync
 uvx aptitude-resolver mcp
@@ -227,7 +233,7 @@ Inspect the server locally:
 npx -y @modelcontextprotocol/inspector uvx aptitude-resolver mcp
 ```
 
-Mutating MCP tools are explicit: `aptitude_install_skill` and `aptitude_sync_lock` require target paths and are annotated as destructive. Read-only tools are available for planning and review before materialization.
+Mutating MCP tools are explicit: `aptitude_install_skill` requires explicit `agents` and `scope`, and `aptitude_sync_lock` requires target paths. `aptitude_preview_install_destinations` is read-only and shows the agent roots and Aptitude state path before an install writes files.
 
 ## What Works Today
 
@@ -241,6 +247,7 @@ Mutating MCP tools are explicit: `aptitude_install_skill` and `aptitude_sync_loc
 - rich lockfile generation, serialization, parsing, and replay
 - lock-driven execution plan generation
 - local materialization from either a fresh plan or an existing lockfile
+- agent-ready skill exports for Codex, Claude Code, GitHub Copilot, Cursor, Gemini CLI, OpenCode, Windsurf, and universal `.agents` roots
 - archive-based skill installs from verified `tar.zst` artifacts
 - separate execution tuning for artifact downloads and local archive extraction
 - `sync --lock` as the lock-replay equivalent of `uv sync`
@@ -272,9 +279,20 @@ The canonical architecture now defines these required semantics:
 
 Current code now implements Governance Phase 1, profile-aware ranking, and explainability snapshots. The canonical source of truth for remaining evolution lives under [docs/README.md](docs/README.md).
 
-## Materialization And Execution Config
+## Materialization, Export, And Execution Config
 
-Install and sync commands are unchanged, but the payload format is now archive-based. Aptitude downloads `tar.zst` skill artifacts, verifies the checksum from the lock metadata, extracts safe archive members into a staging directory, and promotes the target only after all locked skills succeed.
+Install and sync payloads are archive-based. Aptitude downloads `tar.zst` skill artifacts, verifies the checksum from the lock metadata, extracts safe archive members into a staging directory, and promotes the target only after all locked skills succeed.
+
+Fresh `install` exports agent-facing skill packages to the selected agent root. Project scope writes only the agent package into the repository, such as `.codex/skills/<skill>`, `.claude/skills/<skill>`, `.github/skills/<skill>`, or `.agents/skills/<skill>`. Aptitude-owned cache and state stay outside the repository by default:
+
+```text
+Windows:
+  %LOCALAPPDATA%\aptitude\cache
+  %LOCALAPPDATA%\aptitude\state
+
+macOS/Linux:
+  platform cache/state directories, respecting XDG_CACHE_HOME and XDG_STATE_HOME
+```
 
 Workspace `aptitude.toml` can tune materialization concurrency:
 
@@ -309,7 +327,8 @@ install query
 -> governance
 -> lockfile
 -> execution plan
--> materialization
+-> internal materialization
+-> agent export
 ```
 
 Lock replay:
@@ -324,10 +343,23 @@ sync --lock aptitude.lock.json
 
 ## Example Commands
 
+Search without installing:
+
+```bash
+aptitude search "Documentation Writing"
+```
+
+Inspect one skill before installing:
+
+```bash
+aptitude inspect "Documentation Writing"
+```
+
 Install from a query:
 
 ```bash
 aptitude install "Postman Primary Skill"
+aptitude install "Postman Primary Skill" --agent claude-code --global
 ```
 
 Install as JSON for automation:

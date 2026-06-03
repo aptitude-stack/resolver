@@ -25,6 +25,8 @@ Set `APTITUDE_SERVER_BASE_URL` only to override the public registry, such as for
 
 These commands need registry access:
 
+- `aptitude search`
+- `aptitude inspect`
 - `aptitude install`
 - `aptitude resolve`
 - `aptitude sync --lock ...`
@@ -50,6 +52,60 @@ Behavior:
 - `--help` shows root help
 - `--version` prints the installed CLI version
 
+## Search
+
+```bash
+aptitude search QUERY
+```
+
+Flags:
+
+- `--prefer TEXT`
+- `--allow-trust TEXT`
+- `--allow-lifecycle TEXT`
+- `--max-tokens INTEGER`
+- `--max-content-size INTEGER`
+- `--json`
+- `--help`
+
+Examples:
+
+```bash
+aptitude search "Documentation Writing"
+aptitude search "Postman" --prefer high-trust
+aptitude search "Postman" --allow-trust verified,internal --json
+uvx aptitude-resolver search "Documentation Writing"
+```
+
+## Inspect
+
+```bash
+aptitude inspect QUERY
+```
+
+Flags:
+
+- `--version TEXT`
+- `--select-slug TEXT`
+- `--prefer TEXT`
+- `--interaction-mode TEXT`
+- `--allow-trust TEXT`
+- `--allow-lifecycle TEXT`
+- `--max-tokens INTEGER`
+- `--max-content-size INTEGER`
+- `--preview-chars INTEGER`
+- `--json`
+- `--help`
+
+Examples:
+
+```bash
+aptitude inspect "Documentation Writing"
+aptitude inspect "Postman" --select-slug postman.primary
+aptitude inspect "Postman" --preview-chars 1200 --json
+uvx aptitude-resolver inspect "Documentation Writing"
+```
+
 ## Install
 
 ```bash
@@ -66,7 +122,10 @@ Flags:
 - `--allow-lifecycle TEXT`
 - `--max-tokens INTEGER`
 - `--max-content-size INTEGER`
-- `--target PATH`
+- `--agent TEXT`
+- `--scope TEXT`
+- `--global`
+- `--export-root PATH`
 - `--json`
 - `--help`
 
@@ -80,9 +139,14 @@ aptitude install "Postman" --select-slug postman.primary
 aptitude install "Postman" --allow-trust verified,internal
 aptitude install "Postman" --allow-lifecycle published
 aptitude install "Postman" --max-tokens 500 --max-content-size 2048
-aptitude install "Postman" --target demo_postman
+aptitude install "Postman" --agent codex --scope project
+aptitude install "Postman" --agent claude-code --global
+aptitude install "Postman" --agent "*" --scope project
+aptitude install "Postman" --agent codex --scope custom --export-root C:\skills
 aptitude install "Postman Primary Skill" --json
 ```
+
+By default, `install` exports agent-facing skill packages to the selected agent root and keeps Aptitude bookkeeping outside the repository. On Windows, registry artifact cache and install state live under `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`.
 
 ## Sync
 
@@ -189,6 +253,8 @@ aptitude
 aptitude --help
 aptitude --version
 
+aptitude search QUERY [flags]
+aptitude inspect QUERY [flags]
 aptitude install [QUERY] [flags]
 aptitude sync --lock PATH [flags]
 aptitude policy show [--json]

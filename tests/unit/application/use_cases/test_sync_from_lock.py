@@ -103,7 +103,7 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
     result = SyncFromLockUseCase(registry_client).execute(
         SyncRequestDto(
             lock_path=lock_path,
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
         )
     )
 
@@ -127,7 +127,7 @@ def test_sync_from_lock_use_case_raises_for_missing_lockfile(tmp_path) -> None:
         SyncFromLockUseCase(FakeRegistryClient({})).execute(
             SyncRequestDto(
                 lock_path=tmp_path / "missing.lock.json",
-                target=tmp_path / "skill_demo",
+                target=tmp_path / "aptitude_state",
             )
         )
 
@@ -183,7 +183,7 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
     result = SyncFromLockUseCase(registry_client).execute(
         SyncRequestDto(
             lock_path=lock_path,
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
         )
     )
 
