@@ -29,7 +29,7 @@ The current UX goals are:
 
 - wizard-first entry for casual and first-run use
 - stable command signatures for repeatable terminal use
-- review-first install flow before materialization
+- review-first install flow before agent export
 - human-readable failures without stack traces
 - JSON output only when explicitly requested
 
@@ -59,6 +59,8 @@ The CLI currently routes requests with these rules:
 - `aptitude` with no arguments launches the install-first wizard
 - `aptitude install` with no query and no advanced overrides launches the install flow directly inside the wizard
 - `aptitude sync` with no `--lock` and no `--json` launches the sync flow directly inside the wizard
+- `aptitude search ...` runs discovery, policy filtering, and reranking without resolving or installing
+- `aptitude inspect ...` selects one candidate and shows metadata, versions, checksum data, and a bounded content preview without resolving or installing
 - `aptitude install ...` with explicit arguments runs the Typer command path
 - `aptitude policy show` prints the effective client policy and config layers
 - `aptitude sync ...` with explicit arguments runs the Typer command path
@@ -71,7 +73,9 @@ The CLI therefore supports both discovery-oriented use and automation-oriented u
 
 ### Public Commands
 
-- `install`: fresh planning from a query plus local materialization
+- `install`: fresh planning from a query plus agent skill export
+- `search`: ranked discovery without dependency resolution, lock generation, or materialization
+- `inspect`: selected skill metadata and bounded content preview without dependency resolution, lock generation, or materialization
 - `policy show`: inspect effective client policy and contributing config layers
 - `sync`: lock replay and local materialization from an existing lockfile
 - `manifest`: human-readable capability map for commands and flags
@@ -121,6 +125,8 @@ The guided install flow is:
 query input
 -> selection profile
 -> interaction mode
+-> install scope
+-> agent target
 -> resolve
 -> optional candidate selection
 -> review plan
@@ -134,9 +140,13 @@ Key properties:
 - the query prompt uses a larger free-text input surface
 - selection profile is explicit: `balanced`, `low-cost`, or `high-trust`
 - interaction mode is explicit: `auto`, `always`, or `never`
+- install scope is explicit in the wizard: project, global, or custom path
+- agent target is explicit in the wizard: Codex, Claude Code, GitHub Copilot, Cursor, Gemini CLI, OpenCode, Windsurf, Universal, or detected roots
 - ambiguity remains root-only; the wizard may ask the user to choose one candidate
 - the user sees a compact review panel before installation begins
 - cancellation before installation is explicit and non-destructive
+
+Fresh installs keep Aptitude-owned cache and state outside the repository by default. On Windows those paths are `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`; project-scoped installs write only agent-facing skill packages into the repository.
 
 The install flow also supports returning from profile selection back to the query prompt. That is the current escape hatch for revising intent without restarting the whole wizard.
 

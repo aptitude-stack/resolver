@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 import sys
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 import typer
 from rich import box
@@ -18,14 +18,20 @@ from rich.text import Text
 from aptitude_resolver.application.composition import (
     build_effective_policy_report,
     build_install_use_case,
+    build_inspect_use_case,
     build_resolve_use_case,
+    build_search_use_case,
     build_sync_use_case,
 )
 from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     EffectivePolicyReportDto,
+    InspectSkillRequestDto,
+    InspectSkillResultDto,
     InstallResultDto,
     ResolveQueryResultDto,
+    SearchSkillsRequestDto,
+    SearchSkillsResultDto,
     SyncResultDto,
 )
 from aptitude_resolver.domain.errors import (
@@ -58,12 +64,16 @@ from aptitude_resolver.interfaces.cli.support import (
     parse_csv_option,
     parse_interaction_mode,
     parse_missing_environment_variables,
+    render_cli_error_panel,
     resolve_cli_version,
 )
 from aptitude_resolver.interfaces.shared import (
     InteractionMode,
     InstallWorkflowOptions,
     InstallWorkflowService,
+)
+from aptitude_resolver.shared.config import (
+    normalize_agent_list,
 )
 
 app = typer.Typer(
@@ -87,6 +97,8 @@ def configure_help_surfaces(program_name: str | None = None) -> None:
     app.info.help = build_root_help(program_name)
     command_names_by_callback = {
         "resolve": "resolve",
+        "search": "search",
+        "inspect": "inspect",
         "install": "install",
         "sync": "sync",
         "manifest": "manifest",
@@ -261,6 +273,389 @@ def _render_candidate(index: int, candidate: DiscoveryCandidateDto) -> str:
     return "\n".join(lines)
 
 
+def _format_candidate_line(candidate: DiscoveryCandidateDto) -> str:
+    labels = ", ".join(candidate.matched_labels or candidate.labels[:4])
+    label_suffix = f" [{labels}]" if labels else ""
+    details = [
+        candidate.runtime or "unknown runtime",
+        candidate.trust_tier,
+        candidate.lifecycle_status,
+    ]
+    if candidate.token_estimate is not None:
+        details.append(f"tokens={candidate.token_estimate}")
+    if candidate.content_size_bytes is not None:
+        details.append(f"size={candidate.content_size_bytes}B")
+    prefix = (
+        f"{candidate.ranking_position}. "
+        if candidate.ranking_position is not None
+        else "- "
+    )
+    return (
+        f"{prefix}{candidate.slug}@{candidate.version} - {candidate.name} "
+        f"({', '.join(details)}){label_suffix}"
+    )
+
+
+def _candidate_tags(candidate: DiscoveryCandidateDto) -> str:
+    """Return the most useful human-facing labels for one candidate."""
+
+    return ", ".join(candidate.matched_labels or candidate.tags or candidate.labels) or "-"
+
+
+def _candidate_runtime(candidate: DiscoveryCandidateDto) -> str:
+    return candidate.runtime or "unknown"
+
+
+def _format_candidate_stats(candidate: DiscoveryCandidateDto) -> str:
+    stats: list[str] = []
+    if candidate.token_estimate is not None:
+        stats.append(f"{candidate.token_estimate} tokens")
+    if candidate.content_size_bytes is not None:
+        stats.append(f"{candidate.content_size_bytes} B")
+    return " | ".join(stats) or "-"
+
+
+def _format_published_at(value: str | None) -> str:
+    return value or "unknown"
+
+
+def _format_search_result(result: SearchSkillsResultDto) -> str:
+    separator = _text_separator(sys.stdout)
+    lines = [
+        "Search Results",
+        separator,
+        f"Query: {result.requested_query}",
+    ]
+    if not result.candidates:
+        lines.append("No candidates returned.")
+        return "\n".join(lines)
+
+    lines.append("")
+    lines.extend(_format_candidate_line(candidate) for candidate in result.candidates)
+    lines.extend(
+        [
+            "",
+            "Next steps:",
+            f'  aptitude inspect "{result.requested_query}" --select-slug SLUG',
+            f'  aptitude install "{result.requested_query}" --select-slug SLUG',
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _render_search_result_panel(result: SearchSkillsResultDto) -> Group:
+    panel_box = _panel_box_for_stream(sys.stdout)
+
+    summary = Table.grid(expand=True, padding=(0, 2))
+    summary.add_column(style=THEME.text_subtle, ratio=1)
+    summary.add_column(style=THEME.text_primary, ratio=3)
+    summary.add_row("Query", result.requested_query)
+    summary.add_row(
+        "Matches",
+        f"{len(result.candidates)} ranked skill"
+        f"{'s' if len(result.candidates) != 1 else ''}",
+    )
+
+    candidates = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=panel_box,
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    candidates.add_column("#", style=THEME.text_subtle, min_width=3, no_wrap=True)
+    candidates.add_column("Skill", style=THEME.text_primary, min_width=22)
+    candidates.add_column("Version", style=THEME.text_subtle, min_width=14, no_wrap=True)
+    candidates.add_column("Runtime", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column("Trust", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column("Lifecycle", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column("Stats", style=THEME.text_subtle, ratio=1)
+    candidates.add_column("Tags", style=THEME.text_body, ratio=2)
+    for index, candidate in enumerate(result.candidates, start=1):
+        rank = candidate.ranking_position or index
+        candidates.add_row(
+            str(rank),
+            f"{candidate.slug}\n{candidate.name}",
+            candidate.version,
+            _candidate_runtime(candidate),
+            candidate.trust_tier,
+            candidate.lifecycle_status,
+            _format_candidate_stats(candidate),
+            _candidate_tags(candidate),
+        )
+
+    panels: list[Panel] = [
+        Panel(
+            summary,
+            title="Search Summary",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        )
+    ]
+    if result.candidates:
+        panels.append(
+            Panel(
+                candidates,
+                title="Ranked Candidates",
+                border_style=THEME.border_secondary,
+                box=panel_box,
+                padding=(1, 1),
+            )
+        )
+        panels.append(
+            Panel(
+                Text(
+                    "\n".join(
+                        [
+                            f'aptitude inspect "{result.requested_query}" --select-slug SLUG',
+                            f'aptitude install "{result.requested_query}" --select-slug SLUG',
+                        ]
+                    ),
+                    style=THEME.text_body,
+                ),
+                title="Next Steps",
+                border_style=THEME.border_secondary,
+                box=panel_box,
+                padding=(1, 1),
+            )
+        )
+    else:
+        panels.append(
+            Panel(
+                Text("No candidates returned.", style=THEME.text_body),
+                title="Ranked Candidates",
+                border_style=THEME.border_secondary,
+                box=panel_box,
+                padding=(1, 1),
+            )
+        )
+    return Group(*panels)
+
+
+def _format_inspect_result(result: InspectSkillResultDto) -> str:
+    separator = _text_separator(sys.stdout)
+    lines = [
+        "Skill Inspection",
+        separator,
+        f"Query: {result.requested_query}",
+    ]
+    if result.status == "selection_required":
+        lines.extend(["", "Selection required. Matching candidates:"])
+        lines.extend(_format_candidate_line(candidate) for candidate in result.candidates)
+        return "\n".join(lines)
+
+    if result.selected_coordinate is not None:
+        lines.append(
+            "Selected: "
+            f"{result.selected_coordinate.slug}@{result.selected_coordinate.version}"
+        )
+
+    if result.skill is not None:
+        skill = result.skill
+        lines.extend(
+            [
+                "",
+                "Metadata",
+                separator,
+                f"Name: {skill.name}",
+                f"Description: {skill.description}",
+                f"Runtime: {skill.runtime or 'unknown'}",
+                f"Lifecycle: {skill.lifecycle_status}",
+                f"Trust: {skill.trust_tier}",
+                f"Tokens: {_format_policy_limit(skill.token_estimate)}",
+                f"Content size: {_format_policy_limit(skill.content_size_bytes)} bytes",
+            ]
+        )
+        if skill.content_checksum_algorithm and skill.content_checksum_digest:
+            lines.append(
+                "Checksum: "
+                f"{skill.content_checksum_algorithm}:{skill.content_checksum_digest}"
+            )
+
+    if result.available_versions:
+        lines.extend(["", "Available Versions", separator])
+        for item in result.available_versions:
+            default_suffix = " default" if item.is_current_default else ""
+            lines.append(
+                f"- {item.version} ({item.lifecycle_status}, {item.trust_tier})"
+                f"{default_suffix}"
+            )
+
+    if result.content_preview is not None:
+        suffix = " (truncated)" if result.content_preview_truncated else ""
+        lines.extend(["", f"Content Preview{suffix}", separator, result.content_preview])
+
+    return "\n".join(lines)
+
+
+def _skill_description(result: InspectSkillResultDto) -> str:
+    if result.skill is None:
+        return "No description available."
+    return result.skill.description or result.skill.rendered_summary or "No description available."
+
+
+def _render_inspect_selection_required_panel(result: InspectSkillResultDto) -> Group:
+    panel_box = _panel_box_for_stream(sys.stdout)
+    candidates = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=panel_box,
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    candidates.add_column("#", style=THEME.text_subtle, min_width=3, no_wrap=True)
+    candidates.add_column("Skill", style=THEME.text_primary, min_width=22)
+    candidates.add_column("Version", style=THEME.text_subtle, min_width=14, no_wrap=True)
+    candidates.add_column("Runtime", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column("Trust", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column("Tags", style=THEME.text_body, ratio=2)
+    for index, candidate in enumerate(result.candidates, start=1):
+        candidates.add_row(
+            str(candidate.ranking_position or index),
+            f"{candidate.slug}\n{candidate.name}",
+            candidate.version,
+            _candidate_runtime(candidate),
+            candidate.trust_tier,
+            _candidate_tags(candidate),
+        )
+    return Group(
+        Panel(
+            Text(
+                f"Query: {result.requested_query}\n"
+                "Multiple matching skills require an explicit selection.",
+                style=THEME.text_body,
+            ),
+            title="Skill Inspection",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        ),
+        Panel(
+            candidates,
+            title="Matching Candidates",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        ),
+        Panel(
+            Text(
+                f'aptitude inspect "{result.requested_query}" --select-slug SLUG',
+                style=THEME.text_body,
+            ),
+            title="Next Step",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        ),
+    )
+
+
+def _render_inspect_result_panel(result: InspectSkillResultDto) -> Group:
+    if result.status == "selection_required":
+        return _render_inspect_selection_required_panel(result)
+
+    panel_box = _panel_box_for_stream(sys.stdout)
+    summary = Table.grid(expand=True, padding=(0, 2))
+    summary.add_column(style=THEME.text_subtle, ratio=1)
+    summary.add_column(style=THEME.text_primary, ratio=3)
+    summary.add_row("Query", result.requested_query)
+    if result.selected_coordinate is not None:
+        summary.add_row(
+            "Selected",
+            f"{result.selected_coordinate.slug} ({result.selected_coordinate.version})",
+        )
+    if result.skill is not None:
+        summary.add_row("Name", result.skill.name)
+        summary.add_row("Description", _skill_description(result))
+
+    metadata = Table.grid(expand=True, padding=(0, 2))
+    metadata.add_column(style=THEME.text_subtle, ratio=1)
+    metadata.add_column(style=THEME.text_primary, ratio=3)
+    if result.skill is not None:
+        skill = result.skill
+        metadata.add_row("Runtime", skill.runtime or "unknown")
+        metadata.add_row("Trust", skill.trust_tier)
+        metadata.add_row("Lifecycle", skill.lifecycle_status)
+        metadata.add_row("Tags", ", ".join(skill.tags) if skill.tags else "-")
+        metadata.add_row("Tokens", _format_policy_limit(skill.token_estimate))
+        metadata.add_row("Size", f"{_format_policy_limit(skill.content_size_bytes)} bytes")
+        metadata.add_row("Published", _format_published_at(skill.published_at))
+        if skill.content_checksum_algorithm and skill.content_checksum_digest:
+            metadata.add_row(
+                "Checksum",
+                f"{skill.content_checksum_algorithm}:{skill.content_checksum_digest}",
+            )
+
+    versions = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=panel_box,
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    versions.add_column("Version", style=THEME.text_primary, min_width=14, no_wrap=True)
+    versions.add_column("Default", style=THEME.text_subtle, min_width=8, no_wrap=True)
+    versions.add_column("Trust", style=THEME.text_body, min_width=10, no_wrap=True)
+    versions.add_column("Lifecycle", style=THEME.text_body, min_width=10, no_wrap=True)
+    versions.add_column("Published", style=THEME.text_subtle, ratio=1)
+    for item in result.available_versions:
+        versions.add_row(
+            item.version,
+            "yes" if item.is_current_default else "",
+            item.trust_tier,
+            item.lifecycle_status,
+            _format_published_at(item.published_at),
+        )
+
+    preview_text = result.content_preview or "No markdown preview returned."
+    if result.content_preview_truncated:
+        preview_text = f"{preview_text}\n\nPreview truncated for terminal display."
+
+    panels: list[Panel] = [
+        Panel(
+            summary,
+            title="Skill Inspection",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        )
+    ]
+    if result.skill is not None:
+        panels.append(
+            Panel(
+                metadata,
+                title="Metadata",
+                border_style=THEME.border_secondary,
+                box=panel_box,
+                padding=(1, 1),
+            )
+        )
+    if result.available_versions:
+        panels.append(
+            Panel(
+                versions,
+                title="Available Versions",
+                border_style=THEME.border_secondary,
+                box=panel_box,
+                padding=(1, 1),
+            )
+        )
+    panels.append(
+        Panel(
+            Text(preview_text, style=THEME.text_body),
+            title="Markdown Preview",
+            border_style=THEME.border_secondary,
+            box=panel_box,
+            padding=(1, 1),
+        )
+    )
+    return Group(*panels)
+
+
 def _run_with_activity(
     description: str,
     operation: Callable[[], T],
@@ -395,9 +790,19 @@ def _format_install_success(
             + " ".join(f"{slug}-{version}" for slug, version in resolved_coordinates)
         )
 
+    if result.exported_skills:
+        lines.append(separator)
+        lines.append("Exported agent skills:")
+        for item in result.exported_skills:
+            lines.append(f"  {item.agent}: {item.destination_path}")
+
+    if result.lock_path:
+        lines.append(separator)
+        lines.append(f"Lockfile: {result.lock_path}")
+
     if result.materialized_root:
         lines.append(separator)
-        lines.append(f"Installed to: {result.materialized_root}")
+        lines.append(f"Aptitude state: {result.materialized_root}")
 
     if telemetry_summary:
         lines.append(separator)
@@ -420,8 +825,15 @@ def _render_install_success_panel(
             "Selected",
             f"{result.selected_coordinate.slug} ({result.selected_coordinate.version})",
         )
+    if result.export_roots:
+        summary.add_row(
+            "Agent roots",
+            ", ".join(f"{agent}: {path}" for agent, path in result.export_roots.items()),
+        )
+    if result.lock_path:
+        summary.add_row("Lockfile", str(result.lock_path))
     if result.materialized_root:
-        summary.add_row("Installed to", str(result.materialized_root))
+        summary.add_row("Aptitude state", str(result.materialized_root))
 
     installed = Table(
         expand=True,
@@ -437,6 +849,24 @@ def _render_install_success_panel(
     for skill in result.installed_skills:
         installed.add_row(skill.slug, skill.version, skill.install_path)
 
+    exported = Table(
+        expand=True,
+        show_header=True,
+        header_style=THEME.text_muted,
+        box=_panel_box_for_stream(sys.stdout),
+        border_style=THEME.border_primary,
+        pad_edge=False,
+    )
+    exported.add_column("Agent", style=THEME.text_primary, min_width=14)
+    exported.add_column("Skill", style=THEME.text_primary, min_width=18)
+    exported.add_column("Path", style=THEME.text_body, ratio=3)
+    for exported_skill in result.exported_skills:
+        exported.add_row(
+            exported_skill.agent,
+            exported_skill.slug,
+            exported_skill.destination_path,
+        )
+
     panels: list[Panel] = [
         Panel(
             summary,
@@ -451,6 +881,16 @@ def _render_install_success_panel(
             Panel(
                 installed,
                 title="Installed Skills",
+                border_style=THEME.border_secondary,
+                box=_panel_box_for_stream(sys.stdout),
+                padding=(1, 1),
+            )
+        )
+    if result.exported_skills:
+        panels.append(
+            Panel(
+                exported,
+                title="Agent Exports",
                 border_style=THEME.border_secondary,
                 box=_panel_box_for_stream(sys.stdout),
                 padding=(1, 1),
@@ -817,6 +1257,28 @@ def _render_policy_report_panel(report: EffectivePolicyReportDto) -> Group:
 
 
 def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
+    if command_name == "search":
+        return (
+            "prefer",
+            "allow_trust",
+            "allow_lifecycle",
+            "max_tokens",
+            "max_content_size",
+            "search_json",
+        )
+    if command_name == "inspect":
+        return (
+            "version_select",
+            "select_slug",
+            "prefer",
+            "interaction_mode",
+            "allow_trust",
+            "allow_lifecycle",
+            "max_tokens",
+            "max_content_size",
+            "preview_chars",
+            "inspect_json",
+        )
     if command_name == "install":
         return (
             "version_select",
@@ -827,7 +1289,10 @@ def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
             "allow_lifecycle",
             "max_tokens",
             "max_content_size",
-            "install_target",
+            "install_agent",
+            "install_scope",
+            "install_global",
+            "install_export_root",
             "install_json",
         )
     if command_name == "sync":
@@ -895,7 +1360,9 @@ def _render_manifest_flags_table() -> Table:
 def _render_manifest_panel() -> Group:
     return Group(
         Panel(
-            _render_manifest_commands_table(["install", "sync", "policy", "manifest"]),
+            _render_manifest_commands_table(
+                ["search", "inspect", "install", "sync", "policy", "manifest", "mcp"]
+            ),
             title="Public Commands",
             border_style=THEME.border_secondary,
             box=_panel_box_for_stream(sys.stdout),
@@ -919,27 +1386,11 @@ def _render_manifest_panel() -> Group:
 
 
 def _render_error_panel(message: str) -> Panel:
-    lines = [
-        line
-        for line in message.splitlines()
-        if line.strip() and line.strip() != HORIZONTAL_SEPARATOR
-    ]
-    title = (lines[0] if lines else "Aptitude error").rstrip(".")
-    body = "\n".join(lines[1:]).strip() if len(lines) > 1 else message
-    return Panel(
-        Text(body, style=THEME.text_body),
-        title=title,
-        border_style=THEME.border_secondary,
-        box=_panel_box_for_stream(sys.stderr),
-        padding=(1, 1),
-    )
+    return render_cli_error_panel(message, stream=sys.stderr)
 
 
 def _emit_error_message(message: str) -> None:
-    if _has_interactive_output():
-        _stderr_console().print(_render_error_panel(message))
-        return
-    typer.echo(message, err=True)
+    _stderr_console().print(_render_error_panel(message))
 
 
 def _emit_error(error: AptitudeResolverError) -> None:
@@ -997,7 +1448,11 @@ def _install_result(
     query: str,
     version: str | None,
     select_slug: str | None,
-    target: Path,
+    target: Path | None,
+    agents: list[str],
+    scope: str,
+    export_root: Path | None,
+    cwd: Path | None,
     options: InstallWorkflowOptions,
 ) -> InstallResultDto:
     """Execute install and, if needed, complete interactive candidate selection."""
@@ -1011,6 +1466,10 @@ def _install_result(
             version=version,
             select_slug=select_slug,
             target=target,
+            agents=agents,
+            scope=_install_scope(scope),
+            export_root=export_root,
+            cwd=cwd,
             interaction_mode=None,
             prompt_capable=prompt_capable,
             selection_source=None,
@@ -1025,6 +1484,10 @@ def _install_result(
             version=version,
             select_slug=chosen_slug,
             target=target,
+            agents=agents,
+            scope=_install_scope(scope),
+            export_root=export_root,
+            cwd=cwd,
             interaction_mode="never",
             prompt_capable=False,
             selection_source="interactive",
@@ -1037,11 +1500,42 @@ def _sync_result(
     workflow_service: InstallWorkflowService,
     *,
     lock_path: Path,
-    target: Path,
+    target: Path | None,
 ) -> SyncResultDto:
     """Execute sync from one existing lockfile."""
 
     return workflow_service.sync_lock(lock_path=lock_path, target=target)
+
+
+def _install_scope(scope: str) -> Literal["project", "global", "custom"]:
+    normalized = scope.strip().lower()
+    if normalized in {"project", "global", "custom"}:
+        return normalized  # type: ignore[return-value]
+    raise typer.BadParameter("scope must be project, global, or custom")
+
+
+def _resolve_cli_install_scope(
+    *,
+    scope: str | None,
+    global_install: bool,
+    export_root: Path | None,
+) -> Literal["project", "global", "custom"]:
+    if scope is not None and global_install:
+        raise typer.BadParameter("Use either --scope global or --global, not both.")
+    if scope is not None:
+        return _install_scope(scope)
+    if global_install:
+        return "global"
+    if export_root is not None:
+        return "custom"
+    return "project"
+
+
+def _resolve_cli_agents(agent: list[str] | None) -> list[str]:
+    try:
+        return normalize_agent_list(agent or ["codex"])
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 def _exit_for_missing_query() -> None:
@@ -1069,6 +1563,10 @@ def _can_launch_install_flow(
     allow_lifecycle: str | None,
     max_tokens: int | None,
     max_content_size: int | None,
+    agent: list[str] | None,
+    scope: str | None,
+    global_install: bool,
+    export_root: Path | None,
     json_output: bool,
 ) -> bool:
     """Return whether a bare install invocation should open the guided flow."""
@@ -1082,6 +1580,10 @@ def _can_launch_install_flow(
         and allow_lifecycle is None
         and max_tokens is None
         and max_content_size is None
+        and agent is None
+        and scope is None
+        and not global_install
+        and export_root is None
         and not json_output
     )
 
@@ -1094,6 +1596,242 @@ def _can_launch_sync_flow(
     """Return whether a bare sync invocation should open the guided flow."""
 
     return lock_path is None and not json_output
+
+
+def _search_result(
+    *,
+    query: str,
+    options: InstallWorkflowOptions,
+) -> SearchSkillsResultDto:
+    """Execute discovery-only search."""
+
+    use_case, close = build_search_use_case(
+        selection_profile_override=options.selection_profile,
+        interaction_mode_override=options.interaction_mode,
+        allowed_trust_tiers_override=options.allowed_trust_tiers,
+        allowed_lifecycle_statuses_override=options.allowed_lifecycle_statuses,
+        max_token_estimate_override=options.max_token_estimate,
+        max_content_size_bytes_override=options.max_content_size_bytes,
+    )
+    try:
+        return use_case.execute(SearchSkillsRequestDto(query=query))
+    finally:
+        close()
+
+
+def _inspect_result(
+    *,
+    query: str,
+    version: str | None,
+    select_slug: str | None,
+    preview_chars: int,
+    options: InstallWorkflowOptions,
+    json_output: bool,
+) -> InspectSkillResultDto:
+    """Execute selected-skill inspection and complete interactive selection."""
+
+    use_case, close = build_inspect_use_case(
+        selection_profile_override=options.selection_profile,
+        interaction_mode_override=options.interaction_mode,
+        allowed_trust_tiers_override=options.allowed_trust_tiers,
+        allowed_lifecycle_statuses_override=options.allowed_lifecycle_statuses,
+        max_token_estimate_override=options.max_token_estimate,
+        max_content_size_bytes_override=options.max_content_size_bytes,
+    )
+    try:
+        result = use_case.execute(
+            InspectSkillRequestDto(
+                query=query,
+                version=version,
+                select_slug=select_slug,
+                interaction_mode=options.interaction_mode,
+                prompt_capable=_can_prompt_user() and not json_output,
+                preview_char_limit=preview_chars,
+            )
+        )
+        if result.status == "selection_required" and not json_output:
+            chosen_slug = _prompt_for_candidate_slug(result.candidates)
+            return use_case.execute(
+                InspectSkillRequestDto(
+                    query=query,
+                    version=version,
+                    select_slug=chosen_slug,
+                    interaction_mode="never",
+                    prompt_capable=False,
+                    selection_source="interactive",
+                    preview_char_limit=preview_chars,
+                )
+            )
+        return result
+    finally:
+        close()
+
+
+@app.command(help=build_command_help("search"))
+def search(
+    query: str,
+    prefer: str | None = typer.Option(
+        None,
+        "--prefer",
+        help=OPTIONS["prefer"].help_text,
+    ),
+    allow_trust: str | None = typer.Option(
+        None,
+        "--allow-trust",
+        help=OPTIONS["allow_trust"].help_text,
+    ),
+    allow_lifecycle: str | None = typer.Option(
+        None,
+        "--allow-lifecycle",
+        help=OPTIONS["allow_lifecycle"].help_text,
+    ),
+    max_tokens: int | None = typer.Option(
+        None,
+        "--max-tokens",
+        min=0,
+        help=OPTIONS["max_tokens"].help_text,
+    ),
+    max_content_size: int | None = typer.Option(
+        None,
+        "--max-content-size",
+        min=0,
+        help=OPTIONS["max_content_size"].help_text,
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help=OPTIONS["search_json"].help_text,
+    ),
+) -> None:
+    """Search registry candidates without resolving or installing."""
+
+    options = build_workflow_options(
+        prefer=prefer,
+        allow_trust=allow_trust,
+        allow_lifecycle=allow_lifecycle,
+        max_tokens=max_tokens,
+        max_content_size=max_content_size,
+    )
+
+    try:
+        result = _run_with_activity(
+            "Searching resolver skills",
+            lambda: _search_result(query=query, options=options),
+        )
+    except AptitudeResolverError as exc:
+        _emit_error(exc)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        _emit_unexpected_error(exc)
+        raise typer.Exit(code=1) from exc
+
+    if json_output:
+        typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+        return
+
+    if _has_interactive_output():
+        _stdout_console().print(_render_search_result_panel(result))
+        return
+
+    typer.echo(_format_search_result(result))
+
+
+@app.command(help=build_command_help("inspect"))
+def inspect(
+    query: str,
+    version: str | None = typer.Option(
+        None,
+        "--version",
+        help=OPTIONS["version_select"].help_text,
+    ),
+    select_slug: str | None = typer.Option(
+        None,
+        "--select-slug",
+        help=OPTIONS["select_slug"].help_text,
+    ),
+    prefer: str | None = typer.Option(
+        None,
+        "--prefer",
+        help=OPTIONS["prefer"].help_text,
+    ),
+    interaction_mode: str | None = typer.Option(
+        None,
+        "--interaction-mode",
+        help=OPTIONS["interaction_mode"].help_text,
+    ),
+    allow_trust: str | None = typer.Option(
+        None,
+        "--allow-trust",
+        help=OPTIONS["allow_trust"].help_text,
+    ),
+    allow_lifecycle: str | None = typer.Option(
+        None,
+        "--allow-lifecycle",
+        help=OPTIONS["allow_lifecycle"].help_text,
+    ),
+    max_tokens: int | None = typer.Option(
+        None,
+        "--max-tokens",
+        min=0,
+        help=OPTIONS["max_tokens"].help_text,
+    ),
+    max_content_size: int | None = typer.Option(
+        None,
+        "--max-content-size",
+        min=0,
+        help=OPTIONS["max_content_size"].help_text,
+    ),
+    preview_chars: int = typer.Option(
+        4000,
+        "--preview-chars",
+        min=0,
+        help=OPTIONS["preview_chars"].help_text,
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help=OPTIONS["inspect_json"].help_text,
+    ),
+) -> None:
+    """Inspect one skill candidate without resolving or installing."""
+
+    options = build_workflow_options(
+        prefer=prefer,
+        interaction_mode=interaction_mode,
+        allow_trust=allow_trust,
+        allow_lifecycle=allow_lifecycle,
+        max_tokens=max_tokens,
+        max_content_size=max_content_size,
+    )
+
+    try:
+        result = _run_with_activity(
+            "Inspecting resolver skill",
+            lambda: _inspect_result(
+                query=query,
+                version=version,
+                select_slug=select_slug,
+                preview_chars=preview_chars,
+                options=options,
+                json_output=json_output,
+            ),
+        )
+    except AptitudeResolverError as exc:
+        _emit_error(exc)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        _emit_unexpected_error(exc)
+        raise typer.Exit(code=1) from exc
+
+    if json_output:
+        typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+        return
+
+    if _has_interactive_output():
+        _stdout_console().print(_render_inspect_result_panel(result))
+        return
+
+    typer.echo(_format_inspect_result(result))
 
 
 @app.command(hidden=True, help=build_command_help("resolve"))
@@ -1217,10 +1955,25 @@ def install(
         min=0,
         help=OPTIONS["max_content_size"].help_text,
     ),
-    target: Path = typer.Option(
-        Path("skill_demo"),
-        "--target",
-        help=OPTIONS["install_target"].help_text,
+    agent: list[str] | None = typer.Option(
+        None,
+        "--agent",
+        help=OPTIONS["install_agent"].help_text,
+    ),
+    scope: str | None = typer.Option(
+        None,
+        "--scope",
+        help=OPTIONS["install_scope"].help_text,
+    ),
+    global_install: bool = typer.Option(
+        False,
+        "--global",
+        help=OPTIONS["install_global"].help_text,
+    ),
+    export_root: Path | None = typer.Option(
+        None,
+        "--export-root",
+        help=OPTIONS["install_export_root"].help_text,
     ),
     json_output: bool = typer.Option(
         False,
@@ -1228,7 +1981,7 @@ def install(
         help=OPTIONS["install_json"].help_text,
     ),
 ) -> None:
-    """Install a skill query into a local demo workspace."""
+    """Install a skill query into one or more agent skill roots."""
 
     if _can_launch_install_flow(
         query=query,
@@ -1240,16 +1993,19 @@ def install(
         allow_lifecycle=allow_lifecycle,
         max_tokens=max_tokens,
         max_content_size=max_content_size,
+        agent=agent,
+        scope=scope,
+        global_install=global_install,
+        export_root=export_root,
         json_output=json_output,
     ):
         if can_launch_cli_wizard():
             if query is None:
-                run_cli_wizard(initial_flow="install", target=target)
+                run_cli_wizard(initial_flow="install")
             else:
                 run_cli_wizard(
                     initial_flow="install",
                     initial_query=query,
-                    target=target,
                 )
             return
 
@@ -1266,6 +2022,12 @@ def install(
         max_tokens=max_tokens,
         max_content_size=max_content_size,
     )
+    install_agents = _resolve_cli_agents(agent)
+    install_scope = _resolve_cli_install_scope(
+        scope=scope,
+        global_install=global_install,
+        export_root=export_root,
+    )
 
     try:
         workflow_service = _build_workflow_service()
@@ -1277,7 +2039,11 @@ def install(
                     query=install_query,
                     version=version,
                     select_slug=select_slug,
-                    target=target,
+                    target=None,
+                    agents=install_agents,
+                    scope=install_scope,
+                    export_root=export_root,
+                    cwd=Path.cwd(),
                     options=options,
                 ),
                 show_bar=not json_output,
@@ -1317,8 +2083,8 @@ def sync(
         "--lock",
         help=OPTIONS["lock"].help_text,
     ),
-    target: Path = typer.Option(
-        Path("skill_demo"),
+    target: Path | None = typer.Option(
+        None,
         "--target",
         help=OPTIONS["sync_target"].help_text,
     ),

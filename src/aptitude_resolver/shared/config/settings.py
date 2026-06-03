@@ -13,7 +13,7 @@ _ENVIRONMENT_VARIABLES_BY_FIELD = {
     "read_token": "APTITUDE_READ_TOKEN",
     "server_timeout_seconds": "APTITUDE_SERVER_TIMEOUT_SECONDS",
 }
-DEFAULT_SERVER_BASE_URL = "https://aptitude-registry.dev/"
+DEFAULT_SERVER_BASE_URL = "https://api.aptitude-registry.dev"
 
 
 class Settings(BaseSettings):

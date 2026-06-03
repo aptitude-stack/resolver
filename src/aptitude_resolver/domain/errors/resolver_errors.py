@@ -46,6 +46,19 @@ class InvalidResolverConfigurationError(AptitudeResolverError):
         return payload
 
 
+class InvalidInstallTargetError(AptitudeResolverError):
+    """Raised when an install destination cannot be resolved safely."""
+
+    def __init__(self, details: str) -> None:
+        self.details = details
+        super().__init__(f"Invalid install target: {details}")
+
+    def to_payload(self) -> dict[str, object]:
+        payload = super().to_payload()
+        payload["details"] = self.details
+        return payload
+
+
 class RegistryUnavailableError(AptitudeResolverError):
     """Raised when the registry cannot be reached."""
 

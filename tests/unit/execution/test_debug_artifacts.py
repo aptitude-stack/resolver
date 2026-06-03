@@ -36,7 +36,7 @@ def _node(slug: str, version: str) -> ResolvedSkillNode:
 def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
     tmp_path,
 ) -> None:
-    target = tmp_path / "skill_demo"
+    target = tmp_path / "aptitude_state"
     graph = ResolutionGraph(
         root=SkillCoordinate(slug="python.lint", version="1.2.3"),
         nodes=[

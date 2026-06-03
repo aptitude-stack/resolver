@@ -35,6 +35,25 @@ def _client(handler, *, cache_dir=None) -> RegistryClient:
     )
 
 
+def test_registry_client_normalizes_trailing_slash_base_url() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "http://testserver/discovery"
+        return httpx.Response(200, json={"candidates": []})
+
+    client = RegistryClient(
+        Settings(
+            server_base_url="http://testserver/",
+            read_token="reader-token",
+            server_timeout_seconds=5.0,
+            _env_file=None,
+        ),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        cache_store=CacheStore(Path(tempfile.mkdtemp(prefix="resolver-cache-test-"))),
+    )
+
+    assert client.discover_candidates("Postman") == []
+
+
 def test_list_skill_versions_reads_live_contract_from_skill_endpoint() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import (
+    ExportedSkillDto,
     InstallRequestDto,
     InstallResultDto,
     InstalledSkillDto,
@@ -24,11 +25,18 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
     policy_to_dto,
     trace_to_dto,
 )
+from aptitude_resolver.domain.errors import InvalidInstallTargetError
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
 from aptitude_resolver.execution import (
     MaterializationOptions,
+    export_materialized_skills_to_agent_root,
     materialize_lockfile,
     write_install_debug_artifacts,
+)
+from aptitude_resolver.lockfile import Lockfile, serialize_lockfile
+from aptitude_resolver.shared.config import (
+    default_install_materialization_root,
+    resolve_agent_install_roots,
 )
 from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
@@ -99,9 +107,11 @@ class InstallSkillUseCase:
                     trace=[trace_to_dto(item) for item in plan.trace],
                 )
 
+            materialization_target = _materialization_target(request)
+            export_roots = _export_roots(request)
             with telemetry.measure("materialization"):
                 materialization = materialize_lockfile(
-                    target=request.target,
+                    target=materialization_target,
                     lockfile=plan.lockfile,
                     registry_client=self._registry_client,
                     execution_plan=plan.execution_plan,
@@ -115,6 +125,32 @@ class InstallSkillUseCase:
                     trace=trace,
                     policy_evaluations=plan.policy_evaluations,
                 )
+            exported_skills: list[ExportedSkillDto] = []
+            with telemetry.measure("agent_export"):
+                for agent, export_root in export_roots.items():
+                    export_result = export_materialized_skills_to_agent_root(
+                        materialized_root=Path(materialization.materialized_root),
+                        lockfile=plan.lockfile,
+                        destination_root=export_root,
+                        agent=agent,
+                        scope=request.scope,
+                    )
+                    trace.extend(export_result.trace)
+                    exported_skills.extend(
+                        ExportedSkillDto(
+                            agent=item.agent,
+                            scope=item.scope,
+                            slug=item.slug,
+                            version=item.version,
+                            destination_path=item.destination_path,
+                            skill_markdown_path=item.skill_markdown_path,
+                            metadata_path=item.metadata_path,
+                        )
+                        for item in export_result.exported_skills
+                    )
+            project_lock_path = _project_lock_path(request)
+            if project_lock_path is not None:
+                _write_project_lockfile(project_lock_path, plan.lockfile)
             return InstallResultDto(
                 requested_query=plan.requested_query,
                 requested_version=plan.requested_version,
@@ -135,7 +171,17 @@ class InstallSkillUseCase:
                     )
                     for item in materialization.installed_skills
                 ],
+                exported_skills=exported_skills,
                 materialized_root=materialization.materialized_root,
+                lock_path=str(project_lock_path)
+                if project_lock_path is not None
+                else None,
+                export_root=next(iter(export_roots.values())).as_posix()
+                if len(export_roots) == 1
+                else None,
+                export_roots={
+                    agent: str(root) for agent, root in export_roots.items()
+                },
                 trace=[trace_to_dto(item) for item in trace],
                 policy_evaluations=[
                     policy_to_dto(item) for item in plan.policy_evaluations
@@ -143,3 +189,40 @@ class InstallSkillUseCase:
             )
         finally:
             emit_stage_timings(telemetry)
+
+
+def _materialization_target(request: InstallRequestDto) -> Path:
+    return (
+        request.target.expanduser().resolve()
+        if request.target is not None
+        else default_install_materialization_root().resolve()
+    )
+
+
+def _export_roots(request: InstallRequestDto) -> dict[str, Path]:
+    cwd = request.cwd
+    if cwd is None and request.target is not None:
+        cwd = request.target.expanduser().resolve().parent
+    try:
+        return resolve_agent_install_roots(
+            agents=request.agents,
+            scope=request.scope,
+            cwd=cwd,
+            export_root=request.export_root,
+        )
+    except ValueError as exc:
+        raise InvalidInstallTargetError(str(exc)) from exc
+
+
+def _project_lock_path(request: InstallRequestDto) -> Path | None:
+    if request.scope != "project":
+        return None
+    project_root = (
+        request.cwd.expanduser().resolve() if request.cwd else Path.cwd().resolve()
+    )
+    return project_root / "aptitude.lock.json"
+
+
+def _write_project_lockfile(path: Path, lockfile: Lockfile) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(serialize_lockfile(lockfile), encoding="utf-8")

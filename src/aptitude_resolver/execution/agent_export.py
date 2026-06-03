@@ -8,6 +8,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from aptitude_resolver.domain.errors import InvalidArtifactError
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.lockfile import Lockfile, replay_lockfile
 
@@ -60,7 +61,9 @@ def export_materialized_skills_to_agent_root(
         node_id = f"{coordinate.slug}@{coordinate.version}"
         node = nodes_by_id[node_id]
         source_dir = materialized_root / "skills" / coordinate.slug / coordinate.version
-        content_path = source_dir / "content.md"
+        export_source_dir = _resolve_export_source_dir(source_dir)
+        content_path = export_source_dir / "content.md"
+        existing_skill_markdown_path = export_source_dir / "SKILL.md"
         export_dir = destination_root / coordinate.slug
         export_dir.parent.mkdir(parents=True, exist_ok=True)
 
@@ -71,7 +74,15 @@ def export_materialized_skills_to_agent_root(
             staging_dir = Path(temp_dir)
             skill_markdown_path = staging_dir / "SKILL.md"
             metadata_path = staging_dir / APTITUDE_AGENT_SIDECAR
-            shutil.copy2(content_path, skill_markdown_path)
+            _copy_agent_resources(source_dir=export_source_dir, staging_dir=staging_dir)
+            if content_path.exists():
+                shutil.copy2(content_path, skill_markdown_path)
+            elif not existing_skill_markdown_path.exists():
+                raise InvalidArtifactError(
+                    coordinate.slug,
+                    coordinate.version,
+                    "Expected content.md or SKILL.md in the materialized artifact.",
+                )
             metadata_path.write_text(
                 json.dumps(
                     {
@@ -128,3 +139,27 @@ def export_materialized_skills_to_agent_root(
         exported_skills=exported_skills,
         trace=trace,
     )
+
+
+def _copy_agent_resources(*, source_dir: Path, staging_dir: Path) -> None:
+    """Copy bundled skill resources while normalizing the main markdown file."""
+
+    def ignore(_path: str, names: list[str]) -> set[str]:
+        return {"content.md", "metadata.json"} & set(names)
+
+    shutil.copytree(source_dir, staging_dir, dirs_exist_ok=True, ignore=ignore)
+
+
+def _resolve_export_source_dir(source_dir: Path) -> Path:
+    """Return the directory whose contents should become the agent skill package."""
+
+    if (source_dir / "content.md").exists() or (source_dir / "SKILL.md").exists():
+        return source_dir
+
+    # Temporary compatibility for currently published artifacts. Remove this
+    # after the registry publishes SKILL.md at the archive root again.
+    bundled_source_dir = source_dir / "skill-bundle"
+    if (bundled_source_dir / "SKILL.md").exists():
+        return bundled_source_dir
+
+    return source_dir

@@ -1,10 +1,13 @@
 """Shared configuration helpers."""
 
 from aptitude_resolver.shared.config.agent_targets import (
+    AgentInstallScope,
     AgentTargetPreset,
     detect_available_agent_targets,
     get_agent_target_preset,
+    normalize_agent_list,
     resolve_agent_install_root,
+    resolve_agent_install_roots,
     supported_agent_targets,
 )
 from aptitude_resolver.shared.config.aptitude_config import (
@@ -28,15 +31,28 @@ from aptitude_resolver.shared.config.settings import (
     Settings,
     describe_settings_validation_error,
 )
+from aptitude_resolver.shared.config.local_paths import (
+    default_aptitude_cache_dir,
+    default_aptitude_data_dir,
+    default_aptitude_state_dir,
+    default_install_materialization_root,
+    default_sync_materialization_root,
+)
 
 __all__ = [
     "AptitudeConfig",
+    "AgentInstallScope",
     "AgentTargetPreset",
     "ExecutionConfig",
     "PolicyConfig",
     "SelectionConfig",
     "detect_available_agent_targets",
     "Settings",
+    "default_aptitude_cache_dir",
+    "default_aptitude_data_dir",
+    "default_aptitude_state_dir",
+    "default_install_materialization_root",
+    "default_sync_materialization_root",
     "describe_settings_validation_error",
     "discover_system_config_path",
     "get_agent_target_preset",
@@ -46,10 +62,12 @@ __all__ = [
     "load_system_aptitude_config",
     "load_user_aptitude_config",
     "load_workspace_aptitude_config",
+    "normalize_agent_list",
     "read_env_execution_overrides",
     "read_env_selection_overrides",
     "resolve_system_config_path",
     "resolve_user_config_path",
     "resolve_agent_install_root",
+    "resolve_agent_install_roots",
     "supported_agent_targets",
 ]
