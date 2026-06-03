@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import threading
 from pathlib import Path
 from typing import Any
 
 from diskcache import Cache, JSONDisk
+
+from aptitude_resolver.shared.config.local_paths import default_aptitude_cache_dir
 
 
 def default_cache_dir(
@@ -18,26 +19,7 @@ def default_cache_dir(
 ) -> Path:
     """Return the default OS-appropriate cache directory for Aptitude."""
 
-    env_map = os.environ if env is None else env
-    effective_home = Path.home() if home is None else home
-    effective_os_name = os.name if os_name is None else os_name
-
-    if effective_os_name == "nt":
-        local_app_data = env_map.get("LOCALAPPDATA")
-        base = (
-            Path(local_app_data)
-            if local_app_data is not None
-            else effective_home / "AppData" / "Local"
-        )
-    else:
-        xdg_cache_home = env_map.get("XDG_CACHE_HOME")
-        base = (
-            Path(xdg_cache_home)
-            if xdg_cache_home is not None
-            else effective_home / ".cache"
-        )
-
-    return base / "resolver" / "cache"
+    return default_aptitude_cache_dir(env=env, home=home, os_name=os_name)
 
 
 class CacheStore:

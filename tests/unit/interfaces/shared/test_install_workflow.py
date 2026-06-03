@@ -94,7 +94,7 @@ def test_install_query_closes_builder_when_use_case_raises() -> None:
             query="python lint",
             version=None,
             select_slug=None,
-            target=Path("skill_demo"),
+            target=Path("aptitude_state"),
             interaction_mode=None,
             prompt_capable=False,
             selection_source=None,

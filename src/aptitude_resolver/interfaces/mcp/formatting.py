@@ -217,9 +217,20 @@ def _format_install_result(result: InstallResultDto) -> str:
             f"Selected: `{result.selected_coordinate.slug}@{result.selected_coordinate.version}`"
         )
     if result.materialized_root:
-        lines.append(f"Materialized root: `{result.materialized_root}`")
+        lines.append(f"Aptitude state: `{result.materialized_root}`")
+    if result.export_roots:
+        lines.extend(["", "## Agent Roots"])
+        lines.extend(
+            f"- `{agent}` -> `{path}`" for agent, path in result.export_roots.items()
+        )
+    if result.exported_skills:
+        lines.extend(["", "## Exported Skills"])
+        lines.extend(
+            f"- `{item.agent}` `{item.slug}@{item.version}` -> `{item.destination_path}`"
+            for item in result.exported_skills
+        )
     if result.installed_skills:
-        lines.extend(["", "## Installed Skills"])
+        lines.extend(["", "## Aptitude Internal Skills"])
         lines.extend(
             f"- `{item.slug}@{item.version}` -> `{item.install_path}`"
             for item in result.installed_skills

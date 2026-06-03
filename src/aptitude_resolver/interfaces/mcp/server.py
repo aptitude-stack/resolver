@@ -25,6 +25,7 @@ from aptitude_resolver.application.dto import (
     SyncRequestDto,
 )
 from aptitude_resolver.domain.errors import AptitudeResolverError
+from aptitude_resolver.domain.errors import InvalidInstallTargetError
 from aptitude_resolver.interfaces.cli.catalog import build_manifest_text
 from aptitude_resolver.interfaces.mcp.errors import format_mcp_error
 from aptitude_resolver.interfaces.mcp.formatting import (
@@ -34,11 +35,17 @@ from aptitude_resolver.interfaces.mcp.formatting import (
 from aptitude_resolver.interfaces.mcp.models import (
     InspectSkillInput,
     InstallSkillInput,
+    PreviewInstallDestinationsInput,
     ResponseFormat,
     ResolveSkillInput,
     SearchSkillsInput,
     ShowPolicyInput,
     SyncLockInput,
+)
+from aptitude_resolver.shared.config import (
+    default_install_materialization_root,
+    resolve_agent_install_roots,
+    supported_agent_targets,
 )
 
 TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
@@ -65,6 +72,13 @@ TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
     ),
     "aptitude_show_policy": ToolAnnotations(
         title="Show Aptitude Policy",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+    "aptitude_preview_install_destinations": ToolAnnotations(
+        title="Preview Aptitude Install Destinations",
         readOnlyHint=True,
         destructiveHint=False,
         idempotentHint=True,
@@ -203,19 +217,45 @@ class AptitudeMcpAdapter:
         except AptitudeResolverError as exc:
             return _error_response(exc)
 
+    def preview_install_destinations(
+        self,
+        params: PreviewInstallDestinationsInput,
+    ) -> str:
+        try:
+            result = _preview_install_destinations(
+                agents=params.agents or ["codex"],
+                scope=params.scope or "project",
+                cwd=_resolve_optional_path(params.cwd),
+                export_root=_resolve_optional_path(params.export_root),
+            )
+            return format_response(result, params.response_format)
+        except AptitudeResolverError as exc:
+            return _error_response(exc)
+
     def install_skill(self, params: InstallSkillInput) -> str:
-        target = _resolve_required_path(params.target, field_name="target")
+        if params.agents is None or params.scope is None:
+            return _error_response(
+                InvalidInstallTargetError(
+                    "MCP installs require explicit agents and scope. Call "
+                    "aptitude_preview_install_destinations first if you need to "
+                    "inspect the write paths."
+                )
+            )
         use_case, close = self._install_builder(**_workflow_kwargs(params))
         try:
             result = use_case.execute(
                 InstallRequestDto(
                     query=params.query,
-                    target=target,
+                    target=None,
                     version=params.version,
                     select_slug=params.select_slug,
                     interaction_mode=params.interaction_mode,
                     prompt_capable=False,
                     selection_source="mcp",
+                    agents=params.agents,
+                    scope=params.scope,
+                    export_root=_resolve_optional_path(params.export_root),
+                    cwd=_resolve_optional_path(params.cwd),
                 )
             )
             return format_response(result, params.response_format)
@@ -289,11 +329,22 @@ def create_server(adapter: AptitudeMcpAdapter | None = None) -> FastMCP:
         return active_adapter.show_policy(params)
 
     @mcp.tool(
+        name="aptitude_preview_install_destinations",
+        annotations=TOOL_ANNOTATIONS["aptitude_preview_install_destinations"],
+    )
+    def aptitude_preview_install_destinations(
+        params: PreviewInstallDestinationsInput,
+    ) -> str:
+        """Preview agent skill roots and Aptitude state paths before installing."""
+
+        return active_adapter.preview_install_destinations(params)
+
+    @mcp.tool(
         name="aptitude_install_skill",
         annotations=TOOL_ANNOTATIONS["aptitude_install_skill"],
     )
     def aptitude_install_skill(params: InstallSkillInput) -> str:
-        """Resolve and materialize a skill query into an explicit local target path."""
+        """Resolve, verify, and export a skill query into explicit agent roots."""
 
         return active_adapter.install_skill(params)
 
@@ -339,7 +390,8 @@ def create_server(adapter: AptitudeMcpAdapter | None = None) -> FastMCP:
         return (
             f"Resolve `{query}` with `aptitude_resolve_skill`, review the selected "
             "coordinate, governance, lockfile, and execution plan, then ask for "
-            "confirmation before calling `aptitude_install_skill` with an explicit target."
+            "confirmation before calling `aptitude_install_skill` with explicit "
+            "agents and scope."
         )
 
     @mcp.prompt("aptitude_compare_candidates")
@@ -374,6 +426,7 @@ def _workflow_kwargs(params: Any) -> dict[str, Any]:
         "allowed_lifecycle_statuses": "allowed_lifecycle_statuses_override",
         "max_token_estimate": "max_token_estimate_override",
         "max_content_size_bytes": "max_content_size_bytes_override",
+        "cwd": "cwd",
     }
     for source, target in field_map.items():
         value = getattr(params, source, None)
@@ -393,6 +446,41 @@ def _resolve_optional_path(path: Path | None) -> Path | None:
     if path is None:
         return None
     return _resolve_required_path(path, field_name="cwd")
+
+
+def _preview_install_destinations(
+    *,
+    agents: list[str],
+    scope: str,
+    cwd: Path | None,
+    export_root: Path | None,
+) -> dict[str, Any]:
+    try:
+        roots = resolve_agent_install_roots(
+            agents=agents,
+            scope=scope,
+            cwd=cwd,
+            export_root=export_root,
+        )
+    except ValueError as exc:
+        raise InvalidInstallTargetError(str(exc)) from exc
+
+    return {
+        "scope": scope,
+        "cwd": str((cwd or Path.cwd()).resolve()),
+        "materialized_root": str(default_install_materialization_root().resolve()),
+        "supported_agents": [
+            {"agent": preset.agent, "display_name": preset.display_name}
+            for preset in supported_agent_targets()
+        ],
+        "destination_roots": {
+            agent: str(root) for agent, root in roots.items()
+        },
+        "warnings": [
+            "Install will write agent-facing skill packages to destination_roots.",
+            "Aptitude cache and state remain outside the repository by default.",
+        ],
+    }
 
 
 def _error_response(error: AptitudeResolverError) -> str:

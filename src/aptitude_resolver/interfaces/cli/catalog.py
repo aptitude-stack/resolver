@@ -144,17 +144,56 @@ OPTIONS = {
             "ceiling in bytes."
         ),
     ),
-    "install_target": OptionSurface(
-        key="install_target",
-        signature="--target PATH",
-        brief="materialization target directory",
-        help_text="Local directory where the resolved graph should be materialized.",
+    "install_agent": OptionSurface(
+        key="install_agent",
+        signature="--agent TEXT",
+        brief="agent target to export into; repeatable, or use *",
+        help_text=(
+            "Agent skill target to export into. Repeat for multiple agents or use * "
+            "for every supported target."
+        ),
+    ),
+    "install_scope": OptionSurface(
+        key="install_scope",
+        signature="--scope TEXT",
+        brief="project, global, or custom export scope",
+        help_text="Install scope for agent exports: project, global, or custom.",
+    ),
+    "install_global": OptionSurface(
+        key="install_global",
+        signature="--global",
+        brief="shortcut for --scope global",
+        help_text="Install into the selected agent's global skill root.",
+    ),
+    "install_export_root": OptionSurface(
+        key="install_export_root",
+        signature="--export-root PATH",
+        brief="custom base directory for agent exports",
+        help_text="Custom base directory used when --scope custom is selected.",
     ),
     "install_json": OptionSurface(
         key="install_json",
         signature="--json",
         brief="structured machine-readable result",
         help_text="Print the structured JSON install result for automation and CI.",
+    ),
+    "search_json": OptionSurface(
+        key="search_json",
+        signature="--json",
+        brief="structured machine-readable search result",
+        help_text="Print the structured JSON search result for automation and CI.",
+    ),
+    "inspect_json": OptionSurface(
+        key="inspect_json",
+        signature="--json",
+        brief="structured machine-readable inspection result",
+        help_text="Print the structured JSON inspection result for automation and CI.",
+    ),
+    "preview_chars": OptionSurface(
+        key="preview_chars",
+        signature="--preview-chars INTEGER",
+        brief="bounded content preview length",
+        help_text="Maximum number of content-preview characters to print.",
     ),
     "sync_target": OptionSurface(
         key="sync_target",
@@ -204,14 +243,113 @@ PLANNING_OPTION_KEYS = (
     "max_tokens",
     "max_content_size",
 )
+SEARCH_OPTION_KEYS = (
+    "prefer",
+    "allow_trust",
+    "allow_lifecycle",
+    "max_tokens",
+    "max_content_size",
+    "search_json",
+)
+INSPECT_OPTION_KEYS = (
+    "version_select",
+    "select_slug",
+    "prefer",
+    "interaction_mode",
+    "allow_trust",
+    "allow_lifecycle",
+    "max_tokens",
+    "max_content_size",
+    "preview_chars",
+    "inspect_json",
+)
 
 COMMANDS = {
+    "search": CommandSurface(
+        name="search",
+        audience="public",
+        summary="discover ranked candidates without resolving or installing",
+        usage='{cli} search "query"',
+        description="Search registry candidates without resolving or installing.",
+        flow_title="Discovery-only flow",
+        flow_steps=("discovery", "policy filtering", "reranking"),
+        examples=(
+            '{cli} search "Documentation Writing"',
+            '{cli} search "Postman" --prefer high-trust',
+            '{cli} search "Postman" --allow-trust verified,internal --json',
+        ),
+        option_groups=(
+            OptionGroup(
+                title="Selection behavior",
+                option_keys=("prefer",),
+            ),
+            OptionGroup(
+                title="Policy behavior",
+                option_keys=(
+                    "allow_trust",
+                    "allow_lifecycle",
+                    "max_tokens",
+                    "max_content_size",
+                ),
+            ),
+            OptionGroup(
+                title="Output behavior",
+                option_keys=("search_json",),
+            ),
+        ),
+        note_lines=(
+            "does not resolve dependencies",
+            "does not write a lockfile or materialize files",
+        ),
+    ),
+    "inspect": CommandSurface(
+        name="inspect",
+        audience="public",
+        summary="inspect one candidate without resolving or installing",
+        usage='{cli} inspect "query"',
+        description="Inspect one selected skill candidate and preview its content.",
+        flow_title="Inspection flow",
+        flow_steps=("discovery", "policy filtering", "reranking", "selected preview"),
+        examples=(
+            '{cli} inspect "Documentation Writing"',
+            '{cli} inspect "Postman" --select-slug postman-primary',
+            '{cli} inspect "Postman" --preview-chars 1200 --json',
+        ),
+        option_groups=(
+            OptionGroup(
+                title="Selection behavior",
+                option_keys=(
+                    "version_select",
+                    "select_slug",
+                    "prefer",
+                    "interaction_mode",
+                ),
+            ),
+            OptionGroup(
+                title="Policy behavior",
+                option_keys=(
+                    "allow_trust",
+                    "allow_lifecycle",
+                    "max_tokens",
+                    "max_content_size",
+                ),
+            ),
+            OptionGroup(
+                title="Output behavior",
+                option_keys=("preview_chars", "inspect_json"),
+            ),
+        ),
+        note_lines=(
+            "does not resolve dependencies",
+            "does not write a lockfile or materialize files",
+        ),
+    ),
     "install": CommandSurface(
         name="install",
         audience="public",
-        summary="fresh planning from a query and local materialization",
+        summary="fresh planning from a query and agent skill export",
         usage='{cli} install "query"',
-        description="Install a skill query into a local demo workspace.",
+        description="Install a skill query into one or more agent skill roots.",
         flow_title="Fresh planning flow",
         flow_steps=(
             "discovery",
@@ -223,7 +361,8 @@ COMMANDS = {
         examples=(
             '{cli} install "Postman Primary Skill"',
             '{cli} install "Postman" --interaction-mode always',
-            '{cli} install "Postman Primary Skill" --prefer low-cost',
+            '{cli} install "Postman Primary Skill" --agent codex --scope project',
+            '{cli} install "Postman Primary Skill" --agent claude-code --global',
             '{cli} install "Postman Primary Skill" --json',
         ),
         option_groups=(
@@ -241,8 +380,17 @@ COMMANDS = {
                 ),
             ),
             OptionGroup(
+                title="Install destination",
+                option_keys=(
+                    "install_agent",
+                    "install_scope",
+                    "install_global",
+                    "install_export_root",
+                ),
+            ),
+            OptionGroup(
                 title="Output behavior",
-                option_keys=("install_target", "install_json"),
+                option_keys=("install_json",),
                 lines=(
                     "default   human-friendly install summary",
                     "--json    structured machine-readable result",
@@ -397,6 +545,8 @@ def build_root_help(program_name: str | None = None) -> str:
     """Render the root help summary from the catalog."""
 
     public_commands = (
+        COMMANDS["search"],
+        COMMANDS["inspect"],
         COMMANDS["install"],
         COMMANDS["sync"],
         COMMANDS["policy"],
@@ -422,6 +572,16 @@ def build_root_help(program_name: str | None = None) -> str:
             "  APTITUDE_SERVER_BASE_URL   registry URL override",
             "",
             "Examples:",
+            "  "
+            + _render_command_text(
+                '{cli} search "Documentation Writing"',
+                program_name=program_name,
+            ),
+            "  "
+            + _render_command_text(
+                '{cli} inspect "Documentation Writing"',
+                program_name=program_name,
+            ),
             "  "
             + _render_command_text(
                 '{cli} install "Postman Primary Skill"',
@@ -450,7 +610,7 @@ def build_root_help(program_name: str | None = None) -> str:
             "  " + _render_command_text("{cli} manifest", program_name=program_name),
             "  " + _render_command_text("{cli} mcp", program_name=program_name),
             "",
-            "Use `install --help`, `sync --help`, or `mcp --help` for command-specific options, or `manifest` for the full surface.",
+            "Use `search --help`, `inspect --help`, `install --help`, `sync --help`, or `mcp --help` for command-specific options, or `manifest` for the full surface.",
         ]
     )
     return "\n".join(lines)
@@ -502,6 +662,8 @@ def build_manifest_text(program_name: str | None = None) -> str:
     """Render the human-readable capability map."""
 
     public_commands = (
+        COMMANDS["search"],
+        COMMANDS["inspect"],
         COMMANDS["install"],
         COMMANDS["sync"],
         COMMANDS["policy"],
@@ -560,10 +722,26 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
     install_option_signatures = (
         "--prefer balanced|low-cost|high-trust  --interaction-mode auto|always|never",
         "--select-slug slug  --allow-trust a,b  --allow-lifecycle a,b",
-        "--max-tokens N  --max-content-size N  --target PATH  --json",
+        "--max-tokens N  --max-content-size N  --agent codex  --scope project  --json",
     )
     body = Group(
         Text("Public commands", style=THEME.text_subtle),
+        Text(
+            "search   "
+            + _render_command_text(
+                '{cli} search "query" [flags]',
+                program_name=program_name,
+            ),
+            style=THEME.text_primary,
+        ),
+        Text(
+            "inspect  "
+            + _render_command_text(
+                '{cli} inspect "query" [flags]',
+                program_name=program_name,
+            ),
+            style=THEME.text_primary,
+        ),
         Text(
             "install  "
             + _render_command_text(
@@ -637,8 +815,18 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
 
 
 def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
+    if command_name == "search":
+        return SEARCH_OPTION_KEYS
+    if command_name == "inspect":
+        return INSPECT_OPTION_KEYS
     if command_name == "install":
-        return PLANNING_OPTION_KEYS + ("install_target", "install_json")
+        return PLANNING_OPTION_KEYS + (
+            "install_agent",
+            "install_scope",
+            "install_global",
+            "install_export_root",
+            "install_json",
+        )
     if command_name == "sync":
         return ("lock", "sync_target", "sync_json")
     if command_name == "policy":

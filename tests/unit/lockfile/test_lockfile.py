@@ -60,16 +60,23 @@ class FakeRegistryClient:
     def list_skill_versions(self, slug: str) -> list[VersionSummary]:
         return [
             VersionSummary(
-                coordinate=SkillCoordinate(slug=candidate_slug, version=version),
-                is_current_default=True,
+                coordinate=metadata.coordinate,
+                name=metadata.name,
+                description=metadata.description,
+                tags=list(metadata.tags),
+                headers=dict(metadata.headers),
+                rendered_summary=metadata.rendered_summary,
                 lifecycle_status=metadata.lifecycle_status,
                 trust_tier=metadata.trust_tier,
                 published_at=metadata.published_at,
-                token_estimate=metadata.token_estimate,
+                content_checksum_algorithm=metadata.content_checksum_algorithm,
+                content_checksum_digest=metadata.content_checksum_digest,
                 content_size_bytes=metadata.content_size_bytes,
-                rendered_summary=metadata.rendered_summary,
+                token_estimate=metadata.token_estimate,
+                maturity_score=metadata.maturity_score,
+                security_score=metadata.security_score,
             )
-            for (candidate_slug, version), metadata in self.metadata_by_coordinate.items()
+            for (candidate_slug, _), metadata in self.metadata_by_coordinate.items()
             if candidate_slug == slug
         ]
 

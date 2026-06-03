@@ -103,11 +103,48 @@ class ShowPolicyInput(_StrictInput):
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
 
+class PreviewInstallDestinationsInput(_StrictInput):
+    """Input for previewing agent install destinations without writing files."""
+
+    agents: list[str] | None = Field(
+        default=None,
+        description="Agent targets to preview. Use ['*'] for all supported agents.",
+    )
+    scope: Literal["project", "global", "custom"] | None = Field(
+        default=None,
+        description="Install scope to preview: project, global, or custom.",
+    )
+    cwd: Path | None = Field(
+        default=None,
+        description="Workspace directory used for project-scope destinations.",
+    )
+    export_root: Path | None = Field(
+        default=None,
+        description="Custom export root used with scope=custom.",
+    )
+    response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+
 class InstallSkillInput(_WorkflowPolicyInput):
-    """Input for fresh planning plus local materialization."""
+    """Input for fresh planning plus agent-aware skill export."""
 
     query: str = Field(..., min_length=1, max_length=500, description="Skill query.")
-    target: Path = Field(..., description="Explicit directory where skills are materialized.")
+    agents: list[str] | None = Field(
+        default=None,
+        description="Explicit agent targets. Use ['*'] for all supported agents.",
+    )
+    scope: Literal["project", "global", "custom"] | None = Field(
+        default=None,
+        description="Explicit install scope: project, global, or custom.",
+    )
+    cwd: Path | None = Field(
+        default=None,
+        description="Workspace directory used for project-scope destinations.",
+    )
+    export_root: Path | None = Field(
+        default=None,
+        description="Custom export root used with scope=custom.",
+    )
     version: str | None = Field(default=None, description="Optional requested version.")
     select_slug: str | None = Field(default=None, description="Optional explicit selected slug.")
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)

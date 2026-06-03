@@ -154,7 +154,8 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
     result = InstallSkillUseCase(registry_client).execute(
         InstallRequestDto(
             query="python lint",
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
+            cwd=tmp_path,
         )
     )
 
@@ -180,14 +181,19 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
         ("python-base", "1.0.0"),
         ("python-lint", "1.2.3"),
     ]
-    resolution_dir = tmp_path / "skill_demo" / "resolution"
+    resolution_dir = tmp_path / "aptitude_state" / "resolution"
     assert (resolution_dir / "graph.json").exists()
     assert (resolution_dir / "trace.json").exists()
     assert (resolution_dir / "policy.json").exists()
+    project_lock_path = tmp_path / "aptitude.lock.json"
+    assert result.lock_path == str(project_lock_path)
+    assert project_lock_path.exists()
     graph_payload = json.loads(
         (resolution_dir / "graph.json").read_text(encoding="utf-8")
     )
     assert graph_payload["root"] == {"slug": "python-lint", "version": "1.2.3"}
+    project_lock_payload = json.loads(project_lock_path.read_text(encoding="utf-8"))
+    assert project_lock_payload["root"]["selected_node_id"] == "python-lint@1.2.3"
 
 
 def test_install_use_case_returns_selection_required_before_dependency_resolution_or_materialization(
@@ -215,7 +221,7 @@ def test_install_use_case_returns_selection_required_before_dependency_resolutio
     result = InstallSkillUseCase(registry_client).execute(
         InstallRequestDto(
             query="lint",
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
             interaction_mode="always",
             prompt_capable=True,
         )

@@ -75,6 +75,14 @@ Install a skill by query:
 
 ```bash
 aptitude install "Postman Primary Skill"
+aptitude install "Postman Primary Skill" --agent codex --scope project
+```
+
+Search and inspect before installing:
+
+```bash
+uvx aptitude-resolver search "Documentation Writing"
+uvx aptitude-resolver inspect "Documentation Writing"
 ```
 
 Inspect effective local policy and config layers:
@@ -120,7 +128,7 @@ Aptitude ships a local stdio MCP server for agents and MCP-compatible apps. The 
 
 The MCP server process still runs locally. `uvx` only resolves the published package and starts its `mcp` command over stdio.
 
-The MCP server exposes tools for search, inspect, resolve, policy inspection, install, and lock sync. Mutating tools require explicit filesystem targets.
+The MCP server exposes tools for search, inspect, resolve, policy inspection, install destination preview, install, and lock sync. Mutating install calls require explicit `agents` and `scope`; lock sync requires an explicit filesystem target.
 
 If Aptitude is already installed as a persistent tool, MCP hosts can also use the direct executable:
 
@@ -150,6 +158,7 @@ Replace `APTITUDE_READ_TOKEN` with a token accepted by the target Aptitude Serve
 - policy filtering and graph governance
 - lockfile generation and replay
 - archive-based skill materialization from verified `tar.zst` artifacts
+- agent-ready exports for project, global, and custom skill roots
 - local config loading from `aptitude.toml`
 - CLI and MCP interfaces
 

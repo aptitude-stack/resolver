@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import replace
 
-from packaging.version import Version
-
 from aptitude_resolver.discovery.intent import normalize_text
 from aptitude_resolver.domain.models import DiscoveryCandidate, SearchIntent
 from aptitude_resolver.domain.policy import (
@@ -14,6 +12,7 @@ from aptitude_resolver.domain.policy import (
     lifecycle_status_rank,
     trust_tier_rank,
 )
+from aptitude_resolver.domain.versioning import SkillVersion, parse_skill_version
 
 
 def rerank_candidates(
@@ -76,7 +75,7 @@ class RankingComponents:
     size_known: int
     size_score: int
     current_default: int
-    semantic_version: Version
+    semantic_version: SkillVersion
     published_at: str
     slug: str
     match_reasons: str
@@ -180,7 +179,7 @@ def _ranking_components(
         size_known=size_known,
         size_score=size_score,
         current_default=current_default,
-        semantic_version=Version(version.coordinate.version),
+        semantic_version=parse_skill_version(version.coordinate.version),
         published_at=version.published_at,
         slug=candidate.slug,
         match_reasons="".join(candidate.match_reasons),

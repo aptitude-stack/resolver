@@ -226,12 +226,12 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
     lockfile = _lockfile(content_by_coordinate)
 
     result = materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
     )
 
-    materialized_root = tmp_path / "skill_demo"
+    materialized_root = tmp_path / "aptitude_state"
     assert materialized_root.exists()
     assert [item.slug for item in result.installed_skills] == [
         "python-base",
@@ -271,7 +271,7 @@ def test_materialize_lockfile_preserves_existing_target_when_promotion_fails(
     tmp_path,
     monkeypatch,
 ) -> None:
-    target = tmp_path / "skill_demo"
+    target = tmp_path / "aptitude_state"
     target.mkdir()
     (target / "keep.txt").write_text("keep me\n", encoding="utf-8")
     (target / "locked.txt").write_text("locked\n", encoding="utf-8")
@@ -339,7 +339,7 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
 
     with pytest.raises(ContentChecksumMismatchError) as exc_info:
         materialize_lockfile(
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
             lockfile=lockfile,
             registry_client=registry_client,
         )
@@ -351,7 +351,7 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
     assert payload["algorithm"] == "sha256"
     assert payload["expected_digest"] == expected_node.content_checksum_digest
     assert payload["actual_digest"] == hashlib.sha256(b"tampered").hexdigest()
-    assert not (tmp_path / "skill_demo").exists()
+    assert not (tmp_path / "aptitude_state").exists()
 
 
 @pytest.mark.parametrize(
@@ -382,12 +382,12 @@ def test_materialize_lockfile_rejects_unsafe_archive_members(
 
     with pytest.raises(InvalidArtifactError, match=message):
         materialize_lockfile(
-            target=tmp_path / "skill_demo",
+            target=tmp_path / "aptitude_state",
             lockfile=lockfile,
             registry_client=registry_client,
         )
 
-    assert not (tmp_path / "skill_demo").exists()
+    assert not (tmp_path / "aptitude_state").exists()
 
 
 def test_materialize_lockfile_downloads_locked_artifacts_in_parallel(
@@ -402,7 +402,7 @@ def test_materialize_lockfile_downloads_locked_artifacts_in_parallel(
     lockfile = _multi_lockfile(content_by_coordinate)
 
     materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
         options=MaterializationOptions(concurrent_downloads=3, concurrent_installs=1),
@@ -430,7 +430,7 @@ def test_materialize_lockfile_preserves_lock_order_when_workers_finish_out_of_or
     lockfile = _multi_lockfile(content_by_coordinate)
 
     result = materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
         options=MaterializationOptions(concurrent_downloads=3, concurrent_installs=3),
@@ -458,7 +458,7 @@ def test_materialize_lockfile_concurrent_downloads_one_is_serial(tmp_path) -> No
     lockfile = _multi_lockfile(content_by_coordinate)
 
     materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
         options=MaterializationOptions(concurrent_downloads=1, concurrent_installs=3),
@@ -509,7 +509,7 @@ def test_materialize_lockfile_concurrent_installs_one_serializes_extraction(
     )
 
     materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
         options=MaterializationOptions(concurrent_downloads=3, concurrent_installs=1),
@@ -550,7 +550,7 @@ def test_materialize_lockfile_reuses_precomputed_execution_plan(
     monkeypatch.setattr(materialize_module, "build_execution_plan", _unexpected_rebuild)
 
     result = materialize_module.materialize_lockfile(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         lockfile=lockfile,
         registry_client=registry_client,
         execution_plan=precomputed_plan,
@@ -619,7 +619,7 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
     )
 
     write_install_debug_artifacts(
-        target=tmp_path / "skill_demo",
+        target=tmp_path / "aptitude_state",
         graph=graph,
         trace=[
             TraceEntry(
@@ -639,7 +639,7 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
         ],
     )
 
-    resolution_dir = tmp_path / "skill_demo" / "resolution"
+    resolution_dir = tmp_path / "aptitude_state" / "resolution"
     assert json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))[
         "root"
     ] == {

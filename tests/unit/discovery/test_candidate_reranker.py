@@ -102,6 +102,26 @@ def test_rerank_candidates_prefers_hyphenated_exact_slug() -> None:
     assert [item.slug for item in ranked] == ["python-lint", "generic-lint"]
 
 
+def test_rerank_candidates_accepts_semver_prerelease_versions() -> None:
+    intent = parse_search_intent("Documentation Writing")
+
+    ranked = rerank_candidates(
+        intent,
+        [
+            _candidate(
+                "docs-writer",
+                "0.1.0-publish.20260515115306",
+                name="Documentation Writing",
+                tags=["documentation"],
+                runtime="markdown",
+            )
+        ],
+        SelectionPreferences(),
+    )
+
+    assert ranked[0].slug == "docs-writer"
+
+
 def test_rerank_candidates_prefers_lower_cost_under_low_cost_profile() -> None:
     intent = parse_search_intent("lint tool")
     candidates = [

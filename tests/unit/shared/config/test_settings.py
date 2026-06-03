@@ -6,6 +6,10 @@ from pydantic import ValidationError
 from aptitude_resolver.shared.config.settings import DEFAULT_SERVER_BASE_URL, Settings
 
 
+def test_default_server_base_url_points_to_public_api_host() -> None:
+    assert DEFAULT_SERVER_BASE_URL == "https://api.aptitude-registry.dev"
+
+
 def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APTITUDE_SERVER_BASE_URL", "http://localhost:8000")
     monkeypatch.setenv("APTITUDE_READ_TOKEN", "reader-token")
@@ -18,7 +22,7 @@ def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None
     assert settings.server_timeout_seconds == 5.0
 
 
-def test_settings_default_server_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_use_default_server_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("APTITUDE_SERVER_BASE_URL", raising=False)
     monkeypatch.setenv("APTITUDE_READ_TOKEN", "reader-token")
 

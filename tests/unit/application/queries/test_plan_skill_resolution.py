@@ -280,6 +280,20 @@ def test_decisive_signals_add_only_supported_rank_deltas() -> None:
     ]
 
 
+def test_decisive_signals_accept_semver_prerelease_versions() -> None:
+    selected = _candidate("docs-writer", "0.1.0-publish.20260515115307")
+    runner_up = _candidate("old-docs-writer", "0.1.0-publish.20260515115306")
+
+    signals = planning_module._decisive_signals(
+        selected,
+        runner_up,
+        selection_mode="non_interactive_top_ranked",
+        selection_preferences=SelectionPreferences(),
+    )
+
+    assert "newer_semver" in signals
+
+
 def test_decisive_signals_fall_back_to_profile_when_no_decisive_delta_exists() -> None:
     selected = _candidate(
         "python-lint",

@@ -16,6 +16,7 @@ from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
     ExecutionPlanDto,
     ExecutionStepDto,
+    ExportedSkillDto,
     InstalledSkillDto,
     InstallResultDto,
     LockRootDto,
@@ -76,7 +77,15 @@ class FakeWorkflowService:
 def _select_direct_install_option(select_calls: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         select_calls.append(title)
-        return "balanced" if title == "Selection profile" else "auto"
+        if title == "Selection profile":
+            return "balanced"
+        if title == "Interaction mode":
+            return "auto"
+        if title == "Install scope":
+            return "project"
+        if title == "Agent target":
+            return "codex"
+        return "auto"
 
     return select_one
 
@@ -84,7 +93,15 @@ def _select_direct_install_option(select_calls: list[str]) -> Callable[..., str]
 def _select_direct_install_event(events: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         events.append(f"select:{title}")
-        return "balanced" if title == "Selection profile" else "auto"
+        if title == "Selection profile":
+            return "balanced"
+        if title == "Interaction mode":
+            return "auto"
+        if title == "Install scope":
+            return "project"
+        if title == "Agent target":
+            return "codex"
+        return "auto"
 
     return select_one
 
@@ -260,7 +277,7 @@ def _selection_required_result() -> ResolveQueryResultDto:
 
 
 def _installed_result(
-    materialized_root: str = str(Path("skill_demo")),
+    materialized_root: str = str(Path("aptitude_state")),
 ) -> InstallResultDto:
     return InstallResultDto(
         requested_query="lint",
@@ -308,13 +325,32 @@ def _installed_result(
                 ),
             )
         ],
+        exported_skills=[
+            ExportedSkillDto(
+                agent="codex",
+                scope="project",
+                slug="js-lint",
+                version="2.1.0",
+                destination_path=str(Path(".codex") / "skills" / "js-lint"),
+                skill_markdown_path=str(
+                    Path(".codex") / "skills" / "js-lint" / "SKILL.md"
+                ),
+                metadata_path=str(
+                    Path(".codex")
+                    / "skills"
+                    / "js-lint"
+                    / ".aptitude-export.json"
+                ),
+            )
+        ],
         materialized_root=materialized_root,
+        lock_path=str(Path("aptitude.lock.json")),
         trace=[],
     )
 
 
 def _synced_result(
-    materialized_root: str = str(Path("skill_demo")),
+    materialized_root: str = str(Path("aptitude_state")),
 ) -> SyncResultDto:
     installed_result = _installed_result(materialized_root=materialized_root)
     assert installed_result.lockfile is not None
@@ -345,7 +381,7 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     )
     transcript = StringIO()
     answers = iter(["lint"])
-    selections = iter(["install", "balanced", "auto", "js-lint"])
+    selections = iter(["install", "balanced", "auto", "project", "codex", "js-lint"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -362,7 +398,13 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     assert service.resolve_calls[1]["select_slug"] == "js-lint"
     assert service.install_calls[0]["query"] == "lint"
     assert service.install_calls[0]["select_slug"] == "js-lint"
-    assert "Installation Summary" in transcript.getvalue()
+    assert service.install_calls[0]["agents"] == ["codex"]
+    assert service.install_calls[0]["scope"] == "project"
+    output = transcript.getvalue()
+    assert "Installation Summary" in output
+    assert str(Path(".codex") / "skills" / "js-lint") in output
+    assert str(Path("aptitude.lock.json")) in output
+    assert str(Path("aptitude_state") / "skills" / "js-lint" / "2.1.0") not in output
 
 
 def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
@@ -372,7 +414,7 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
     )
     transcript = StringIO()
     answers = iter(["python lint"])
-    selections = iter(["install", "balanced", "auto"])
+    selections = iter(["install", "balanced", "auto", "project", "codex"])
     confirmations = iter([True])
 
     @contextmanager
@@ -568,13 +610,13 @@ def test_format_plan_summary_row_aligns_one_label_value_pair() -> None:
         wizard_module._format_plan_summary_row(
             ("Runtime", "unknown"),
         )
-        == "Runtime     : unknown"
+        == "Runtime        : unknown"
     )
     assert (
         wizard_module._format_plan_summary_row(
             ("Interaction", "auto"),
         )
-        == "Interaction : auto"
+        == "Interaction    : auto"
     )
 
 
@@ -612,7 +654,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["balanced", "auto"])
+    selections = iter(["balanced", "auto", "project", "codex"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -663,7 +705,12 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     output = transcript.getvalue()
     assert "Choose a flow" not in output
     assert prompt_calls == []
-    assert select_calls[:2] == ["Selection profile", "Interaction mode"]
+    assert select_calls[:4] == [
+        "Selection profile",
+        "Interaction mode",
+        "Install scope",
+        "Agent target",
+    ]
     assert service.resolve_calls[0]["query"] == "postman primary skill"
     options = cast(InstallWorkflowOptions, service.resolve_calls[0]["options"])
     assert options.selection_profile == "balanced"
@@ -754,7 +801,7 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
     transcript = StringIO()
     prompt_calls: list[tuple[str, str | None, bool]] = []
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "balanced", "auto"])
+    selections = iter(["install", "balanced", "auto", "project", "codex"])
     confirmations = iter([True])
 
     def prompt_text(
@@ -786,7 +833,7 @@ def test_cli_wizard_return_from_profile_menu_reopens_query_prompt() -> None:
     )
     transcript = StringIO()
     answers = iter(["Postman", "Postman Primary Skill"])
-    selections = iter(["install", "__return__", "balanced", "auto"])
+    selections = iter(["install", "__return__", "balanced", "auto", "project", "codex"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -809,7 +856,7 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "balanced", "auto"])
+    selections = iter(["install", "balanced", "auto", "project", "codex"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -830,7 +877,19 @@ def test_cli_wizard_retries_install_query_after_no_matches() -> None:
     service = FakeWorkflowService(install_responses=[_installed_result()])
     transcript = StringIO()
     answers = iter(["dsas", "postman primary skill"])
-    selections = iter(["install", "balanced", "auto", "balanced", "auto"])
+    selections = iter(
+        [
+            "install",
+            "balanced",
+            "auto",
+            "project",
+            "codex",
+            "balanced",
+            "auto",
+            "project",
+            "codex",
+        ]
+    )
     confirmations = iter([True])
 
     def resolve_query(**kwargs: object) -> ResolveQueryResultDto:
@@ -854,6 +913,8 @@ def test_cli_wizard_retries_install_query_after_no_matches() -> None:
     output = transcript.getvalue()
     assert "No matching skills were found." in output
     assert "Try a more specific query or adjust any restrictive policy flags." in output
+    assert any(corner in output for corner in ("╭", "┌", "+"))
+    assert "Query: dsas" in output
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
