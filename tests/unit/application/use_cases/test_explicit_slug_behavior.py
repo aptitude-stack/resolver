@@ -30,17 +30,17 @@ class FakeRegistryClient:
 
     def list_skill_versions(self, slug: str) -> list[VersionSummary]:
         raise AssertionError(
-            "list_skill_versions should not be called for a missing explicit dotted slug"
+            "list_skill_versions should not be called for a missing explicit hyphenated slug"
         )
 
     def fetch_skill_metadata(self, slug: str, version: str):
         raise AssertionError(
-            "fetch_skill_metadata should not be called for a missing explicit dotted slug"
+            "fetch_skill_metadata should not be called for a missing explicit hyphenated slug"
         )
 
     def fetch_direct_dependencies(self, slug: str, version: str):
         raise AssertionError(
-            "fetch_direct_dependencies should not be called for a missing explicit dotted slug"
+            "fetch_direct_dependencies should not be called for a missing explicit hyphenated slug"
         )
 
     def fetch_skill_artifact(
@@ -52,42 +52,42 @@ class FakeRegistryClient:
         checksum_digest: str | None = None,
     ) -> bytes:
         raise AssertionError(
-            "fetch_skill_artifact should not be called for a missing explicit dotted slug"
+            "fetch_skill_artifact should not be called for a missing explicit hyphenated slug"
         )
 
 
-def test_resolve_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug() -> (
+def test_resolve_use_case_raises_skill_not_found_for_missing_explicit_hyphenated_slug() -> (
     None
 ):
     registry_client = FakeRegistryClient()
 
     with pytest.raises(
         SkillNotFoundError,
-        match="Skill not found: postman.primary.1773823396197-11603",
+        match="Skill not found: postman-primary-1773823396197-11603",
     ):
         ResolveSkillQueryUseCase(registry_client).execute(
-            ResolveQueryRequestDto(query="postman.primary.1773823396197-11603")
+            ResolveQueryRequestDto(query="postman-primary-1773823396197-11603")
         )
 
-    assert registry_client.identity_calls == ["postman.primary.1773823396197-11603"]
+    assert registry_client.identity_calls == ["postman-primary-1773823396197-11603"]
     assert registry_client.discovery_calls == []
 
 
-def test_install_use_case_raises_skill_not_found_for_missing_explicit_dotted_slug(
+def test_install_use_case_raises_skill_not_found_for_missing_explicit_hyphenated_slug(
     tmp_path,
 ) -> None:
     registry_client = FakeRegistryClient()
 
     with pytest.raises(
         SkillNotFoundError,
-        match="Skill not found: postman.primary.1773823396197-11603",
+        match="Skill not found: postman-primary-1773823396197-11603",
     ):
         InstallSkillUseCase(registry_client).execute(
             InstallRequestDto(
-                query="postman.primary.1773823396197-11603",
+                query="postman-primary-1773823396197-11603",
                 target=tmp_path / "aptitude_state",
             )
         )
 
-    assert registry_client.identity_calls == ["postman.primary.1773823396197-11603"]
+    assert registry_client.identity_calls == ["postman-primary-1773823396197-11603"]
     assert registry_client.discovery_calls == []

@@ -72,7 +72,7 @@ class QueueUseCase:
 
 def _resolved_result(
     *,
-    slug: str = "python.lint",
+    slug: str = "python-lint",
     version: str = "1.2.3",
     selection_mode: str = "single_candidate",
 ) -> ResolveQueryResultDto:
@@ -82,10 +82,10 @@ def _resolved_result(
         selection_mode=selection_mode,
         selected_coordinate=ResolveCoordinateDto(slug=slug, version=version),
         selected_skill=ResolveSkillSummaryDto(
-            name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+            name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
             description="Linting skill",
             tags=["lint"],
-            runtime="python" if slug == "python.lint" else "javascript",
+            runtime="python" if slug == "python-lint" else "javascript",
             rendered_summary="Lint files consistently.",
             lifecycle_status="published",
             trust_tier="internal",
@@ -96,10 +96,10 @@ def _resolved_result(
                 ResolvedSkillNodeDto(
                     slug=slug,
                     version=version,
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
-                    runtime="python" if slug == "python.lint" else "javascript",
+                    runtime="python" if slug == "python-lint" else "javascript",
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
                     trust_tier="internal",
@@ -125,11 +125,11 @@ def _resolved_result(
                     slug=slug,
                     version=version,
                     artifact_ref=f"/skills/{slug}/{version}/content",
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
                     headers={
-                        "runtime": "python" if slug == "python.lint" else "javascript"
+                        "runtime": "python" if slug == "python-lint" else "javascript"
                     },
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
@@ -182,7 +182,7 @@ def _selection_required_result() -> ResolveQueryResultDto:
         status="selection_required",
         candidates=[
             DiscoveryCandidateDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 name="Python Lint",
                 description="Lint Python files",
@@ -202,10 +202,10 @@ def _selection_required_result() -> ResolveQueryResultDto:
                     "size=256B",
                     "published=2026-03-18T00:00:00Z",
                 ],
-                selection_reason="ranked above js.lint@2.1.0: closer exact name match",
+                selection_reason="ranked above js-lint@2.1.0: closer exact name match",
             ),
             DiscoveryCandidateDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 name="JavaScript Lint",
                 description="Lint JavaScript files",
@@ -244,7 +244,7 @@ def _search_result() -> SearchSkillsResultDto:
         status="found",
         candidates=[
             DiscoveryCandidateDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 name="Python Lint",
                 description="Lint Python files",
@@ -270,7 +270,7 @@ def _inspect_selection_required_result() -> InspectSkillResultDto:
         status="selection_required",
         candidates=[
             DiscoveryCandidateDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 name="Python Lint",
                 description="Lint Python files",
@@ -287,7 +287,7 @@ def _inspect_selection_required_result() -> InspectSkillResultDto:
                 ranking_position=1,
             ),
             DiscoveryCandidateDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 name="JavaScript Lint",
                 description="Lint JavaScript files",
@@ -309,7 +309,7 @@ def _inspect_selection_required_result() -> InspectSkillResultDto:
 
 def _inspect_result(
     *,
-    slug: str = "python.lint",
+    slug: str = "python-lint",
     version: str = "1.2.3",
     selection_mode: str = "single_candidate",
 ) -> InspectSkillResultDto:
@@ -360,14 +360,14 @@ def _installed_result(
         requested_query="python lint",
         status="installed",
         selection_mode="single_candidate",
-        selected_coordinate=ResolveCoordinateDto(slug="python.lint", version="1.2.3"),
+        selected_coordinate=ResolveCoordinateDto(slug="python-lint", version="1.2.3"),
         graph=ResolvedGraphDto(
-            root=ResolveCoordinateDto(slug="python.lint", version="1.2.3"),
+            root=ResolveCoordinateDto(slug="python-lint", version="1.2.3"),
             nodes=[],
             edges=[],
             install_order=[
-                ResolveCoordinateDto(slug="dep.core", version="0.9.0"),
-                ResolveCoordinateDto(slug="python.lint", version="1.2.3"),
+                ResolveCoordinateDto(slug="dep-core", version="0.9.0"),
+                ResolveCoordinateDto(slug="python-lint", version="1.2.3"),
             ],
             conflicts=[],
         ),
@@ -377,89 +377,89 @@ def _installed_result(
             root=LockRootDto(
                 request="python lint",
                 requested_version=None,
-                selected_node_id="python.lint@1.2.3",
+                selected_node_id="python-lint@1.2.3",
                 selection_mode="single_candidate",
             ),
             nodes=[
                 LockedSkillDto(
-                    node_id="dep.core@0.9.0",
-                    slug="dep.core",
+                    node_id="dep-core@0.9.0",
+                    slug="dep-core",
                     version="0.9.0",
-                    artifact_ref="/skills/dep.core/0.9.0/content",
-                    name="dep.core",
-                    description="dep.core description",
+                    artifact_ref="/skills/dep-core/0.9.0/content",
+                    name="dep-core",
+                    description="dep-core description",
                     tags=["core"],
                     headers={"runtime": "python"},
-                    rendered_summary="dep.core summary",
+                    rendered_summary="dep-core summary",
                     lifecycle_status="published",
                     trust_tier="internal",
                     published_at="2026-03-18T00:00:00Z",
                     content_checksum={
                         "algorithm": "sha256",
-                        "digest": "digest-dep.core-0.9.0",
+                        "digest": "digest-dep-core-0.9.0",
                         "size_bytes": 256,
                     },
                 ),
                 LockedSkillDto(
-                    node_id="python.lint@1.2.3",
-                    slug="python.lint",
+                    node_id="python-lint@1.2.3",
+                    slug="python-lint",
                     version="1.2.3",
-                    artifact_ref="/skills/python.lint/1.2.3/content",
-                    name="python.lint",
-                    description="python.lint description",
+                    artifact_ref="/skills/python-lint/1.2.3/content",
+                    name="python-lint",
+                    description="python-lint description",
                     tags=["lint"],
                     headers={"runtime": "python"},
-                    rendered_summary="python.lint summary",
+                    rendered_summary="python-lint summary",
                     lifecycle_status="published",
                     trust_tier="internal",
                     published_at="2026-03-18T00:00:00Z",
                     content_checksum={
                         "algorithm": "sha256",
-                        "digest": "digest-python.lint-1.2.3",
+                        "digest": "digest-python-lint-1.2.3",
                         "size_bytes": 256,
                     },
                 ),
             ],
             edges=[
                 LockedEdgeDto(
-                    source_node_id="python.lint@1.2.3",
-                    target_node_id="dep.core@0.9.0",
+                    source_node_id="python-lint@1.2.3",
+                    target_node_id="dep-core@0.9.0",
                 )
             ],
-            install_order=["dep.core@0.9.0", "python.lint@1.2.3"],
+            install_order=["dep-core@0.9.0", "python-lint@1.2.3"],
             governance=[],
         ),
         execution_plan=ExecutionPlanDto(
             steps=[
                 ExecutionStepDto(
-                    node_id="dep.core@0.9.0",
-                    skill="dep.core",
+                    node_id="dep-core@0.9.0",
+                    skill="dep-core",
                     version="0.9.0",
-                    artifact_ref="/skills/dep.core/0.9.0/content",
+                    artifact_ref="/skills/dep-core/0.9.0/content",
                     action="materialize_local_skill",
                 ),
                 ExecutionStepDto(
-                    node_id="python.lint@1.2.3",
-                    skill="python.lint",
+                    node_id="python-lint@1.2.3",
+                    skill="python-lint",
                     version="1.2.3",
-                    artifact_ref="/skills/python.lint/1.2.3/content",
+                    artifact_ref="/skills/python-lint/1.2.3/content",
                     action="materialize_local_skill",
                 ),
             ]
         ),
         installed_skills=[
             InstalledSkillDto(
-                slug="dep.core",
+                slug="dep-core",
                 version="0.9.0",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                    Path(materialized_root) / "skills" / "dep-core" / "0.9.0"
                 ),
             ),
             InstalledSkillDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                    Path(materialized_root) / "skills" / "python-lint" / "1.2.3"
                 ),
             ),
         ],
@@ -467,23 +467,23 @@ def _installed_result(
             ExportedSkillDto(
                 agent="codex",
                 scope="project",
-                slug="dep.core",
+                slug="dep-core",
                 version="0.9.0",
-                destination_path=str(Path(export_root) / "dep.core"),
-                skill_markdown_path=str(Path(export_root) / "dep.core" / "SKILL.md"),
+                destination_path=str(Path(export_root) / "dep-core"),
+                skill_markdown_path=str(Path(export_root) / "dep-core" / "SKILL.md"),
                 metadata_path=str(
-                    Path(export_root) / "dep.core" / ".aptitude-export.json"
+                    Path(export_root) / "dep-core" / ".aptitude-export.json"
                 ),
             ),
             ExportedSkillDto(
                 agent="codex",
                 scope="project",
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
-                destination_path=str(Path(export_root) / "python.lint"),
-                skill_markdown_path=str(Path(export_root) / "python.lint" / "SKILL.md"),
+                destination_path=str(Path(export_root) / "python-lint"),
+                skill_markdown_path=str(Path(export_root) / "python-lint" / "SKILL.md"),
                 metadata_path=str(
-                    Path(export_root) / "python.lint" / ".aptitude-export.json"
+                    Path(export_root) / "python-lint" / ".aptitude-export.json"
                 ),
             ),
         ],
@@ -509,96 +509,96 @@ def _synced_result(
         requested_query="python lint",
         status="synced",
         selection_mode="single_candidate",
-        selected_coordinate=ResolveCoordinateDto(slug="python.lint", version="1.2.3"),
+        selected_coordinate=ResolveCoordinateDto(slug="python-lint", version="1.2.3"),
         lockfile=LockfileDto(
             version=1,
             generated_at="2026-03-18T00:00:00Z",
             root=LockRootDto(
                 request="python lint",
                 requested_version=None,
-                selected_node_id="python.lint@1.2.3",
+                selected_node_id="python-lint@1.2.3",
                 selection_mode="single_candidate",
             ),
             nodes=[
                 LockedSkillDto(
-                    node_id="dep.core@0.9.0",
-                    slug="dep.core",
+                    node_id="dep-core@0.9.0",
+                    slug="dep-core",
                     version="0.9.0",
-                    artifact_ref="/skills/dep.core/0.9.0/content",
-                    name="dep.core",
-                    description="dep.core description",
+                    artifact_ref="/skills/dep-core/0.9.0/content",
+                    name="dep-core",
+                    description="dep-core description",
                     tags=["core"],
                     headers={"runtime": "python"},
-                    rendered_summary="dep.core summary",
+                    rendered_summary="dep-core summary",
                     lifecycle_status="published",
                     trust_tier="internal",
                     published_at="2026-03-18T00:00:00Z",
                     content_checksum={
                         "algorithm": "sha256",
-                        "digest": "digest-dep.core-0.9.0",
+                        "digest": "digest-dep-core-0.9.0",
                         "size_bytes": 256,
                     },
                 ),
                 LockedSkillDto(
-                    node_id="python.lint@1.2.3",
-                    slug="python.lint",
+                    node_id="python-lint@1.2.3",
+                    slug="python-lint",
                     version="1.2.3",
-                    artifact_ref="/skills/python.lint/1.2.3/content",
-                    name="python.lint",
-                    description="python.lint description",
+                    artifact_ref="/skills/python-lint/1.2.3/content",
+                    name="python-lint",
+                    description="python-lint description",
                     tags=["lint"],
                     headers={"runtime": "python"},
-                    rendered_summary="python.lint summary",
+                    rendered_summary="python-lint summary",
                     lifecycle_status="published",
                     trust_tier="internal",
                     published_at="2026-03-18T00:00:00Z",
                     content_checksum={
                         "algorithm": "sha256",
-                        "digest": "digest-python.lint-1.2.3",
+                        "digest": "digest-python-lint-1.2.3",
                         "size_bytes": 256,
                     },
                 ),
             ],
             edges=[
                 LockedEdgeDto(
-                    source_node_id="python.lint@1.2.3",
-                    target_node_id="dep.core@0.9.0",
+                    source_node_id="python-lint@1.2.3",
+                    target_node_id="dep-core@0.9.0",
                 )
             ],
-            install_order=["dep.core@0.9.0", "python.lint@1.2.3"],
+            install_order=["dep-core@0.9.0", "python-lint@1.2.3"],
             governance=[],
         ),
         execution_plan=ExecutionPlanDto(
             steps=[
                 ExecutionStepDto(
-                    node_id="dep.core@0.9.0",
-                    skill="dep.core",
+                    node_id="dep-core@0.9.0",
+                    skill="dep-core",
                     version="0.9.0",
-                    artifact_ref="/skills/dep.core/0.9.0/content",
+                    artifact_ref="/skills/dep-core/0.9.0/content",
                     action="materialize_local_skill",
                 ),
                 ExecutionStepDto(
-                    node_id="python.lint@1.2.3",
-                    skill="python.lint",
+                    node_id="python-lint@1.2.3",
+                    skill="python-lint",
                     version="1.2.3",
-                    artifact_ref="/skills/python.lint/1.2.3/content",
+                    artifact_ref="/skills/python-lint/1.2.3/content",
                     action="materialize_local_skill",
                 ),
             ]
         ),
         installed_skills=[
             InstalledSkillDto(
-                slug="dep.core",
+                slug="dep-core",
                 version="0.9.0",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "dep.core" / "0.9.0"
+                    Path(materialized_root) / "skills" / "dep-core" / "0.9.0"
                 ),
             ),
             InstalledSkillDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "python.lint" / "1.2.3"
+                    Path(materialized_root) / "skills" / "python-lint" / "1.2.3"
                 ),
             ),
         ],
@@ -642,7 +642,7 @@ def test_cli_search_prints_ranked_candidates(monkeypatch) -> None:
     assert use_case.requests[0].query == "python lint"
     assert close_calls == ["closed"]
     assert "Search Results" in result.stdout
-    assert "python.lint@1.2.3 - Python Lint" in result.stdout
+    assert "python-lint@1.2.3 - Python Lint" in result.stdout
     assert 'aptitude inspect "python lint" --select-slug SLUG' in result.stdout
 
 
@@ -662,7 +662,7 @@ def test_cli_search_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Search Summary" in result.stdout
     assert "Ranked Candidates" in result.stdout
     assert "Next Steps" in result.stdout
-    assert "python.lint" in result.stdout
+    assert "python-lint" in result.stdout
     assert 'aptitude install "python lint" --select-slug SLUG' in result.stdout
 
 
@@ -743,8 +743,8 @@ def test_cli_inspect_prints_skill_metadata_and_preview(monkeypatch) -> None:
     assert use_case.requests[0].preview_char_limit == 4000
     assert close_calls == ["closed"]
     assert "Skill Inspection" in result.stdout
-    assert "Selected: python.lint@1.2.3" in result.stdout
-    assert "Checksum: sha256:digest-python.lint-1.2.3" in result.stdout
+    assert "Selected: python-lint@1.2.3" in result.stdout
+    assert "Checksum: sha256:digest-python-lint-1.2.3" in result.stdout
     assert "# Python Lint" in result.stdout
 
 
@@ -766,7 +766,7 @@ def test_cli_inspect_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Metadata" in result.stdout
     assert "Available Versions" in result.stdout
     assert "Markdown Preview" in result.stdout
-    assert "python.lint (1.2.3)" in result.stdout
+    assert "python-lint (1.2.3)" in result.stdout
 
 
 def test_cli_inspect_interactive_prompts_and_replays_with_selected_slug(
@@ -776,7 +776,7 @@ def test_cli_inspect_interactive_prompts_and_replays_with_selected_slug(
         responses=[
             _inspect_selection_required_result(),
             _inspect_result(
-                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+                slug="js-lint", version="2.1.0", selection_mode="interactive_choice"
             ),
         ]
     )
@@ -797,7 +797,7 @@ def test_cli_inspect_interactive_prompts_and_replays_with_selected_slug(
     assert use_case.requests[0].select_slug is None
     assert use_case.requests[1].interaction_mode == "never"
     assert use_case.requests[1].prompt_capable is False
-    assert use_case.requests[1].select_slug == "js.lint"
+    assert use_case.requests[1].select_slug == "js-lint"
     assert use_case.requests[1].selection_source == "interactive"
 
 
@@ -845,7 +845,7 @@ def test_cli_inspect_passes_selection_flag_overrides_to_builder(monkeypatch) -> 
             "--version",
             "1.2.3",
             "--select-slug",
-            "python.lint",
+            "python-lint",
             "--prefer",
             "low-cost",
             "--interaction-mode",
@@ -871,7 +871,7 @@ def test_cli_inspect_passes_selection_flag_overrides_to_builder(monkeypatch) -> 
         "max_content_size_bytes_override": 512,
     }
     assert use_case.requests[0].version == "1.2.3"
-    assert use_case.requests[0].select_slug == "python.lint"
+    assert use_case.requests[0].select_slug == "python-lint"
 
 
 def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
@@ -914,7 +914,7 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
         responses=[
             _selection_required_result(),
             _resolved_result(
-                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+                slug="js-lint", version="2.1.0", selection_mode="interactive_choice"
             ),
         ]
     )
@@ -933,7 +933,7 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
     assert "Multiple matching skills were found:" in result.stdout
     assert "tokens=120 | size=256B | published=2026-03-18T00:00:00Z" in result.stdout
     assert (
-        "why ranked here: ranked above js.lint@2.1.0: closer exact name match"
+        "why ranked here: ranked above js-lint@2.1.0: closer exact name match"
         in result.stdout
     )
     assert len(use_case.requests) == 2
@@ -942,7 +942,7 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
     assert use_case.requests[0].select_slug is None
     assert use_case.requests[1].interaction_mode == "never"
     assert use_case.requests[1].prompt_capable is False
-    assert use_case.requests[1].select_slug == "js.lint"
+    assert use_case.requests[1].select_slug == "js-lint"
     assert use_case.requests[1].selection_source == "interactive"
     assert close_calls == ["closed"]
 
@@ -951,7 +951,7 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     use_case = QueueUseCase(
         responses=[
             _resolved_result(
-                slug="js.lint", version="2.1.0", selection_mode="explicit_slug"
+                slug="js-lint", version="2.1.0", selection_mode="explicit_slug"
             )
         ]
     )
@@ -965,14 +965,14 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     )
 
     result = runner.invoke(
-        app_module.app, ["resolve", "lint", "--select-slug", "js.lint"]
+        app_module.app, ["resolve", "lint", "--select-slug", "js-lint"]
     )
 
     assert result.exit_code == 0
     assert len(use_case.requests) == 1
     assert use_case.requests[0].interaction_mode is None
     assert use_case.requests[0].prompt_capable is True
-    assert use_case.requests[0].select_slug == "js.lint"
+    assert use_case.requests[0].select_slug == "js-lint"
     assert close_calls == ["closed"]
 
 
@@ -1005,12 +1005,12 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert close_calls == ["closed"]
     assert "Collecting python lint" in result.stdout
     assert "Installation Summary" in result.stdout
-    assert "Using resolver candidate python.lint (1.2.3)" in result.stdout
-    assert "Collecting dependency dep.core (0.9.0)" in result.stdout
+    assert "Using resolver candidate python-lint (1.2.3)" in result.stdout
+    assert "Collecting dependency dep-core (0.9.0)" in result.stdout
     assert (
-        "Installing collected resolver skills: dep.core, python.lint" in result.stdout
+        "Installing collected resolver skills: dep-core, python-lint" in result.stdout
     )
-    assert "Successfully installed dep.core-0.9.0 python.lint-1.2.3" in result.stdout
+    assert "Successfully installed dep-core-0.9.0 python-lint-1.2.3" in result.stdout
     assert f"Aptitude state: {target}" in result.stdout
     assert "Lockfile: aptitude.lock.json" in result.stdout
     assert f"codex: {export_root}" in result.stdout
@@ -1051,7 +1051,7 @@ def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
     assert result.exit_code == 0
     assert "Installed Skills" in result.stdout
     assert "Installation Summary" in result.stdout
-    assert "dep.core" in result.stdout
+    assert "dep-core" in result.stdout
     assert (
         "Install telemetry | Discovery 95.7ms | Materialization 18.2ms" in result.stdout
     )
@@ -1239,7 +1239,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
             pass
 
         def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
-            return ["python.lint"]
+            return ["python-lint"]
 
         def fetch_skill_identity(self, slug: str):
             raise AssertionError(
@@ -1249,7 +1249,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
         def list_skill_versions(self, slug: str) -> list[VersionSummary]:
             return [
                 VersionSummary(
-                    coordinate=SkillCoordinate(slug="python.lint", version="1.2.3"),
+                    coordinate=SkillCoordinate(slug="python-lint", version="1.2.3"),
                     name="Python Lint",
                     description="Lint Python files.",
                     tags=["python", "lint"],
@@ -1259,7 +1259,7 @@ def test_cli_resolve_policy_override_can_reject_candidates_end_to_end(
                     trust_tier="internal",
                     published_at="2026-03-28T00:00:00Z",
                     content_checksum_algorithm="sha256",
-                    content_checksum_digest="digest-python.lint-1.2.3",
+                    content_checksum_digest="digest-python-lint-1.2.3",
                     content_size_bytes=256,
                     token_estimate=100,
                     maturity_score=0.9,
@@ -1323,8 +1323,8 @@ def test_cli_sync_prints_synced_result(monkeypatch, tmp_path) -> None:
     assert use_case.requests[0].target == target
     assert close_calls == ["closed"]
     assert f"Syncing locked resolver skills from {lock_path.resolve()}" in result.stdout
-    assert "Installing locked resolver skills: dep.core, python.lint" in result.stdout
-    assert "Successfully synced dep.core-0.9.0 python.lint-1.2.3" in result.stdout
+    assert "Installing locked resolver skills: dep-core, python-lint" in result.stdout
+    assert "Successfully synced dep-core-0.9.0 python-lint-1.2.3" in result.stdout
     assert f"Installed to: {target}" in result.stdout
 
 
@@ -1349,7 +1349,7 @@ def test_cli_sync_interactive_uses_panels(monkeypatch, tmp_path) -> None:
     assert result.exit_code == 0
     assert "Sync Summary" in result.stdout
     assert "Installed Skills" in result.stdout
-    assert "python.lint" in result.stdout
+    assert "python-lint" in result.stdout
 
 
 def test_cli_sync_json_flag_preserves_structured_output(monkeypatch, tmp_path) -> None:
@@ -1657,7 +1657,7 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
         lambda: (
             QueueUseCase(
                 error=SelectionSlugNotFoundError(
-                    "lint", "missing.skill", ["python.lint"]
+                    "lint", "missing-skill", ["python-lint"]
                 )
             ),
             lambda: close_calls.append("closed"),
@@ -1665,13 +1665,13 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     )
 
     result = runner.invoke(
-        app_module.app, ["resolve", "lint", "--select-slug", "missing.skill"]
+        app_module.app, ["resolve", "lint", "--select-slug", "missing-skill"]
     )
 
     assert result.exit_code == 1
     assert close_calls == ["closed"]
     assert "Requested selection is not available." in result.stderr
-    assert "Selected slug: missing.skill" in result.stderr
+    assert "Selected slug: missing-skill" in result.stderr
     assert result.stdout == ""
 
 
@@ -1779,7 +1779,7 @@ def test_format_error_keeps_structured_payload_for_non_environment_config_errors
 def test_format_error_includes_checksum_error_payload_details() -> None:
     rendered = app_module._format_error(
         ContentChecksumMismatchError(
-            slug="python.lint",
+            slug="python-lint",
             version="1.2.3",
             algorithm="sha256",
             expected_digest="expected",
@@ -1788,6 +1788,6 @@ def test_format_error_includes_checksum_error_payload_details() -> None:
     )
 
     assert "Downloaded content failed integrity verification." in rendered
-    assert "Skill: python.lint@1.2.3" in rendered
+    assert "Skill: python-lint@1.2.3" in rendered
     assert "Expected digest: expected" in rendered
     assert "Actual digest: actual" in rendered

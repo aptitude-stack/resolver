@@ -124,32 +124,32 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
     root_artifact = _artifact("# Python Lint\n")
     dependency_artifact = _artifact("# Python Base\n")
 
-    registry_client.discovery_by_query["python lint"] = ["python.lint"]
-    registry_client.versions_by_slug["python.lint"] = [
+    registry_client.discovery_by_query["python lint"] = ["python-lint"]
+    registry_client.versions_by_slug["python-lint"] = [
         _version_summary(
-            "python.lint",
+            "python-lint",
             "1.2.3",
             name="Python Lint",
             artifact=root_artifact,
         )
     ]
-    registry_client.metadata_by_coordinate[("python.lint", "1.2.3")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "1.2.3")] = _metadata(
+        "python-lint",
         "1.2.3",
         name="Python Lint",
         artifact=root_artifact,
     )
-    registry_client.metadata_by_coordinate[("python.base", "1.0.0")] = _metadata(
-        "python.base",
+    registry_client.metadata_by_coordinate[("python-base", "1.0.0")] = _metadata(
+        "python-base",
         "1.0.0",
         name="Python Base",
         artifact=dependency_artifact,
     )
-    registry_client.dependencies_by_coordinate[("python.lint", "1.2.3")] = [
-        DependencySpec(slug="python.base", version="1.0.0")
+    registry_client.dependencies_by_coordinate[("python-lint", "1.2.3")] = [
+        DependencySpec(slug="python-base", version="1.0.0")
     ]
-    registry_client.artifact_by_coordinate[("python.lint", "1.2.3")] = root_artifact
-    registry_client.artifact_by_coordinate[("python.base", "1.0.0")] = dependency_artifact
+    registry_client.artifact_by_coordinate[("python-lint", "1.2.3")] = root_artifact
+    registry_client.artifact_by_coordinate[("python-base", "1.0.0")] = dependency_artifact
 
     result = InstallSkillUseCase(registry_client).execute(
         InstallRequestDto(
@@ -161,25 +161,25 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
 
     assert result.status == "installed"
     assert result.lockfile is not None
-    assert result.lockfile.root.selected_node_id == "python.lint@1.2.3"
+    assert result.lockfile.root.selected_node_id == "python-lint@1.2.3"
     assert result.execution_plan is not None
     assert [step.node_id for step in result.execution_plan.steps] == [
-        "python.base@1.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-lint@1.2.3",
     ]
     assert registry_client.discovery_calls[0].name == "python lint"
-    assert registry_client.version_calls == ["python.lint"]
+    assert registry_client.version_calls == ["python-lint"]
     assert registry_client.metadata_calls == [
-        ("python.lint", "1.2.3"),
-        ("python.base", "1.0.0"),
+        ("python-lint", "1.2.3"),
+        ("python-base", "1.0.0"),
     ]
     assert registry_client.dependency_calls == [
-        ("python.lint", "1.2.3"),
-        ("python.base", "1.0.0"),
+        ("python-lint", "1.2.3"),
+        ("python-base", "1.0.0"),
     ]
     assert registry_client.artifact_calls == [
-        ("python.base", "1.0.0"),
-        ("python.lint", "1.2.3"),
+        ("python-base", "1.0.0"),
+        ("python-lint", "1.2.3"),
     ]
     resolution_dir = tmp_path / "aptitude_state" / "resolution"
     assert (resolution_dir / "graph.json").exists()
@@ -191,27 +191,27 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
     graph_payload = json.loads(
         (resolution_dir / "graph.json").read_text(encoding="utf-8")
     )
-    assert graph_payload["root"] == {"slug": "python.lint", "version": "1.2.3"}
+    assert graph_payload["root"] == {"slug": "python-lint", "version": "1.2.3"}
     project_lock_payload = json.loads(project_lock_path.read_text(encoding="utf-8"))
-    assert project_lock_payload["root"]["selected_node_id"] == "python.lint@1.2.3"
+    assert project_lock_payload["root"]["selected_node_id"] == "python-lint@1.2.3"
 
 
 def test_install_use_case_returns_selection_required_before_dependency_resolution_or_materialization(
     tmp_path,
 ) -> None:
     registry_client = FakeRegistryClient()
-    registry_client.discovery_by_query["lint"] = ["python.lint", "js.lint"]
-    registry_client.versions_by_slug["python.lint"] = [
+    registry_client.discovery_by_query["lint"] = ["python-lint", "js-lint"]
+    registry_client.versions_by_slug["python-lint"] = [
         _version_summary(
-            "python.lint",
+            "python-lint",
             "1.2.3",
             name="Python Lint",
             artifact=_artifact("# Python Lint\n"),
         )
     ]
-    registry_client.versions_by_slug["js.lint"] = [
+    registry_client.versions_by_slug["js-lint"] = [
         _version_summary(
-            "js.lint",
+            "js-lint",
             "2.1.0",
             name="JavaScript Lint",
             artifact=_artifact("# JavaScript Lint\n"),
@@ -228,6 +228,6 @@ def test_install_use_case_returns_selection_required_before_dependency_resolutio
     )
 
     assert result.status == "selection_required"
-    assert [item.slug for item in result.candidates] == ["python.lint", "js.lint"]
+    assert [item.slug for item in result.candidates] == ["python-lint", "js-lint"]
     assert registry_client.dependency_calls == []
     assert registry_client.artifact_calls == []

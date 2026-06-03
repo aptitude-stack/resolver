@@ -22,7 +22,7 @@ from aptitude_resolver.domain.models import (
 from aptitude_resolver.domain.tracing import TraceEntry
 
 
-SLUG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,127})$")
+SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,127})$")
 
 
 class RegistryCandidatePort(Protocol):
@@ -80,8 +80,7 @@ class DiscoverSkillCandidatesQuery:
                         message=f"Slug-like query '{query}' was not found directly; falling back to discovery.",
                     )
                 )
-                if "." in query:
-                    raise SkillNotFoundError(f"Skill not found: {query}") from exc
+                raise SkillNotFoundError(f"Skill not found: {query}") from exc
             else:
                 trace.append(
                     TraceEntry(
@@ -143,7 +142,7 @@ class DiscoverSkillCandidatesQuery:
 
     @staticmethod
     def _looks_like_slug(query: str) -> bool:
-        return SLUG_RE.fullmatch(query) is not None and " " not in query and "." in query
+        return SLUG_RE.fullmatch(query) is not None and " " not in query and "-" in query
 
     def _build_discovered_skill(self, slug: str) -> DiscoveredSkill | None:
         versions = self._registry_client.list_skill_versions(slug)

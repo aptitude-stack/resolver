@@ -48,6 +48,6 @@ def test_cache_keys_are_deterministic() -> None:
     )
 
     assert first == second
-    assert metadata_key("python.lint", "1.2.3") == "metadata:python.lint@1.2.3"
-    assert version_list_key("python.lint") == "versions:python.lint"
+    assert metadata_key("python-lint", "1.2.3") == "metadata:python-lint@1.2.3"
+    assert version_list_key("python-lint") == "versions:python-lint"
     assert content_key(algorithm="sha256", digest="abc") == "content:sha256:abc"

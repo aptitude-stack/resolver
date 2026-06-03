@@ -31,8 +31,8 @@ def _lockfile(
     *, install_order: list[str], edges: list[LockedEdge] | None = None
 ) -> Lockfile:
     nodes = [
-        _node("python.base@1.0.0", "python.base", "1.0.0"),
-        _node("python.lint@1.2.3", "python.lint", "1.2.3"),
+        _node("python-base@1.0.0", "python-base", "1.0.0"),
+        _node("python-lint@1.2.3", "python-lint", "1.2.3"),
     ]
     return Lockfile(
         version=1,
@@ -41,7 +41,7 @@ def _lockfile(
         root=LockRoot(
             request="python lint",
             requested_version=None,
-            selected_node_id="python.lint@1.2.3",
+            selected_node_id="python-lint@1.2.3",
             selection_mode="single_candidate",
         ),
         nodes=nodes,
@@ -53,7 +53,7 @@ def _lockfile(
 
 def test_replay_lockfile_rejects_duplicate_install_order_entries() -> None:
     lockfile = _lockfile(
-        install_order=["python.base@1.0.0", "python.base@1.0.0", "python.lint@1.2.3"]
+        install_order=["python-base@1.0.0", "python-base@1.0.0", "python-lint@1.2.3"]
     )
 
     with pytest.raises(InvalidLockfileError, match="duplicate node id"):
@@ -61,7 +61,7 @@ def test_replay_lockfile_rejects_duplicate_install_order_entries() -> None:
 
 
 def test_replay_lockfile_rejects_missing_root_selected_node() -> None:
-    lockfile = _lockfile(install_order=["python.base@1.0.0", "python.lint@1.2.3"])
+    lockfile = _lockfile(install_order=["python-base@1.0.0", "python-lint@1.2.3"])
     lockfile = Lockfile(
         version=lockfile.version,
         generated_at=lockfile.generated_at,
@@ -69,7 +69,7 @@ def test_replay_lockfile_rejects_missing_root_selected_node() -> None:
         root=LockRoot(
             request=lockfile.root.request,
             requested_version=lockfile.root.requested_version,
-            selected_node_id="missing.skill@9.9.9",
+            selected_node_id="missing-skill@9.9.9",
             selection_mode=lockfile.root.selection_mode,
         ),
         nodes=lockfile.nodes,
@@ -83,7 +83,7 @@ def test_replay_lockfile_rejects_missing_root_selected_node() -> None:
 
 
 def test_replay_lockfile_rejects_unknown_install_order_node() -> None:
-    lockfile = _lockfile(install_order=["python.base@1.0.0", "missing.skill@9.9.9"])
+    lockfile = _lockfile(install_order=["python-base@1.0.0", "missing-skill@9.9.9"])
 
     with pytest.raises(InvalidLockfileError, match="references unknown node id"):
         replay_lockfile(lockfile)
@@ -91,11 +91,11 @@ def test_replay_lockfile_rejects_unknown_install_order_node() -> None:
 
 def test_replay_lockfile_rejects_edge_references_to_missing_nodes() -> None:
     lockfile = _lockfile(
-        install_order=["python.base@1.0.0", "python.lint@1.2.3"],
+        install_order=["python-base@1.0.0", "python-lint@1.2.3"],
         edges=[
             LockedEdge(
-                source_node_id="python.lint@1.2.3",
-                target_node_id="missing.skill@9.9.9",
+                source_node_id="python-lint@1.2.3",
+                target_node_id="missing-skill@9.9.9",
             )
         ],
     )

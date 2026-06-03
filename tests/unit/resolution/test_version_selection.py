@@ -126,15 +126,15 @@ def _candidate(slug: str, version: str) -> DiscoveryCandidate:
 def test_select_preferred_version_prefers_lifecycle_trust_and_semver() -> None:
     selected = select_preferred_version(
         [
-            _version("python.lint", "2.0.0", trust_tier="untrusted"),
-            _version("python.lint", "1.9.0", trust_tier="verified"),
+            _version("python-lint", "2.0.0", trust_tier="untrusted"),
+            _version("python-lint", "1.9.0", trust_tier="verified"),
             _version(
-                "python.lint",
+                "python-lint",
                 "2.1.0",
                 trust_tier="verified",
                 lifecycle_status="deprecated",
             ),
-            _version("python.lint", "2.0.1", trust_tier="verified"),
+            _version("python-lint", "2.0.1", trust_tier="verified"),
         ]
     )
 
@@ -144,8 +144,8 @@ def test_select_preferred_version_prefers_lifecycle_trust_and_semver() -> None:
 def test_select_preferred_version_accepts_semver_prerelease_versions() -> None:
     selected = select_preferred_version(
         [
-            _version("docs.writer", "0.1.0-publish.20260515115306"),
-            _version("docs.writer", "0.1.0-publish.20260515115307"),
+            _version("docs-writer", "0.1.0-publish.20260515115306"),
+            _version("docs-writer", "0.1.0-publish.20260515115307"),
         ]
     )
 
@@ -155,8 +155,8 @@ def test_select_preferred_version_accepts_semver_prerelease_versions() -> None:
 def test_select_preferred_version_keeps_semver_final_above_prerelease() -> None:
     selected = select_preferred_version(
         [
-            _version("docs.writer", "0.1.0-publish.20260515115306"),
-            _version("docs.writer", "0.1.0"),
+            _version("docs-writer", "0.1.0-publish.20260515115306"),
+            _version("docs-writer", "0.1.0"),
         ]
     )
 
@@ -167,8 +167,8 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
     None
 ):
     registry_client = FakeRegistryClient()
-    registry_client.metadata_by_coordinate[("python.lint", "1.2.3")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "1.2.3")] = _metadata(
+        "python-lint",
         "1.2.3",
         name="Python Lint",
     )
@@ -177,10 +177,10 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
         _intent("python lint", language="python"),
         [
             DiscoveredSkill(
-                slug="python.lint",
+                slug="python-lint",
                 available_versions=[
                     _version(
-                        "python.lint",
+                        "python-lint",
                         "1.0.0",
                         name="",
                         description="",
@@ -190,7 +190,7 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
                         trust_tier="verified",
                     ),
                     _version(
-                        "python.lint",
+                        "python-lint",
                         "1.2.3",
                         name="",
                         description="",
@@ -206,10 +206,10 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
         registry_client,
     )
 
-    assert [candidate.slug for candidate in candidates] == ["python.lint"]
+    assert [candidate.slug for candidate in candidates] == ["python-lint"]
     assert candidates[0].selected_coordinate.version == "1.2.3"
     assert candidates[0].selected_version.name == "Python Lint"
-    assert registry_client.metadata_calls == [("python.lint", "1.2.3")]
+    assert registry_client.metadata_calls == [("python-lint", "1.2.3")]
     assert [item.action for item in trace] == [
         "select_candidate_version",
         "enrich_candidate_version",
@@ -220,8 +220,8 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
     None
 ):
     registry_client = FakeRegistryClient()
-    registry_client.metadata_by_coordinate[("python.lint", "2.0.0")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "2.0.0")] = _metadata(
+        "python-lint",
         "2.0.0",
         name="Python Lint",
     )
@@ -230,25 +230,25 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
         _intent("python lint", language="python"),
         [
             DiscoveredSkill(
-                slug="python.lint",
-                available_versions=[_version("python.lint", "1.2.3")],
+                slug="python-lint",
+                available_versions=[_version("python-lint", "1.2.3")],
             ),
             DiscoveredSkill(
-                slug="generic.lint",
-                available_versions=[_version("generic.lint", "3.0.0")],
+                slug="generic-lint",
+                available_versions=[_version("generic-lint", "3.0.0")],
             ),
         ],
         registry_client,
         version="2.0.0",
     )
 
-    assert [candidate.slug for candidate in candidates] == ["python.lint"]
+    assert [candidate.slug for candidate in candidates] == ["python-lint"]
     assert candidates[0].selected_coordinate.version == "2.0.0"
     assert [item.action for item in trace] == [
         "select_candidate_version",
         "candidate_version_miss",
     ]
-    assert trace[1].data["slug"] == "generic.lint"
+    assert trace[1].data["slug"] == "generic-lint"
 
 
 def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected_version() -> (
@@ -260,10 +260,10 @@ def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected
         _intent("python lint", language="python"),
         [
             DiscoveredSkill(
-                slug="python.lint",
+                slug="python-lint",
                 available_versions=[
                     _version(
-                        "python.lint",
+                        "python-lint",
                         "1.2.3",
                         name="Python Lint",
                         description="Lint Python code",
@@ -289,14 +289,14 @@ def test_resolve_candidate_versions_keeps_candidate_matching_details_on_selected
 def test_select_final_candidate_respects_explicit_slug() -> None:
     result = select_final_candidate(
         query="lint",
-        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
-        select_slug="js.lint",
+        candidates=[_candidate("python-lint", "1.2.3"), _candidate("js-lint", "2.1.0")],
+        select_slug="js-lint",
         interaction_mode="never",
         prompt_capable=False,
     )
 
     assert result.selected_candidate is not None
-    assert result.selected_candidate.slug == "js.lint"
+    assert result.selected_candidate.slug == "js-lint"
     assert result.selection_mode == "explicit_slug"
     assert result.trace == []
 
@@ -306,7 +306,7 @@ def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_wh
 ):
     result = select_final_candidate(
         query="lint",
-        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        candidates=[_candidate("python-lint", "1.2.3"), _candidate("js-lint", "2.1.0")],
         select_slug=None,
         interaction_mode="auto",
         prompt_capable=True,
@@ -320,7 +320,7 @@ def test_select_final_candidate_returns_selection_required_for_auto_ambiguity_wh
 def test_select_final_candidate_returns_selection_required_for_always_mode() -> None:
     result = select_final_candidate(
         query="lint",
-        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        candidates=[_candidate("python-lint", "1.2.3"), _candidate("js-lint", "2.1.0")],
         select_slug=None,
         interaction_mode="always",
         prompt_capable=True,
@@ -336,8 +336,8 @@ def test_select_final_candidate_raises_when_always_mode_cannot_prompt() -> None:
         select_final_candidate(
             query="lint",
             candidates=[
-                _candidate("python.lint", "1.2.3"),
-                _candidate("js.lint", "2.1.0"),
+                _candidate("python-lint", "1.2.3"),
+                _candidate("js-lint", "2.1.0"),
             ],
             select_slug=None,
             interaction_mode="always",
@@ -350,14 +350,14 @@ def test_select_final_candidate_auto_selects_top_ranked_candidate_when_prompt_un
 ):
     result = select_final_candidate(
         query="lint",
-        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        candidates=[_candidate("python-lint", "1.2.3"), _candidate("js-lint", "2.1.0")],
         select_slug=None,
         interaction_mode="auto",
         prompt_capable=False,
     )
 
     assert result.selected_candidate is not None
-    assert result.selected_candidate.slug == "python.lint"
+    assert result.selected_candidate.slug == "python-lint"
     assert result.selection_mode == "non_interactive_top_ranked"
     assert [item.action for item in result.trace] == ["auto_select_top_ranked"]
 
@@ -365,14 +365,14 @@ def test_select_final_candidate_auto_selects_top_ranked_candidate_when_prompt_un
 def test_select_final_candidate_never_mode_auto_selects_top_ranked_candidate() -> None:
     result = select_final_candidate(
         query="lint",
-        candidates=[_candidate("python.lint", "1.2.3"), _candidate("js.lint", "2.1.0")],
+        candidates=[_candidate("python-lint", "1.2.3"), _candidate("js-lint", "2.1.0")],
         select_slug=None,
         interaction_mode="never",
         prompt_capable=True,
     )
 
     assert result.selected_candidate is not None
-    assert result.selected_candidate.slug == "python.lint"
+    assert result.selected_candidate.slug == "python-lint"
     assert result.selection_mode == "non_interactive_top_ranked"
     assert [item.action for item in result.trace] == ["auto_select_top_ranked"]
 
@@ -381,8 +381,8 @@ def test_select_final_candidate_raises_when_selected_slug_is_missing() -> None:
     with pytest.raises(SelectionSlugNotFoundError):
         select_final_candidate(
             query="lint",
-            candidates=[_candidate("python.lint", "1.2.3")],
-            select_slug="js.lint",
+            candidates=[_candidate("python-lint", "1.2.3")],
+            select_slug="js-lint",
             interaction_mode="never",
             prompt_capable=False,
         )

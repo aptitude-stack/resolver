@@ -17,15 +17,15 @@ def _minimal_lock_payload() -> dict[str, object]:
         "root": {
             "request": "python lint",
             "requested_version": None,
-            "selected_node_id": "python.lint@1.2.3",
+            "selected_node_id": "python-lint@1.2.3",
             "selection_mode": "single_candidate",
         },
         "nodes": [
             {
-                "node_id": "python.lint@1.2.3",
-                "slug": "python.lint",
+                "node_id": "python-lint@1.2.3",
+                "slug": "python-lint",
                 "version": "1.2.3",
-                "artifact_ref": "/skills/python.lint/1.2.3/content",
+                "artifact_ref": "/skills/python-lint/1.2.3/content",
                 "name": "Python Lint",
                 "description": "Lint Python files.",
                 "tags": ["lint"],
@@ -36,13 +36,13 @@ def _minimal_lock_payload() -> dict[str, object]:
                 "published_at": "2026-03-28T00:00:00Z",
                 "content_checksum": {
                     "algorithm": "sha256",
-                    "digest": "digest-python.lint-1.2.3",
+                    "digest": "digest-python-lint-1.2.3",
                     "size_bytes": 256,
                 },
             }
         ],
         "edges": [],
-        "install_order": ["python.lint@1.2.3"],
+        "install_order": ["python-lint@1.2.3"],
         "governance": [],
     }
 
@@ -71,6 +71,6 @@ def test_parse_lockfile_accepts_older_payload_without_selection_or_policy_snapsh
 ):
     parsed = parse_lockfile(json.dumps(_minimal_lock_payload()))
 
-    assert parsed.root.selected_node_id == "python.lint@1.2.3"
+    assert parsed.root.selected_node_id == "python-lint@1.2.3"
     assert parsed.selection is None
     assert parsed.policy is None

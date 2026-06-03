@@ -54,14 +54,14 @@ def test_rerank_candidates_prefers_exact_name_runtime_and_tags() -> None:
         intent,
         [
             _candidate(
-                "generic.lint",
+                "generic-lint",
                 "3.0.0",
                 name="Generic Lint",
                 tags=["lint"],
                 runtime="bash",
             ),
             _candidate(
-                "python.lint",
+                "python-lint",
                 "1.2.3",
                 name="Python Lint",
                 tags=["python", "lint"],
@@ -71,8 +71,35 @@ def test_rerank_candidates_prefers_exact_name_runtime_and_tags() -> None:
         SelectionPreferences(),
     )
 
-    assert [item.slug for item in ranked] == ["python.lint", "generic.lint"]
+    assert [item.slug for item in ranked] == ["python-lint", "generic-lint"]
     assert [item.ranking_position for item in ranked] == [1, 2]
+
+
+def test_rerank_candidates_prefers_hyphenated_exact_slug() -> None:
+    intent = parse_search_intent("python lint")
+
+    ranked = rerank_candidates(
+        intent,
+        [
+            _candidate(
+                "generic-lint",
+                "3.0.0",
+                name="Generic Lint",
+                tags=["lint"],
+                runtime="bash",
+            ),
+            _candidate(
+                "python-lint",
+                "1.2.3",
+                name="Python Tools",
+                tags=["lint"],
+                runtime="python",
+            ),
+        ],
+        SelectionPreferences(),
+    )
+
+    assert [item.slug for item in ranked] == ["python-lint", "generic-lint"]
 
 
 def test_rerank_candidates_accepts_semver_prerelease_versions() -> None:
@@ -82,7 +109,7 @@ def test_rerank_candidates_accepts_semver_prerelease_versions() -> None:
         intent,
         [
             _candidate(
-                "docs.writer",
+                "docs-writer",
                 "0.1.0-publish.20260515115306",
                 name="Documentation Writing",
                 tags=["documentation"],
@@ -92,14 +119,14 @@ def test_rerank_candidates_accepts_semver_prerelease_versions() -> None:
         SelectionPreferences(),
     )
 
-    assert ranked[0].slug == "docs.writer"
+    assert ranked[0].slug == "docs-writer"
 
 
 def test_rerank_candidates_prefers_lower_cost_under_low_cost_profile() -> None:
     intent = parse_search_intent("lint tool")
     candidates = [
         _candidate(
-            "trusted.lint",
+            "trusted-lint",
             "1.0.0",
             name="Lint Tool",
             tags=["lint", "tool"],
@@ -109,7 +136,7 @@ def test_rerank_candidates_prefers_lower_cost_under_low_cost_profile() -> None:
             content_size_bytes=300,
         ),
         _candidate(
-            "cheap.lint",
+            "cheap-lint",
             "1.0.0",
             name="Lint Tool",
             tags=["lint", "tool"],
@@ -127,15 +154,15 @@ def test_rerank_candidates_prefers_lower_cost_under_low_cost_profile() -> None:
         intent, candidates, SelectionPreferences(profile="low-cost")
     )
 
-    assert [item.slug for item in balanced] == ["trusted.lint", "cheap.lint"]
-    assert [item.slug for item in low_cost] == ["cheap.lint", "trusted.lint"]
+    assert [item.slug for item in balanced] == ["trusted-lint", "cheap-lint"]
+    assert [item.slug for item in low_cost] == ["cheap-lint", "trusted-lint"]
 
 
 def test_rerank_candidates_low_cost_profile_keeps_relevance_ahead_of_cost() -> None:
     intent = parse_search_intent("python lint")
     candidates = [
         _candidate(
-            "python.lint",
+            "python-lint",
             "1.0.0",
             name="Python Lint",
             tags=["python", "lint"],
@@ -145,7 +172,7 @@ def test_rerank_candidates_low_cost_profile_keeps_relevance_ahead_of_cost() -> N
             content_size_bytes=400,
         ),
         _candidate(
-            "cheap.tool",
+            "cheap-tool",
             "1.0.0",
             name="Cheap Tool",
             tags=["tool"],
@@ -160,4 +187,4 @@ def test_rerank_candidates_low_cost_profile_keeps_relevance_ahead_of_cost() -> N
         intent, candidates, SelectionPreferences(profile="low-cost")
     )
 
-    assert [item.slug for item in low_cost] == ["python.lint", "cheap.tool"]
+    assert [item.slug for item in low_cost] == ["python-lint", "cheap-tool"]
