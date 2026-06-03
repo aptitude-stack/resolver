@@ -25,6 +25,7 @@ from aptitude_resolver.application.dto import (
 from aptitude_resolver.domain.errors import InvalidLockfileError
 from aptitude_resolver.interfaces.mcp.models import (
     InstallSkillInput,
+    PreviewInstallDestinationsInput,
     ResponseFormat,
     ResolveSkillInput,
     SearchSkillsInput,
@@ -158,7 +159,27 @@ def test_resolve_skill_uses_non_interactive_mcp_selection_source() -> None:
     assert builder.closed is True
 
 
-def test_install_skill_resolves_explicit_target_and_closes_builder(tmp_path: Path) -> None:
+def test_preview_install_destinations_is_read_only(tmp_path: Path) -> None:
+    adapter = AptitudeMcpAdapter()
+
+    response = adapter.preview_install_destinations(
+        PreviewInstallDestinationsInput(
+            agents=["codex"],
+            scope="project",
+            cwd=tmp_path,
+            response_format=ResponseFormat.JSON,
+        )
+    )
+    payload = json.loads(response)
+
+    assert payload["scope"] == "project"
+    assert payload["destination_roots"]["codex"] == str(
+        tmp_path / ".codex" / "skills"
+    )
+    assert "materialized_root" in payload
+
+
+def test_install_skill_requires_explicit_agent_scope_and_closes_builder(tmp_path: Path) -> None:
     use_case = RecordingUseCase(
         InstallResultDto(
             requested_query="postman",
@@ -183,16 +204,32 @@ def test_install_skill_resolves_explicit_target_and_closes_builder(tmp_path: Pat
     response = adapter.install_skill(
         InstallSkillInput(
             query="postman",
-            target=tmp_path / "target",
+            agents=["codex"],
+            scope="project",
+            cwd=tmp_path,
             response_format=ResponseFormat.JSON,
         )
     )
     payload = json.loads(response)
 
     assert payload["status"] == "installed"
-    assert use_case.requests[0].target.is_absolute()
+    assert use_case.requests[0].target is None
+    assert use_case.requests[0].agents == ["codex"]
+    assert use_case.requests[0].scope == "project"
+    assert use_case.requests[0].cwd == tmp_path.resolve()
     assert use_case.requests[0].selection_source == "mcp"
     assert builder.closed is True
+
+
+def test_install_skill_rejects_ambiguous_mcp_writes() -> None:
+    adapter = AptitudeMcpAdapter()
+
+    response = adapter.install_skill(
+        InstallSkillInput(query="postman", response_format=ResponseFormat.JSON)
+    )
+
+    assert response.startswith("Error:")
+    assert "explicit agents and scope" in response
 
 
 def test_sync_lock_resolves_paths_and_closes_builder(tmp_path: Path) -> None:

@@ -48,11 +48,18 @@ from aptitude_resolver.interfaces.cli.support import (
     format_cli_install_telemetry_line,
     format_cli_telemetry_block,
     format_unexpected_cli_error,
+    render_cli_error_panel,
 )
 from aptitude_resolver.interfaces.shared import (
     InstallWorkflowOptions,
     InstallWorkflowService,
     InteractionMode,
+)
+from aptitude_resolver.shared.config import (
+    default_sync_materialization_root,
+    detect_available_agent_targets,
+    resolve_agent_install_roots,
+    supported_agent_targets,
 )
 
 try:
@@ -94,12 +101,21 @@ INTERACTION_OPTIONS: list[tuple[str, InteractionMode]] = [
     ("Always ask", "always"),
     ("Never ask", "never"),
 ]
+INSTALL_SCOPE_OPTIONS: list[tuple[str, Literal["project", "global", "custom"]]] = [
+    ("Project", "project"),
+    ("Global", "global"),
+    ("Custom path", "custom"),
+]
+AGENT_OPTIONS: list[tuple[str, str]] = [
+    *((preset.display_name, preset.agent) for preset in supported_agent_targets()),
+    ("All detected", "detected"),
+]
 
 T = TypeVar("T")
 BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
-PLAN_SUMMARY_LABEL_WIDTH = len("Interaction")
+PLAN_SUMMARY_LABEL_WIDTH = len("github-copilot")
 
 WORDMARKS: dict[BannerStyle, str] = {
     "classic": (
@@ -175,7 +191,11 @@ class WorkflowServicePort(Protocol):
         query: str,
         version: str | None,
         select_slug: str | None,
-        target: Path,
+        target: Path | None,
+        agents: list[str],
+        scope: Literal["project", "global", "custom"],
+        export_root: Path | None,
+        cwd: Path | None,
         interaction_mode: InteractionMode | None,
         prompt_capable: bool,
         selection_source: str | None,
@@ -186,7 +206,7 @@ class WorkflowServicePort(Protocol):
         self,
         *,
         lock_path: Path,
-        target: Path,
+        target: Path | None,
     ) -> SyncResultDto: ...
 
 
@@ -290,7 +310,8 @@ def _render_plan_panel(
     *,
     selection_profile: str,
     interaction_mode: InteractionMode,
-    target: Path,
+    scope: str,
+    export_roots: Mapping[str, Path],
 ) -> Panel:
     """Render one compact plan review box."""
 
@@ -338,10 +359,17 @@ def _render_plan_panel(
         ),
         Text(
             _format_plan_summary_row(
-                ("Target", target),
+                ("Scope", scope),
             ),
             style=THEME.text_muted,
         ),
+        *[
+            Text(
+                _format_plan_summary_row((f"{agent}", root)),
+                style=THEME.text_muted,
+            )
+            for agent, root in export_roots.items()
+        ],
         Text(""),
         Text("Execution Steps", style=THEME.text_primary),
         *[
@@ -369,13 +397,7 @@ def _render_materialization_panel(
 ) -> Panel:
     """Render one compact materialization result box."""
 
-    installed = (
-        "\n".join(
-            f"✓ {skill.slug}@{skill.version}\n  → {skill.install_path}"
-            for skill in result.installed_skills
-        )
-        or "No skills materialized."
-    )
+    installed = _format_materialization_summary(result)
     if footer:
         installed = f"{installed}\n\n{footer}"
     return Panel(
@@ -384,6 +406,25 @@ def _render_materialization_panel(
         border_style=THEME.border_secondary,
         box=box.ROUNDED,
         padding=(1, 1),
+    )
+
+
+def _format_materialization_summary(result: InstallResultDto | SyncResultDto) -> str:
+    if isinstance(result, InstallResultDto) and result.exported_skills:
+        lines = [
+            f"✓ {skill.slug}@{skill.version}\n  → {skill.destination_path}"
+            for skill in result.exported_skills
+        ]
+        if result.lock_path:
+            lines.extend(["", "Lockfile", f"  → {result.lock_path}"])
+        return "\n".join(lines)
+
+    return (
+        "\n".join(
+            f"✓ {skill.slug}@{skill.version}\n  → {skill.install_path}"
+            for skill in result.installed_skills
+        )
+        or "No skills materialized."
     )
 
 
@@ -766,7 +807,7 @@ class CliWizard:
         prompt_text: PromptText | None = None,
         select_one: SelectPrompt[object] | None = None,
         confirm: ConfirmPrompt | None = None,
-        target: Path = Path("skill_demo"),
+        target: Path | None = None,
         banner_style: BannerStyle = "classic",
     ) -> None:
         self._workflow_service = workflow_service or _build_workflow_service()
@@ -774,8 +815,23 @@ class CliWizard:
         self._prompt_text = prompt_text or _default_prompt_text
         self._select_one = select_one or _default_select_one
         self._confirm = confirm or _default_confirm
-        self._target = target
+        self._target = target or default_sync_materialization_root()
         self._banner_style = banner_style
+
+    def _print_error_message(self, message: str) -> None:
+        """Print one user-facing error in the wizard frame style."""
+
+        self._console.print(
+            render_cli_error_panel(
+                message,
+                stream=getattr(self._console, "file", sys.stderr),
+            )
+        )
+
+    def _print_error(self, error: AptitudeResolverError) -> None:
+        """Print one resolver-owned error in the wizard frame style."""
+
+        self._print_error_message(_format_error(error))
 
     def _select(
         self,
@@ -854,13 +910,13 @@ class CliWizard:
                 )
                 return
         except (AptitudeResolverError,) as exc:
-            self._console.print(_format_error(exc), style="red")
+            self._print_error(exc)
             return
         except (KeyboardInterrupt, EOFError, WizardCancelled):
             self._console.print("Cancelled.", style="yellow")
             return
         except Exception as exc:
-            self._console.print(format_unexpected_cli_error(exc), style="red")
+            self._print_error_message(format_unexpected_cli_error(exc))
             return
 
     def _run_install_flow(
@@ -909,6 +965,12 @@ class CliWizard:
                 if interaction_mode == RETURN_OPTION_VALUE:
                     break
 
+                self._print_step_separator()
+                destination = self._prompt_install_destination()
+                if destination is None:
+                    break
+                agents, scope, export_root, export_roots = destination
+
                 options = build_workflow_options(
                     prefer=str(selection_profile),
                     interaction_mode=interaction_mode,
@@ -919,7 +981,7 @@ class CliWizard:
                         resolve_result = self._resolve(query=query, options=options)
                     except DiscoveryNoCandidatesError as exc:
                         self._print_step_separator()
-                        self._console.print(_format_error(exc), style="red")
+                        self._print_error(exc)
                         self._print_step_separator()
                         query = self._prompt_install_query()
                         if not query:
@@ -940,7 +1002,8 @@ class CliWizard:
                             resolve_result,
                             selection_profile=str(selection_profile),
                             interaction_mode=interaction_mode,
-                            target=self._target,
+                            scope=scope,
+                            export_roots=export_roots,
                         )
                     )
                     self._print_step_separator()
@@ -953,6 +1016,9 @@ class CliWizard:
                         select_slug=resolve_result.selected_coordinate.slug
                         if resolve_result.selected_coordinate is not None
                         else None,
+                        agents=agents,
+                        scope=scope,
+                        export_root=export_root,
                         options=options,
                     )
 
@@ -968,6 +1034,54 @@ class CliWizard:
         """Prompt for one install query using the larger free-text surface."""
 
         return self._prompt_text("Install query", None, large=True).strip()
+
+    def _prompt_install_destination(
+        self,
+    ) -> tuple[list[str], Literal["project", "global", "custom"], Path | None, dict[str, Path]] | None:
+        """Prompt for agent export destination using the same selector style."""
+
+        scope = self._select(
+            "Install scope",
+            _with_return_option(INSTALL_SCOPE_OPTIONS),
+            "Choose where the selected agent should see this skill.",
+        )
+        if scope == RETURN_OPTION_VALUE:
+            return None
+
+        agent = self._select(
+            "Agent target",
+            _with_return_option(AGENT_OPTIONS),
+            "Choose the agent format and root to export into.",
+        )
+        if agent == RETURN_OPTION_VALUE:
+            return None
+
+        agents = (
+            detect_available_agent_targets()
+            if agent == "detected"
+            else [str(agent)]
+        )
+        if not agents:
+            self._console.print(
+                "No supported agent skill roots were detected.",
+                style="yellow",
+            )
+            return None
+
+        export_root: Path | None = None
+        if scope == "custom":
+            raw_root = self._prompt_text("Custom export root", None).strip()
+            if not raw_root:
+                self._console.print("No custom export root entered.", style="yellow")
+                return None
+            export_root = Path(raw_root)
+
+        export_roots = resolve_agent_install_roots(
+            agents=agents,
+            scope=scope,
+            export_root=export_root,
+        )
+        return agents, scope, export_root, export_roots
 
     def _print_operation_telemetry(
         self,
@@ -1091,6 +1205,9 @@ class CliWizard:
         *,
         query: str,
         select_slug: str | None,
+        agents: list[str],
+        scope: Literal["project", "global", "custom"],
+        export_root: Path | None,
         options: InstallWorkflowOptions,
     ) -> tuple[InstallResultDto, str | None]:
         """Install one resolved selection."""
@@ -1115,7 +1232,11 @@ class CliWizard:
                         query=query,
                         version=None,
                         select_slug=select_slug,
-                        target=self._target,
+                        target=None,
+                        agents=agents,
+                        scope=scope,
+                        export_root=export_root,
+                        cwd=Path.cwd(),
                         interaction_mode=None,
                         prompt_capable=False,
                         selection_source="wizard",
@@ -1175,7 +1296,7 @@ def run_cli_wizard(
     *,
     initial_flow: WizardEntryFlow | None = None,
     initial_query: str | None = None,
-    target: Path = Path("skill_demo"),
+    target: Path | None = None,
     banner_style: BannerStyle = "classic",
 ) -> None:
     """Launch the inline CLI wizard, optionally entering one flow directly."""

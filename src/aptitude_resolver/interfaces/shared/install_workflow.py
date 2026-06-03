@@ -50,6 +50,7 @@ class InstallWorkflowOptions:
     allowed_lifecycle_statuses: list[str] | None = None
     max_token_estimate: int | None = None
     max_content_size_bytes: int | None = None
+    cwd: Path | None = None
 
     def build_kwargs(self) -> dict[str, object]:
         """Return composition kwargs for the configured overrides."""
@@ -69,6 +70,8 @@ class InstallWorkflowOptions:
             kwargs["max_token_estimate_override"] = self.max_token_estimate
         if self.max_content_size_bytes is not None:
             kwargs["max_content_size_bytes_override"] = self.max_content_size_bytes
+        if self.cwd is not None:
+            kwargs["cwd"] = self.cwd
         return kwargs
 
 
@@ -119,10 +122,14 @@ class InstallWorkflowService:
         query: str,
         version: str | None,
         select_slug: str | None,
-        target: Path,
-        interaction_mode: InteractionMode | None,
-        prompt_capable: bool,
-        selection_source: str | None,
+        target: Path | None,
+        agents: list[str] | None = None,
+        scope: Literal["project", "global", "custom"] = "project",
+        export_root: Path | None = None,
+        cwd: Path | None = None,
+        interaction_mode: InteractionMode | None = None,
+        prompt_capable: bool = False,
+        selection_source: str | None = None,
         options: InstallWorkflowOptions | None = None,
     ) -> InstallResultDto:
         """Execute install with shared override handling and cleanup."""
@@ -135,6 +142,10 @@ class InstallWorkflowService:
                 version=version,
                 select_slug=select_slug,
                 target=target,
+                agents=agents or ["codex"],
+                scope=scope,
+                export_root=export_root,
+                cwd=cwd,
                 interaction_mode=interaction_mode,
                 prompt_capable=prompt_capable,
                 selection_source=selection_source,
@@ -146,7 +157,7 @@ class InstallWorkflowService:
         self,
         *,
         lock_path: Path,
-        target: Path,
+        target: Path | None,
     ) -> SyncResultDto:
         """Execute lock replay with builder cleanup."""
 
@@ -205,10 +216,14 @@ class InstallWorkflowService:
         query: str,
         version: str | None,
         select_slug: str | None,
-        target: Path,
-        interaction_mode: InteractionMode | None,
-        prompt_capable: bool,
-        selection_source: str | None,
+        target: Path | None,
+        agents: list[str] | None = None,
+        scope: Literal["project", "global", "custom"] = "project",
+        export_root: Path | None = None,
+        cwd: Path | None = None,
+        interaction_mode: InteractionMode | None = None,
+        prompt_capable: bool = False,
+        selection_source: str | None = None,
     ) -> InstallResultDto:
         """Execute one prepared install use case."""
 
@@ -218,6 +233,10 @@ class InstallWorkflowService:
                 version=version,
                 select_slug=select_slug,
                 target=target,
+                agents=agents or ["codex"],
+                scope=scope,
+                export_root=export_root,
+                cwd=cwd,
                 interaction_mode=interaction_mode,
                 prompt_capable=prompt_capable,
                 selection_source=selection_source,

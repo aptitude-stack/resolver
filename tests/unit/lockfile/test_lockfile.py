@@ -10,6 +10,7 @@ from aptitude_resolver.domain.models import (
     ResolvedSkillNode,
     SkillMetadata,
     SkillCoordinate,
+    VersionSummary,
 )
 from aptitude_resolver.domain.policy import PolicyEvaluation, SelectionPreferences
 from aptitude_resolver.lockfile import (
@@ -55,6 +56,29 @@ class FakeRegistryClient:
         self, slug: str, version: str
     ) -> list[DependencySpec]:
         return list(self.dependencies_by_coordinate.get((slug, version), []))
+
+    def list_skill_versions(self, slug: str) -> list[VersionSummary]:
+        return [
+            VersionSummary(
+                coordinate=metadata.coordinate,
+                name=metadata.name,
+                description=metadata.description,
+                tags=list(metadata.tags),
+                headers=dict(metadata.headers),
+                rendered_summary=metadata.rendered_summary,
+                lifecycle_status=metadata.lifecycle_status,
+                trust_tier=metadata.trust_tier,
+                published_at=metadata.published_at,
+                content_checksum_algorithm=metadata.content_checksum_algorithm,
+                content_checksum_digest=metadata.content_checksum_digest,
+                content_size_bytes=metadata.content_size_bytes,
+                token_estimate=metadata.token_estimate,
+                maturity_score=metadata.maturity_score,
+                security_score=metadata.security_score,
+            )
+            for (candidate_slug, _), metadata in self.metadata_by_coordinate.items()
+            if candidate_slug == slug
+        ]
 
 
 def _metadata(slug: str, version: str, *, published_at: str) -> SkillMetadata:
