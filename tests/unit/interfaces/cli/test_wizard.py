@@ -1279,7 +1279,7 @@ def test_default_prompt_text_falls_back_when_shift_enter_binding_is_unsupported(
     assert ("c-c",) in binding_calls
 
 
-def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
+def test_default_prompt_text_uses_shift_enter_hint_on_macos(monkeypatch) -> None:
     binding_calls: list[tuple[object, ...]] = []
     window_calls: list[WindowCall] = []
 
@@ -1391,10 +1391,10 @@ def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
     result = wizard_module._default_prompt_text("Install query", None, large=True)
 
     assert result == "typed query"
-    assert ("escape", "enter") in binding_calls
+    assert ("s-enter",) in binding_calls
     assert ("c-c",) in binding_calls
     footer_fragments = window_calls[1]["args"][0]
-    assert "[Cmd+Return] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
+    assert "[Shift+Enter] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
 
 
 def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(

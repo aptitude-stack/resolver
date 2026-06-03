@@ -512,12 +512,6 @@ def _default_prompt_text(
             (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
             (("escape", "enter"), "[Esc, Enter] submit  [Ctrl+C] cancel"),
         ]
-        if sys.platform == "darwin":
-            # macOS terminals generally can't expose Command directly to prompt_toolkit.
-            submit_candidates = [
-                (("escape", "enter"), "[Cmd+Return] submit  [Ctrl+C] cancel"),
-                (("s-enter",), "[Shift+Enter] submit  [Ctrl+C] cancel"),
-            ]
 
         submit_binding = None
         for keys, hint in submit_candidates:
