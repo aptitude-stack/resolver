@@ -323,7 +323,7 @@ class RegistryClient:
             payload = response.json()
         except ValueError as exc:
             raise UnexpectedRegistryResponseError(
-                "Registry returned a non-JSON response."
+                _format_non_json_response_message(response)
             ) from exc
 
         if not isinstance(payload, dict):
@@ -450,7 +450,7 @@ class RegistryClient:
             payload = response.json()
         except ValueError as exc:
             raise UnexpectedRegistryResponseError(
-                "Registry returned a malformed error response."
+                _format_non_json_response_message(response)
             ) from exc
 
         try:
@@ -484,3 +484,20 @@ class RegistryClient:
             raise RegistryAccessError(message)
 
         raise UnexpectedRegistryResponseError(message)
+
+
+def _format_non_json_response_message(response: httpx.Response) -> str:
+    """Return an actionable error for HTML/text responses from registry paths."""
+
+    content_type = response.headers.get("content-type") or "unknown"
+    message = (
+        "Registry returned a non-JSON response "
+        f"for {response.request.method} {response.request.url} "
+        f"(HTTP {response.status_code}, content-type {content_type})."
+    )
+    if response.request.url.host == "aptitude-registry.dev":
+        message += (
+            " APTITUDE_SERVER_BASE_URL appears to point at the website; "
+            "use https://api.aptitude-registry.dev for registry API calls."
+        )
+    return message
