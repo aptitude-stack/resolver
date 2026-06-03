@@ -157,6 +157,46 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
     assert registry_client.artifact_calls == []
 
 
+def test_search_use_case_resolves_exact_hyphenated_slug_without_discovery() -> None:
+    artifact = _artifact("# Python Patterns\n")
+    registry_client = FakeRegistryClient()
+    registry_client.identity_by_slug["python-patterns"] = SkillIdentity(
+        slug="python-patterns",
+        status="active",
+        current_version=SkillCoordinate(slug="python-patterns", version="0.1.0"),
+        current_lifecycle_status="published",
+        current_trust_tier="untrusted",
+        current_published_at="2026-06-03T14:58:12Z",
+        created_at=None,
+        updated_at=None,
+    )
+    registry_client.versions_by_slug["python-patterns"] = [
+        _version_summary(
+            "python-patterns",
+            "0.1.0",
+            name="python-patterns",
+            artifact=artifact,
+            tags=["python", "patterns", "refactoring"],
+            trust_tier="untrusted",
+            is_current_default=True,
+        )
+    ]
+    registry_client.metadata_by_coordinate[("python-patterns", "0.1.0")] = _metadata(
+        "python-patterns",
+        "0.1.0",
+        name="python-patterns",
+        artifact=artifact,
+    )
+
+    result = SearchSkillsUseCase(registry_client).execute(
+        SearchSkillsRequestDto(query="python-patterns")
+    )
+
+    assert [item.slug for item in result.candidates] == ["python-patterns"]
+    assert registry_client.identity_calls == ["python-patterns"]
+    assert registry_client.discovery_calls == []
+
+
 def test_search_use_case_applies_policy_filtering_before_returning_candidates() -> None:
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["pdf"] = ["pdf-reader", "pdf-forms"]

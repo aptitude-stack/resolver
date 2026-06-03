@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery
+from aptitude_resolver.domain.errors import SkillNotFoundError
 from aptitude_resolver.domain.models import (
     SkillCoordinate,
     SkillIdentity,
@@ -11,8 +14,10 @@ from aptitude_resolver.domain.models import (
 class FakeRegistryClient:
     def __init__(self, candidates: list[str]) -> None:
         self.candidates = candidates
+        self.discovery_calls: list[object] = []
 
     def discover_candidate_slugs(self, query) -> list[str]:
+        self.discovery_calls.append(query)
         return list(self.candidates)
 
     def fetch_skill_identity(self, slug: str) -> SkillIdentity:
@@ -61,9 +66,23 @@ def test_discovery_keeps_all_registry_candidates_without_client_side_cap() -> No
 
 
 def test_discovery_treats_hyphenated_query_as_exact_slug() -> None:
-    result = DiscoverSkillCandidatesQuery(FakeRegistryClient(["fallback-skill"])).execute(
-        "python-lint"
-    )
+    registry_client = FakeRegistryClient(["fallback-skill"])
+
+    result = DiscoverSkillCandidatesQuery(registry_client).execute("python-lint")
 
     assert [match.slug for match in result.matches] == ["python-lint"]
     assert result.trace[1].action == "exact_slug_hit"
+    assert registry_client.discovery_calls == []
+
+
+def test_discovery_does_not_fall_back_when_hyphenated_slug_is_missing() -> None:
+    class MissingSlugRegistryClient(FakeRegistryClient):
+        def fetch_skill_identity(self, slug: str) -> SkillIdentity:
+            raise SkillNotFoundError(f"Skill not found: {slug}")
+
+    registry_client = MissingSlugRegistryClient(["fallback-skill"])
+
+    with pytest.raises(SkillNotFoundError, match="python-missing"):
+        DiscoverSkillCandidatesQuery(registry_client).execute("python-missing")
+
+    assert registry_client.discovery_calls == []
