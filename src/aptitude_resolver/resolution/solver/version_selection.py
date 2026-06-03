@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from packaging.version import Version
-
 from aptitude_resolver.domain.models import VersionSummary
 from aptitude_resolver.domain.policy import lifecycle_status_rank, trust_tier_rank
+from aptitude_resolver.domain.versioning import parse_skill_version
 
 
 def select_preferred_version(
@@ -32,7 +31,7 @@ def select_preferred_version(
             int(version.is_current_default),
             lifecycle_status_rank(version.lifecycle_status),
             trust_tier_rank(version.trust_tier),
-            Version(version.coordinate.version),
+            parse_skill_version(version.coordinate.version),
             version.published_at,
             version.coordinate.slug,
             version.coordinate.version,

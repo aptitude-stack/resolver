@@ -24,15 +24,16 @@ class InstallRequestDto(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     query: str
-    target: Path
+    target: Path | None = None
     version: str | None = None
     select_slug: str | None = None
     interaction_mode: Literal["auto", "always", "never"] | None = None
     prompt_capable: bool = False
     selection_source: str | None = None
-    export_agent: str | None = None
-    export_scope: Literal["project", "global"] | None = None
-    export_destination: Path | None = None
+    agents: list[str] = Field(default_factory=lambda: ["codex"])
+    scope: Literal["project", "global", "custom"] = "project"
+    export_root: Path | None = None
+    cwd: Path | None = None
 
 
 class SyncRequestDto(BaseModel):
@@ -41,7 +42,7 @@ class SyncRequestDto(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     lock_path: Path
-    target: Path
+    target: Path | None = None
 
 
 class InstalledSkillDto(BaseModel):
@@ -85,7 +86,9 @@ class InstallResultDto(BaseModel):
     installed_skills: list[InstalledSkillDto] = Field(default_factory=list)
     exported_skills: list[ExportedSkillDto] = Field(default_factory=list)
     materialized_root: str | None = None
+    lock_path: str | None = None
     export_root: str | None = None
+    export_roots: dict[str, str] = Field(default_factory=dict)
     trace: list[TraceEntryDto] = Field(default_factory=list)
     policy_evaluations: list[PolicyEvaluationDto] = Field(default_factory=list)
 

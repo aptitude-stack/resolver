@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -16,11 +17,14 @@ class AgentTargetPreset:
     global_relative_root: tuple[str, ...]
 
 
+AgentInstallScope = Literal["project", "global", "custom"]
+
+
 SUPPORTED_AGENT_TARGETS: tuple[AgentTargetPreset, ...] = (
     AgentTargetPreset(
         agent="codex",
         display_name="Codex",
-        project_relative_root=(".agents", "skills"),
+        project_relative_root=(".codex", "skills"),
         global_relative_root=(".codex", "skills"),
     ),
     AgentTargetPreset(
@@ -28,6 +32,12 @@ SUPPORTED_AGENT_TARGETS: tuple[AgentTargetPreset, ...] = (
         display_name="Claude Code",
         project_relative_root=(".claude", "skills"),
         global_relative_root=(".claude", "skills"),
+    ),
+    AgentTargetPreset(
+        agent="github-copilot",
+        display_name="GitHub Copilot",
+        project_relative_root=(".github", "skills"),
+        global_relative_root=(".copilot", "skills"),
     ),
     AgentTargetPreset(
         agent="cursor",
@@ -46,6 +56,18 @@ SUPPORTED_AGENT_TARGETS: tuple[AgentTargetPreset, ...] = (
         display_name="OpenCode",
         project_relative_root=(".agents", "skills"),
         global_relative_root=(".config", "opencode", "skills"),
+    ),
+    AgentTargetPreset(
+        agent="windsurf",
+        display_name="Windsurf",
+        project_relative_root=(".windsurf", "skills"),
+        global_relative_root=(".codeium", "windsurf", "skills"),
+    ),
+    AgentTargetPreset(
+        agent="universal",
+        display_name="Universal",
+        project_relative_root=(".agents", "skills"),
+        global_relative_root=(".agents", "skills"),
     ),
 )
 
@@ -84,6 +106,69 @@ def resolve_agent_install_root(
         base = (home or Path.home()).resolve()
         return base.joinpath(*preset.global_relative_root)
     raise ValueError(f"Unsupported agent scope: {scope}")
+
+
+def resolve_agent_install_roots(
+    *,
+    agents: list[str] | tuple[str, ...],
+    scope: str,
+    cwd: Path | None = None,
+    home: Path | None = None,
+    export_root: Path | None = None,
+) -> dict[str, Path]:
+    """Resolve all requested agent roots in deterministic display order."""
+
+    normalized_scope = scope.strip().lower()
+    normalized_agents = normalize_agent_list(agents, cwd=cwd, home=home)
+    if normalized_scope == "custom":
+        if export_root is None:
+            raise ValueError("Custom install scope requires export_root.")
+        root = export_root.expanduser().resolve()
+        return {agent: root / agent for agent in normalized_agents}
+    return {
+        agent: resolve_agent_install_root(
+            agent=agent,
+            scope=normalized_scope,
+            cwd=cwd,
+            home=home,
+        )
+        for agent in normalized_agents
+    }
+
+
+def normalize_agent_list(
+    agents: list[str] | tuple[str, ...],
+    *,
+    cwd: Path | None = None,
+    home: Path | None = None,
+) -> list[str]:
+    """Expand aliases and validate agent names in supported display order."""
+
+    raw_agents = [item.strip().lower() for item in agents if item.strip()]
+    if not raw_agents:
+        raise ValueError("At least one agent target is required.")
+
+    if "*" in raw_agents or "all" in raw_agents:
+        return [preset.agent for preset in SUPPORTED_AGENT_TARGETS]
+
+    if "detected" in raw_agents or "all-detected" in raw_agents:
+        detected = detect_available_agent_targets(cwd=cwd, home=home)
+        if not detected:
+            raise ValueError("No supported agent skill roots were detected.")
+        return detected
+
+    supported = {preset.agent for preset in SUPPORTED_AGENT_TARGETS}
+    unsupported = sorted(set(raw_agents) - supported)
+    if unsupported:
+        raise ValueError(
+            "Unsupported agent target(s): "
+            + ", ".join(unsupported)
+            + ". Supported targets: "
+            + ", ".join(preset.agent for preset in SUPPORTED_AGENT_TARGETS)
+        )
+
+    requested = set(raw_agents)
+    return [preset.agent for preset in SUPPORTED_AGENT_TARGETS if preset.agent in requested]
 
 
 def detect_available_agent_targets(

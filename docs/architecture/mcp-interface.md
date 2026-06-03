@@ -11,7 +11,7 @@ It exposes:
 - discovery and inspection
 - deterministic resolve previews
 - effective policy inspection
-- fresh install materialization
+- fresh install destination preview and agent-aware export
 - lock-driven sync materialization
 - read-only resources for command and architecture context
 - prompts that guide agents through common Aptitude workflows
@@ -42,13 +42,14 @@ Read-only tools:
 - `aptitude_inspect_skill`: selected skill metadata, available versions, and bounded content preview
 - `aptitude_resolve_skill`: deterministic fresh planning with candidates, selected coordinate, graph, lockfile, execution plan, trace, and policy evaluations
 - `aptitude_show_policy`: effective policy and configuration layers
+- `aptitude_preview_install_destinations`: read-only preview of agent roots and Aptitude state paths
 
 Mutating tools:
 
-- `aptitude_install_skill`: fresh planning plus local materialization into an explicit target path
+- `aptitude_install_skill`: fresh planning plus export into explicit agent roots and scope
 - `aptitude_sync_lock`: lock replay plus local materialization into an explicit target path
 
-Mutating tools must require explicit paths. They must not accept shell commands, execute arbitrary commands, or infer hidden write targets.
+Mutating tools must require explicit write intent. `aptitude_install_skill` requires explicit `agents` and `scope`; callers can use `aptitude_preview_install_destinations` before writing. Mutating tools must not accept shell commands, execute arbitrary commands, or infer hidden write targets.
 
 ## Resources And Prompts
 
@@ -94,9 +95,10 @@ MCP currently wraps application use cases directly. A future SDK interface may b
 Tool annotations must match behavior:
 
 - read-only tools set `readOnlyHint=true` and `destructiveHint=false`
+- preview, search, inspect, resolve, and policy tools set `readOnlyHint=true` and `destructiveHint=false`
 - install and sync set `readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, and `openWorldHint=true`
 
-The host application remains responsible for human approval, but Aptitude must still make mutating behavior obvious and require explicit filesystem targets.
+The host application remains responsible for human approval, but Aptitude must still make mutating behavior obvious and require explicit agent/scope or filesystem targets.
 
 ## Verification Expectations
 

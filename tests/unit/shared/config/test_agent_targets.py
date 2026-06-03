@@ -14,9 +14,12 @@ def test_supported_agent_targets_contains_the_phase_one_presets() -> None:
     assert [preset.agent for preset in supported_agent_targets()] == [
         "codex",
         "claude-code",
+        "github-copilot",
         "cursor",
         "gemini-cli",
         "opencode",
+        "windsurf",
+        "universal",
     ]
 
 
@@ -31,7 +34,7 @@ def test_resolve_agent_install_root_supports_project_and_global_scopes(tmp_path)
         scope="project",
         cwd=cwd,
         home=home,
-    ) == cwd / ".agents" / "skills"
+    ) == cwd / ".codex" / "skills"
     assert resolve_agent_install_root(
         agent="opencode",
         scope="global",

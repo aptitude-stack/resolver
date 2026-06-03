@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from packaging.version import Version
-
 from aptitude_resolver.application.dto import ResolveQueryRequestDto
 from aptitude_resolver.discovery import (
     DiscoverSkillCandidatesQuery,
@@ -26,6 +24,7 @@ from aptitude_resolver.domain.policy import (
     trust_tier_rank,
 )
 from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.domain.versioning import parse_skill_version
 from aptitude_resolver.execution import ExecutionPlan, build_execution_plan
 from aptitude_resolver.governance import (
     evaluate_resolution_graph,
@@ -349,7 +348,7 @@ def _decisive_signals(
         signals.append("better_lifecycle_status")
     if selected_version.is_current_default and not runner_version.is_current_default:
         signals.append("current_default")
-    if Version(selected_version.coordinate.version) > Version(
+    if parse_skill_version(selected_version.coordinate.version) > parse_skill_version(
         runner_version.coordinate.version
     ):
         signals.append("newer_semver")

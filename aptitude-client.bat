@@ -23,7 +23,7 @@ if "%~1"=="" (
     echo Aptitude Client interactive shell
     echo Type client commands such as:
     echo   resolve "python lint"
-    echo   install "python lint" --target skill_demo
+    echo   install "python lint" --agent codex --scope project
     echo Type help to show CLI help, or exit to quit.
     echo.
     goto :interactive
