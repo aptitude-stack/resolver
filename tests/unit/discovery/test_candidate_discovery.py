@@ -44,7 +44,7 @@ class FakeRegistryClient:
 
 
 def test_discovery_keeps_all_registry_candidates_without_client_side_cap() -> None:
-    candidates = [f"skill.{index:02d}" for index in range(12)]
+    candidates = [f"skill-{index:02d}" for index in range(12)]
 
     result = DiscoverSkillCandidatesQuery(FakeRegistryClient(candidates)).execute(
         "demo skill"
@@ -58,3 +58,12 @@ def test_discovery_keeps_all_registry_candidates_without_client_side_cap() -> No
         "candidate_count": 12,
         "slugs": candidates,
     }
+
+
+def test_discovery_treats_hyphenated_query_as_exact_slug() -> None:
+    result = DiscoverSkillCandidatesQuery(FakeRegistryClient(["fallback-skill"])).execute(
+        "python-lint"
+    )
+
+    assert [match.slug for match in result.matches] == ["python-lint"]
+    assert result.trace[1].action == "exact_slug_hit"

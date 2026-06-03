@@ -122,10 +122,10 @@ def _version_summary(
 
 def test_search_use_case_returns_ranked_candidates_without_materialization() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.discovery_by_query["pdf"] = ["pdf.reader", "pdf.forms"]
-    registry_client.versions_by_slug["pdf.reader"] = [
+    registry_client.discovery_by_query["pdf"] = ["pdf-reader", "pdf-forms"]
+    registry_client.versions_by_slug["pdf-reader"] = [
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.4.0",
             name="PDF Reader",
             artifact=_artifact("# PDF Reader\n"),
@@ -133,9 +133,9 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
             token_estimate=80,
         )
     ]
-    registry_client.versions_by_slug["pdf.forms"] = [
+    registry_client.versions_by_slug["pdf-forms"] = [
         _version_summary(
-            "pdf.forms",
+            "pdf-forms",
             "1.0.0",
             name="PDF Forms",
             artifact=_artifact("# PDF Forms\n"),
@@ -150,7 +150,7 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
     ).execute(SearchSkillsRequestDto(query="pdf"))
 
     assert result.status == "found"
-    assert [item.slug for item in result.candidates] == ["pdf.reader", "pdf.forms"]
+    assert [item.slug for item in result.candidates] == ["pdf-reader", "pdf-forms"]
     assert result.candidates[0].token_estimate == 80
     assert registry_client.identity_calls == []
     assert registry_client.metadata_calls == []
@@ -159,19 +159,19 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
 
 def test_search_use_case_applies_policy_filtering_before_returning_candidates() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.discovery_by_query["pdf"] = ["pdf.reader", "pdf.forms"]
-    registry_client.versions_by_slug["pdf.reader"] = [
+    registry_client.discovery_by_query["pdf"] = ["pdf-reader", "pdf-forms"]
+    registry_client.versions_by_slug["pdf-reader"] = [
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.4.0",
             name="PDF Reader",
             artifact=_artifact("# PDF Reader\n"),
             trust_tier="internal",
         )
     ]
-    registry_client.versions_by_slug["pdf.forms"] = [
+    registry_client.versions_by_slug["pdf-forms"] = [
         _version_summary(
-            "pdf.forms",
+            "pdf-forms",
             "1.0.0",
             name="PDF Forms",
             artifact=_artifact("# PDF Forms\n"),
@@ -184,36 +184,36 @@ def test_search_use_case_applies_policy_filtering_before_returning_candidates() 
         policy_context=PolicyContext(allowed_trust_tiers=["verified"]),
     ).execute(SearchSkillsRequestDto(query="pdf"))
 
-    assert [item.slug for item in result.candidates] == ["pdf.forms"]
+    assert [item.slug for item in result.candidates] == ["pdf-forms"]
 
 
 def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> None:
     registry_client = FakeRegistryClient()
     content = "# PDF Reader\n\nDetailed markdown content.\n"
-    registry_client.discovery_by_query["pdf"] = ["pdf.reader"]
-    registry_client.versions_by_slug["pdf.reader"] = [
+    registry_client.discovery_by_query["pdf"] = ["pdf-reader"]
+    registry_client.versions_by_slug["pdf-reader"] = [
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.4.0",
             name="PDF Reader",
             artifact=_artifact(content),
             is_current_default=True,
         ),
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.3.0",
             name="PDF Reader",
             artifact=_artifact(content),
             published_at="2026-03-15T00:00:00Z",
         ),
     ]
-    registry_client.metadata_by_coordinate[("pdf.reader", "1.4.0")] = _metadata(
-        "pdf.reader",
+    registry_client.metadata_by_coordinate[("pdf-reader", "1.4.0")] = _metadata(
+        "pdf-reader",
         "1.4.0",
         name="PDF Reader",
         artifact=_artifact(content),
     )
-    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(
+    registry_client.artifact_by_coordinate[("pdf-reader", "1.4.0")] = _artifact(
         content
     )
 
@@ -223,31 +223,31 @@ def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> No
 
     assert result.status == "inspected"
     assert result.selected_coordinate is not None
-    assert result.selected_coordinate.slug == "pdf.reader"
+    assert result.selected_coordinate.slug == "pdf-reader"
     assert registry_client.identity_calls == []
     assert result.skill is not None
     assert result.skill.token_estimate == 120
     assert result.content_preview == content
     assert result.content_preview_truncated is False
     assert [item.version for item in result.available_versions] == ["1.4.0", "1.3.0"]
-    assert registry_client.metadata_calls == [("pdf.reader", "1.4.0")]
-    assert registry_client.artifact_calls == [("pdf.reader", "1.4.0")]
+    assert registry_client.metadata_calls == [("pdf-reader", "1.4.0")]
+    assert registry_client.artifact_calls == [("pdf-reader", "1.4.0")]
 
 
 def test_inspect_use_case_returns_selection_required_when_prompting_is_expected() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.discovery_by_query["pdf"] = ["pdf.reader", "pdf.forms"]
-    registry_client.versions_by_slug["pdf.reader"] = [
+    registry_client.discovery_by_query["pdf"] = ["pdf-reader", "pdf-forms"]
+    registry_client.versions_by_slug["pdf-reader"] = [
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.4.0",
             name="PDF Reader",
             artifact=_artifact("# PDF Reader\n"),
         )
     ]
-    registry_client.versions_by_slug["pdf.forms"] = [
+    registry_client.versions_by_slug["pdf-forms"] = [
         _version_summary(
-            "pdf.forms",
+            "pdf-forms",
             "1.0.0",
             name="PDF Forms",
             artifact=_artifact("# PDF Forms\n"),
@@ -263,29 +263,29 @@ def test_inspect_use_case_returns_selection_required_when_prompting_is_expected(
     )
 
     assert result.status == "selection_required"
-    assert [item.slug for item in result.candidates] == ["pdf.forms", "pdf.reader"]
+    assert [item.slug for item in result.candidates] == ["pdf-forms", "pdf-reader"]
     assert registry_client.metadata_calls == []
 
 
 def test_inspect_use_case_truncates_preview_when_requested() -> None:
     registry_client = FakeRegistryClient()
     content = "# PDF Reader\n" + ("A" * 50)
-    registry_client.discovery_by_query["pdf"] = ["pdf.reader"]
-    registry_client.versions_by_slug["pdf.reader"] = [
+    registry_client.discovery_by_query["pdf"] = ["pdf-reader"]
+    registry_client.versions_by_slug["pdf-reader"] = [
         _version_summary(
-            "pdf.reader",
+            "pdf-reader",
             "1.4.0",
             name="PDF Reader",
             artifact=_artifact(content),
         )
     ]
-    registry_client.metadata_by_coordinate[("pdf.reader", "1.4.0")] = _metadata(
-        "pdf.reader",
+    registry_client.metadata_by_coordinate[("pdf-reader", "1.4.0")] = _metadata(
+        "pdf-reader",
         "1.4.0",
         name="PDF Reader",
         artifact=_artifact(content),
     )
-    registry_client.artifact_by_coordinate[("pdf.reader", "1.4.0")] = _artifact(
+    registry_client.artifact_by_coordinate[("pdf-reader", "1.4.0")] = _artifact(
         content
     )
 

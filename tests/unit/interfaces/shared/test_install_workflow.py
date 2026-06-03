@@ -54,7 +54,7 @@ def test_resolve_query_applies_builder_overrides_and_closes() -> None:
     result = service.resolve_query(
         query="python lint",
         version="1.2.3",
-        select_slug="python.lint",
+        select_slug="python-lint",
         interaction_mode=None,
         prompt_capable=True,
         selection_source=None,
@@ -71,7 +71,7 @@ def test_resolve_query_applies_builder_overrides_and_closes() -> None:
     }
     assert use_case.requests[0].query == "python lint"
     assert use_case.requests[0].version == "1.2.3"
-    assert use_case.requests[0].select_slug == "python.lint"
+    assert use_case.requests[0].select_slug == "python-lint"
     assert use_case.requests[0].prompt_capable is True
     assert close_calls == ["closed"]
 
@@ -126,7 +126,7 @@ def test_install_query_applies_builder_overrides_and_forwards_install_controls()
     result = service.install_query(
         query="python lint",
         version="1.2.3",
-        select_slug="python.lint",
+        select_slug="python-lint",
         target=target,
         interaction_mode="never",
         prompt_capable=False,

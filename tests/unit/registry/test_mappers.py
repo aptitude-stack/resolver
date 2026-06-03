@@ -30,7 +30,7 @@ def _metadata_response(
     headers: dict[str, object] | None = None,
 ) -> MetadataResponse:
     return MetadataResponse(
-        slug="python.lint",
+        slug="python-lint",
         version="1.2.3",
         content=TransportContent(
             checksum=TransportChecksum(algorithm="sha256", digest="digest-123"),
@@ -105,7 +105,7 @@ def test_map_metadata_response_drops_none_headers_and_coerces_other_values() -> 
 
 def test_map_skill_version_list_response_applies_server_defaults() -> None:
     payload = SkillVersionListResponse(
-        slug="python.lint",
+        slug="python-lint",
         versions=[
             SkillVersionListEntryResponse(version="1.2.3"),
             SkillVersionListEntryResponse(
@@ -120,7 +120,7 @@ def test_map_skill_version_list_response_applies_server_defaults() -> None:
 
     versions = map_skill_version_list_response(payload)
 
-    assert versions[0].coordinate.slug == "python.lint"
+    assert versions[0].coordinate.slug == "python-lint"
     assert versions[0].lifecycle_status == "published"
     assert versions[0].trust_tier == "untrusted"
     assert versions[0].published_at == ""
@@ -131,14 +131,14 @@ def test_map_skill_version_list_response_applies_server_defaults() -> None:
 
 def test_dependency_mapping_preserves_selector_contract() -> None:
     selector = DependencySelector(
-        slug="dep.core",
+        slug="dep-core",
         version=None,
         version_constraint=">=1.0",
         optional=True,
         markers=["linux", "ci"],
     )
     payload = DirectDependenciesResponse(
-        slug="python.lint",
+        slug="python-lint",
         version="1.2.3",
         depends_on=[selector],
     )
@@ -147,7 +147,7 @@ def test_dependency_mapping_preserves_selector_contract() -> None:
     mapped_dependencies = map_direct_dependencies(payload)
 
     assert mapped_selector == DependencySpec(
-        slug="dep.core",
+        slug="dep-core",
         version=None,
         version_constraint=">=1.0",
         optional=True,

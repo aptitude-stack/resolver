@@ -62,11 +62,11 @@ def _node(slug: str, version: str, artifact: bytes) -> ResolvedSkillNode:
 
 def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -110,14 +110,14 @@ def test_sync_from_lock_use_case_materializes_from_lock_only(tmp_path) -> None:
     assert result.status == "synced"
     assert result.lock_path == str(lock_path.resolve())
     assert result.selected_coordinate is not None
-    assert result.selected_coordinate.slug == "python.lint"
+    assert result.selected_coordinate.slug == "python-lint"
     assert [step.node_id for step in result.execution_plan.steps] == [
-        "python.base@1.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-lint@1.2.3",
     ]
     assert registry_client.artifact_calls == [
-        ("python.base", "1.0.0"),
-        ("python.lint", "1.2.3"),
+        ("python-base", "1.0.0"),
+        ("python-lint", "1.2.3"),
     ]
     assert any(item.action == "load_lockfile" for item in result.trace)
 
@@ -134,11 +134,11 @@ def test_sync_from_lock_use_case_raises_for_missing_lockfile(tmp_path) -> None:
 
 def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -189,8 +189,8 @@ def test_sync_from_lock_use_case_does_not_require_selection_metadata(tmp_path) -
 
     assert result.status == "synced"
     assert registry_client.artifact_calls == [
-        ("python.base", "1.0.0"),
-        ("python.lint", "1.2.3"),
+        ("python-base", "1.0.0"),
+        ("python-lint", "1.2.3"),
     ]
     assert result.lockfile is not None
     assert result.lockfile.selection is None

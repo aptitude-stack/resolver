@@ -108,18 +108,18 @@ def test_lockfile_to_dto_preserves_nested_content_and_optional_snapshots() -> No
         root=LockRoot(
             request="python lint",
             requested_version=None,
-            selected_node_id="python.lint@1.2.3",
+            selected_node_id="python-lint@1.2.3",
             selection_mode="single_candidate",
         ),
-        nodes=[_locked_skill("python.lint", "1.2.3", name="Python Lint")],
+        nodes=[_locked_skill("python-lint", "1.2.3", name="Python Lint")],
         edges=[
             LockedEdge(
-                source_node_id="python.lint@1.2.3",
-                target_node_id="dep.core@0.9.0",
+                source_node_id="python-lint@1.2.3",
+                target_node_id="dep-core@0.9.0",
                 markers=["linux"],
             )
         ],
-        install_order=["dep.core@0.9.0", "python.lint@1.2.3"],
+        install_order=["dep-core@0.9.0", "python-lint@1.2.3"],
         selection=SelectionSnapshot(
             profile="high-trust",
             interaction_mode="always",
@@ -141,25 +141,25 @@ def test_lockfile_to_dto_preserves_nested_content_and_optional_snapshots() -> No
                 rule="allowed_trust_tiers",
                 passed=True,
                 message="Trust allowed.",
-                node_id="python.lint@1.2.3",
+                node_id="python-lint@1.2.3",
             )
         ],
     )
 
     dto = lockfile_to_dto(lockfile)
 
-    assert dto.root.selected_node_id == "python.lint@1.2.3"
+    assert dto.root.selected_node_id == "python-lint@1.2.3"
     assert dto.nodes[0].headers == {"runtime": "python", "entrypoint": "main"}
     assert dto.nodes[0].content_checksum == {
         "algorithm": "sha256",
-        "digest": "digest-python.lint-1.2.3",
+        "digest": "digest-python-lint-1.2.3",
         "size_bytes": 256,
     }
     assert dto.selection is not None
     assert dto.selection.interaction_mode == "always"
     assert dto.policy is not None
     assert dto.policy.max_total_token_estimate == 600
-    assert dto.governance[0].node_id == "python.lint@1.2.3"
+    assert dto.governance[0].node_id == "python-lint@1.2.3"
 
 
 def test_lockfile_to_dto_omits_optional_snapshots_when_absent() -> None:
@@ -170,12 +170,12 @@ def test_lockfile_to_dto_omits_optional_snapshots_when_absent() -> None:
         root=LockRoot(
             request="python lint",
             requested_version=None,
-            selected_node_id="python.lint@1.2.3",
+            selected_node_id="python-lint@1.2.3",
             selection_mode="single_candidate",
         ),
-        nodes=[_locked_skill("python.lint", "1.2.3", name="Python Lint")],
+        nodes=[_locked_skill("python-lint", "1.2.3", name="Python Lint")],
         edges=[],
-        install_order=["python.lint@1.2.3"],
+        install_order=["python-lint@1.2.3"],
         selection=None,
         policy=None,
         governance=[],
@@ -188,23 +188,23 @@ def test_lockfile_to_dto_omits_optional_snapshots_when_absent() -> None:
 
 
 def test_resolution_mapping_helpers_preserve_runtime_trace_and_root_selection() -> None:
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
-    dependency = SkillCoordinate(slug="dep.core", version="0.9.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="dep-core", version="0.9.0")
     candidate = DiscoveryCandidate(
-        slug="python.lint",
-        selected_version=_version_summary("python.lint", "1.2.3", name="Python Lint"),
+        slug="python-lint",
+        selected_version=_version_summary("python-lint", "1.2.3", name="Python Lint"),
         labels=["python", "lint"],
         matched_labels=["python"],
         match_reasons=["exact_name_match"],
         ranking_position=1,
         selection_details=["tokens=120", "size=256B"],
-        selection_reason="Closer exact name match than dep.core.",
+        selection_reason="Closer exact name match than dep-core.",
     )
     graph = ResolutionGraph(
         root=root,
         nodes=[
-            _resolved_node("dep.core", "0.9.0", name="Dependency Core"),
-            _resolved_node("python.lint", "1.2.3", name="Python Lint"),
+            _resolved_node("dep-core", "0.9.0", name="Dependency Core"),
+            _resolved_node("python-lint", "1.2.3", name="Python Lint"),
         ],
         edges=[DependencyEdge(source=root, target=dependency, markers=["linux"])],
         install_order=[dependency, root],
@@ -223,28 +223,28 @@ def test_resolution_mapping_helpers_preserve_runtime_trace_and_root_selection() 
         root=LockRoot(
             request="python lint",
             requested_version=None,
-            selected_node_id="python.lint@1.2.3",
+            selected_node_id="python-lint@1.2.3",
             selection_mode="single_candidate",
         ),
         nodes=[
-            _locked_skill("dep.core", "0.9.0", name="Dependency Core"),
-            _locked_skill("python.lint", "1.2.3", name="Python Lint"),
+            _locked_skill("dep-core", "0.9.0", name="Dependency Core"),
+            _locked_skill("python-lint", "1.2.3", name="Python Lint"),
         ],
         edges=[
             LockedEdge(
-                source_node_id="python.lint@1.2.3", target_node_id="dep.core@0.9.0"
+                source_node_id="python-lint@1.2.3", target_node_id="dep-core@0.9.0"
             )
         ],
-        install_order=["dep.core@0.9.0", "python.lint@1.2.3"],
+        install_order=["dep-core@0.9.0", "python-lint@1.2.3"],
         governance=[],
     )
     execution_plan = ExecutionPlan(
         steps=[
             ExecutionStep(
-                node_id="dep.core@0.9.0",
-                skill="dep.core",
+                node_id="dep-core@0.9.0",
+                skill="dep-core",
                 version="0.9.0",
-                artifact_ref="/skills/dep.core/0.9.0/content",
+                artifact_ref="/skills/dep-core/0.9.0/content",
                 action="materialize_local_skill",
             )
         ]
@@ -283,13 +283,13 @@ def test_resolution_mapping_helpers_preserve_runtime_trace_and_root_selection() 
 
     assert candidate_dto.runtime == "python"
     assert candidate_dto.token_estimate == 120
-    assert candidate_dto.selection_reason == "Closer exact name match than dep.core."
-    assert graph_dto.root.slug == "python.lint"
+    assert candidate_dto.selection_reason == "Closer exact name match than dep-core."
+    assert graph_dto.root.slug == "python-lint"
     assert graph_dto.edges[0].markers == ["linux"]
-    assert graph_dto.conflicts[0].coordinates[1].slug == "dep.core"
+    assert graph_dto.conflicts[0].coordinates[1].slug == "dep-core"
     assert execution_plan_dto.steps[0].action == "materialize_local_skill"
     assert trace_dto.data == {"decisive_signals": ["exact_name_match"]}
     assert policy_dto.coordinate is not None
-    assert policy_dto.coordinate.slug == "python.lint"
+    assert policy_dto.coordinate.slug == "python-lint"
     assert summary_dto.name == "Python Lint"
     assert summary_dto.runtime == "python"

@@ -76,7 +76,7 @@ Examples:
 aptitude install "Postman Primary Skill"
 aptitude install "Postman" --interaction-mode always
 aptitude install "Postman Primary Skill" --prefer low-cost
-aptitude install "Postman" --select-slug postman.primary
+aptitude install "Postman" --select-slug postman-primary
 aptitude install "Postman" --allow-trust verified,internal
 aptitude install "Postman" --allow-lifecycle published
 aptitude install "Postman" --max-tokens 500 --max-content-size 2048

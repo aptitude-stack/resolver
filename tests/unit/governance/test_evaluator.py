@@ -110,8 +110,8 @@ def test_filter_policy_compliant_candidates_rejects_illegal_candidates_and_emits
     None
 ):
     candidates = [
-        _candidate("trusted.skill", "1.0.0", trust_tier="verified"),
-        _candidate("untrusted.skill", "1.0.0", trust_tier="untrusted"),
+        _candidate("trusted-skill", "1.0.0", trust_tier="verified"),
+        _candidate("untrusted-skill", "1.0.0", trust_tier="untrusted"),
     ]
 
     compliant, trace = filter_policy_compliant_candidates(
@@ -119,7 +119,7 @@ def test_filter_policy_compliant_candidates_rejects_illegal_candidates_and_emits
         PolicyContext(allowed_trust_tiers=["verified"]),
     )
 
-    assert [candidate.slug for candidate in compliant] == ["trusted.skill"]
+    assert [candidate.slug for candidate in compliant] == ["trusted-skill"]
     assert [item.action for item in trace] == [
         "candidate_policy_pass",
         "candidate_policy_reject",
@@ -171,13 +171,13 @@ def test_evaluate_resolution_graph_checks_lifecycle_trust_and_resource_rules() -
         nodes=[
             _node("root.skill", "1.0.0", trust_tier="verified", token_estimate=120),
             _node(
-                "dep.skill", "1.0.0", lifecycle_status="archived", token_estimate=None
+                "dep-skill", "1.0.0", lifecycle_status="archived", token_estimate=None
             ),
         ],
         edges=[],
         install_order=[
             SkillCoordinate(slug="root.skill", version="1.0.0"),
-            SkillCoordinate(slug="dep.skill", version="1.0.0"),
+            SkillCoordinate(slug="dep-skill", version="1.0.0"),
         ],
         conflicts=[],
     )
@@ -193,13 +193,13 @@ def test_evaluate_resolution_graph_checks_lifecycle_trust_and_resource_rules() -
 
     assert any(
         item.rule == "allowed_lifecycle_status"
-        and item.coordinate == SkillCoordinate("dep.skill", "1.0.0")
+        and item.coordinate == SkillCoordinate("dep-skill", "1.0.0")
         and not item.passed
         for item in evaluations
     )
     assert any(
         item.rule == "max_token_estimate"
-        and item.coordinate == SkillCoordinate("dep.skill", "1.0.0")
+        and item.coordinate == SkillCoordinate("dep-skill", "1.0.0")
         and not item.passed
         for item in evaluations
     )
@@ -210,12 +210,12 @@ def test_evaluate_resolution_graph_checks_aggregate_resource_ceilings() -> None:
         root=SkillCoordinate(slug="root.skill", version="1.0.0"),
         nodes=[
             _node("root.skill", "1.0.0", token_estimate=120, content_size_bytes=300),
-            _node("dep.skill", "1.0.0", token_estimate=200, content_size_bytes=400),
+            _node("dep-skill", "1.0.0", token_estimate=200, content_size_bytes=400),
         ],
         edges=[],
         install_order=[
             SkillCoordinate(slug="root.skill", version="1.0.0"),
-            SkillCoordinate(slug="dep.skill", version="1.0.0"),
+            SkillCoordinate(slug="dep-skill", version="1.0.0"),
         ],
         conflicts=[],
     )

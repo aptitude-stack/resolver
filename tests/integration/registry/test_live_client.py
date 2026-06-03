@@ -171,4 +171,4 @@ def test_fetch_invalid_version_against_live_server(
     client = RegistryClient(integration_settings)
 
     with pytest.raises(InvalidCoordinateError):
-        client.fetch_skill_metadata("python.lint", "not-a-semver")
+        client.fetch_skill_metadata("python-lint", "not-a-semver")

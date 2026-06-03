@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aptitude_resolver.shared.config.settings import Settings
+from aptitude_resolver.shared.config.settings import DEFAULT_SERVER_BASE_URL, Settings
 
 
 def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -18,14 +18,13 @@ def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None
     assert settings.server_timeout_seconds == 5.0
 
 
-def test_settings_require_server_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_default_server_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("APTITUDE_SERVER_BASE_URL", raising=False)
     monkeypatch.setenv("APTITUDE_READ_TOKEN", "reader-token")
 
-    with pytest.raises(ValidationError) as exc_info:
-        Settings(_env_file=None)
+    settings = Settings(_env_file=None)
 
-    assert "server_base_url" in str(exc_info.value)
+    assert settings.server_base_url == DEFAULT_SERVER_BASE_URL
 
 
 def test_settings_require_read_token(monkeypatch: pytest.MonkeyPatch) -> None:

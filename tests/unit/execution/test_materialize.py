@@ -130,8 +130,8 @@ def _single_member_tar_zst(
 
 
 def _lockfile(artifact_by_coordinate: dict[tuple[str, str], bytes]):
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -160,9 +160,9 @@ def _lockfile(artifact_by_coordinate: dict[tuple[str, str], bytes]):
 
 
 def _multi_lockfile(artifact_by_coordinate: dict[tuple[str, str], bytes]):
-    base = SkillCoordinate(slug="python.base", version="1.0.0")
-    format_skill = SkillCoordinate(slug="python.format", version="2.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    base = SkillCoordinate(slug="python-base", version="1.0.0")
+    format_skill = SkillCoordinate(slug="python-format", version="2.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -201,23 +201,23 @@ def _multi_lockfile(artifact_by_coordinate: dict[tuple[str, str], bytes]):
 def test_build_execution_plan_uses_locked_install_order() -> None:
     lockfile = _lockfile(
         {
-            ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-            ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+            ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+            ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
         }
     )
 
     execution_plan = build_execution_plan(lockfile)
 
     assert [step.node_id for step in execution_plan.steps] == [
-        "python.base@1.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-lint@1.2.3",
     ]
 
 
 def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact(
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact(
             "# Python Lint\n",
             **{"scripts/setup.py": "print('setup')\n"},
         ),
@@ -234,16 +234,16 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
     materialized_root = tmp_path / "skill_demo"
     assert materialized_root.exists()
     assert [item.slug for item in result.installed_skills] == [
-        "python.base",
-        "python.lint",
+        "python-base",
+        "python-lint",
     ]
     assert (
-        materialized_root / "skills" / "python.lint" / "1.2.3" / "content.md"
+        materialized_root / "skills" / "python-lint" / "1.2.3" / "content.md"
     ).read_text(encoding="utf-8") == "# Python Lint\n"
     assert (
         materialized_root
         / "skills"
-        / "python.lint"
+        / "python-lint"
         / "1.2.3"
         / "scripts"
         / "setup.py"
@@ -257,13 +257,13 @@ def test_materialize_lockfile_writes_skills_and_resolution_artifacts(tmp_path) -
         "materialize_locked_skill",
     ]
     assert result.installed_skills[0].install_path == str(
-        materialized_root / "skills" / "python.base" / "1.0.0"
+        materialized_root / "skills" / "python-base" / "1.0.0"
     )
     assert result.installed_skills[1].install_path == str(
-        materialized_root / "skills" / "python.lint" / "1.2.3"
+        materialized_root / "skills" / "python-lint" / "1.2.3"
     )
     assert result.trace[0].data["install_path"] == str(
-        materialized_root / "skills" / "python.base" / "1.0.0"
+        materialized_root / "skills" / "python-base" / "1.0.0"
     )
 
 
@@ -276,8 +276,8 @@ def test_materialize_lockfile_preserves_existing_target_when_promotion_fails(
     (target / "keep.txt").write_text("keep me\n", encoding="utf-8")
     (target / "locked.txt").write_text("locked\n", encoding="utf-8")
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     lockfile = _lockfile(content_by_coordinate)
     registry_client = FakeRegistryClient(content_by_coordinate)
@@ -313,7 +313,7 @@ def test_preview_tar_zstd_artifact_reads_skill_markdown_bundle_entry() -> None:
     artifact = make_tar_zst({"skill-bundle/SKILL.md": "# Python Base Runtime\n"})
 
     preview, truncated = preview_tar_zstd_artifact(
-        slug="python.base",
+        slug="python-base",
         version="1.1.0",
         artifact=artifact,
         limit=100,
@@ -326,14 +326,14 @@ def test_preview_tar_zstd_artifact_reads_skill_markdown_bundle_entry() -> None:
 def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> None:
     lockfile = _lockfile(
         {
-            ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
-            ("python.base", "1.0.0"): _artifact("# Python Base\n"),
+            ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
+            ("python-base", "1.0.0"): _artifact("# Python Base\n"),
         }
     )
     registry_client = FakeRegistryClient(
         {
-            ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-            ("python.lint", "1.2.3"): b"tampered",
+            ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+            ("python-lint", "1.2.3"): b"tampered",
         }
     )
 
@@ -345,8 +345,8 @@ def test_materialize_lockfile_raises_when_checksum_does_not_match(tmp_path) -> N
         )
 
     payload = exc_info.value.to_payload()
-    expected_node = next(node for node in lockfile.nodes if node.slug == "python.lint")
-    assert payload["slug"] == "python.lint"
+    expected_node = next(node for node in lockfile.nodes if node.slug == "python-lint")
+    assert payload["slug"] == "python-lint"
     assert payload["version"] == "1.2.3"
     assert payload["algorithm"] == "sha256"
     assert payload["expected_digest"] == expected_node.content_checksum_digest
@@ -374,8 +374,8 @@ def test_materialize_lockfile_rejects_unsafe_archive_members(
     message: str,
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): artifact,
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): artifact,
     }
     lockfile = _lockfile(content_by_coordinate)
     registry_client = FakeRegistryClient(content_by_coordinate)
@@ -394,9 +394,9 @@ def test_materialize_lockfile_downloads_locked_artifacts_in_parallel(
     tmp_path,
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.format", "2.0.0"): _artifact("# Python Format\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-format", "2.0.0"): _artifact("# Python Format\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     registry_client = DelayedRegistryClient(content_by_coordinate)
     lockfile = _multi_lockfile(content_by_coordinate)
@@ -415,16 +415,16 @@ def test_materialize_lockfile_preserves_lock_order_when_workers_finish_out_of_or
     tmp_path,
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.format", "2.0.0"): _artifact("# Python Format\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-format", "2.0.0"): _artifact("# Python Format\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     registry_client = DelayedRegistryClient(
         content_by_coordinate,
         delays_by_slug={
-            "python.base": 0.05,
-            "python.format": 0.01,
-            "python.lint": 0.02,
+            "python-base": 0.05,
+            "python-format": 0.01,
+            "python-lint": 0.02,
         },
     )
     lockfile = _multi_lockfile(content_by_coordinate)
@@ -437,22 +437,22 @@ def test_materialize_lockfile_preserves_lock_order_when_workers_finish_out_of_or
     )
 
     assert [item.slug for item in result.installed_skills] == [
-        "python.base",
-        "python.format",
-        "python.lint",
+        "python-base",
+        "python-format",
+        "python-lint",
     ]
     assert [item.data["node_id"] for item in result.trace] == [
-        "python.base@1.0.0",
-        "python.format@2.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-format@2.0.0",
+        "python-lint@1.2.3",
     ]
 
 
 def test_materialize_lockfile_concurrent_downloads_one_is_serial(tmp_path) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.format", "2.0.0"): _artifact("# Python Format\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-format", "2.0.0"): _artifact("# Python Format\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     registry_client = DelayedRegistryClient(content_by_coordinate)
     lockfile = _multi_lockfile(content_by_coordinate)
@@ -466,9 +466,9 @@ def test_materialize_lockfile_concurrent_downloads_one_is_serial(tmp_path) -> No
 
     assert registry_client.max_active_calls == 1
     assert registry_client.calls == [
-        ("python.base", "1.0.0"),
-        ("python.format", "2.0.0"),
-        ("python.lint", "1.2.3"),
+        ("python-base", "1.0.0"),
+        ("python-format", "2.0.0"),
+        ("python-lint", "1.2.3"),
     ]
 
 
@@ -477,9 +477,9 @@ def test_materialize_lockfile_concurrent_installs_one_serializes_extraction(
     monkeypatch,
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.format", "2.0.0"): _artifact("# Python Format\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-format", "2.0.0"): _artifact("# Python Format\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     registry_client = DelayedRegistryClient(content_by_coordinate)
     lockfile = _multi_lockfile(content_by_coordinate)
@@ -516,7 +516,7 @@ def test_materialize_lockfile_concurrent_installs_one_serializes_extraction(
     )
 
     assert max_active_extracts == 1
-    assert extract_order == ["python.base", "python.format", "python.lint"]
+    assert extract_order == ["python-base", "python-format", "python-lint"]
 
 
 def test_default_install_worker_count_is_capped_at_four(monkeypatch) -> None:
@@ -535,8 +535,8 @@ def test_materialize_lockfile_reuses_precomputed_execution_plan(
     tmp_path, monkeypatch
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     lockfile = _lockfile(content_by_coordinate)
     precomputed_plan = build_execution_plan(lockfile)
@@ -562,8 +562,8 @@ def test_materialize_lockfile_reuses_precomputed_execution_plan(
 def test_build_execution_plan_ignores_selection_explainability_metadata() -> None:
     base_lockfile = _lockfile(
         {
-            ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-            ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+            ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+            ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
         }
     )
     low_cost_lock = replace(
@@ -592,28 +592,28 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
     tmp_path,
 ) -> None:
     content_by_coordinate = {
-        ("python.base", "1.0.0"): _artifact("# Python Base\n"),
-        ("python.lint", "1.2.3"): _artifact("# Python Lint\n"),
+        ("python-base", "1.0.0"): _artifact("# Python Base\n"),
+        ("python-lint", "1.2.3"): _artifact("# Python Lint\n"),
     }
     graph = ResolutionGraph(
-        root=SkillCoordinate(slug="python.lint", version="1.2.3"),
+        root=SkillCoordinate(slug="python-lint", version="1.2.3"),
         nodes=[
             _node(
-                "python.base", "1.0.0", content_by_coordinate[("python.base", "1.0.0")]
+                "python-base", "1.0.0", content_by_coordinate[("python-base", "1.0.0")]
             ),
             _node(
-                "python.lint", "1.2.3", content_by_coordinate[("python.lint", "1.2.3")]
+                "python-lint", "1.2.3", content_by_coordinate[("python-lint", "1.2.3")]
             ),
         ],
         edges=[
             DependencyEdge(
-                source=SkillCoordinate(slug="python.lint", version="1.2.3"),
-                target=SkillCoordinate(slug="python.base", version="1.0.0"),
+                source=SkillCoordinate(slug="python-lint", version="1.2.3"),
+                target=SkillCoordinate(slug="python-base", version="1.0.0"),
             )
         ],
         install_order=[
-            SkillCoordinate(slug="python.base", version="1.0.0"),
-            SkillCoordinate(slug="python.lint", version="1.2.3"),
+            SkillCoordinate(slug="python-base", version="1.0.0"),
+            SkillCoordinate(slug="python-lint", version="1.2.3"),
         ],
         conflicts=[],
     )
@@ -625,8 +625,8 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
             TraceEntry(
                 stage="execution",
                 action="materialize_locked_skill",
-                message="Materialized locked skill python.base@1.0.0.",
-                data={"node_id": "python.base@1.0.0"},
+                message="Materialized locked skill python-base@1.0.0.",
+                data={"node_id": "python-base@1.0.0"},
             )
         ],
         policy_evaluations=[
@@ -634,7 +634,7 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
                 rule="allowed_lifecycle_status",
                 passed=True,
                 message="Lifecycle 'published' is allowed.",
-                coordinate=SkillCoordinate(slug="python.lint", version="1.2.3"),
+                coordinate=SkillCoordinate(slug="python-lint", version="1.2.3"),
             )
         ],
     )
@@ -643,7 +643,7 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
     assert json.loads((resolution_dir / "graph.json").read_text(encoding="utf-8"))[
         "root"
     ] == {
-        "slug": "python.lint",
+        "slug": "python-lint",
         "version": "1.2.3",
     }
     assert json.loads((resolution_dir / "trace.json").read_text(encoding="utf-8"))[0][
@@ -651,4 +651,4 @@ def test_write_install_debug_artifacts_writes_graph_trace_and_policy_json(
     ] == ("materialize_locked_skill")
     assert json.loads((resolution_dir / "policy.json").read_text(encoding="utf-8"))[0][
         "coordinate"
-    ] == {"slug": "python.lint", "version": "1.2.3"}
+    ] == {"slug": "python-lint", "version": "1.2.3"}

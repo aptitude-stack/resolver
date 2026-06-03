@@ -38,11 +38,11 @@ def _client(handler, *, cache_dir=None) -> RegistryClient:
 def test_list_skill_versions_reads_live_contract_from_skill_endpoint() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706"
+        assert request.url.path == "/skills/postman-primary-1774130709214-55706"
         return httpx.Response(
             200,
             json={
-                "slug": "postman.primary.1774130709214-55706",
+                "slug": "postman-primary-1774130709214-55706",
                 "versions": [
                     {
                         "version": "1.0.0",
@@ -64,21 +64,21 @@ def test_list_skill_versions_reads_live_contract_from_skill_endpoint() -> None:
 
     client = _client(handler)
 
-    versions = client.list_skill_versions("postman.primary.1774130709214-55706")
+    versions = client.list_skill_versions("postman-primary-1774130709214-55706")
 
     assert [item.coordinate.version for item in versions] == ["1.0.0", "2.0.0"]
-    assert versions[0].coordinate.slug == "postman.primary.1774130709214-55706"
+    assert versions[0].coordinate.slug == "postman-primary-1774130709214-55706"
     assert versions[0].is_current_default is True
 
 
 def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706"
+        assert request.url.path == "/skills/postman-primary-1774130709214-55706"
         return httpx.Response(
             200,
             json={
-                "slug": "postman.primary.1774130709214-55706",
+                "slug": "postman-primary-1774130709214-55706",
                 "versions": [
                     {
                         "version": "1.0.0",
@@ -93,9 +93,9 @@ def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -
 
     client = _client(handler)
 
-    identity = client.fetch_skill_identity("postman.primary.1774130709214-55706")
+    identity = client.fetch_skill_identity("postman-primary-1774130709214-55706")
 
-    assert identity.slug == "postman.primary.1774130709214-55706"
+    assert identity.slug == "postman-primary-1774130709214-55706"
     assert identity.current_version is not None
     assert identity.current_version.version == "1.0.0"
     assert identity.current_lifecycle_status == "published"
@@ -105,11 +105,11 @@ def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -
 def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summary() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0"
+        assert request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0"
         return httpx.Response(
             200,
             json={
-                "slug": "postman.primary.1774130709214-55706",
+                "slug": "postman-primary-1774130709214-55706",
                 "version": "1.0.0",
                 "version_checksum": {
                     "algorithm": "sha256",
@@ -142,10 +142,10 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
     client = _client(handler)
 
     metadata = client.fetch_skill_metadata(
-        "postman.primary.1774130709214-55706", "1.0.0"
+        "postman-primary-1774130709214-55706", "1.0.0"
     )
 
-    assert metadata.coordinate.slug == "postman.primary.1774130709214-55706"
+    assert metadata.coordinate.slug == "postman-primary-1774130709214-55706"
     assert metadata.coordinate.version == "1.0.0"
     assert metadata.name == "Postman Primary Skill"
     assert metadata.rendered_summary == "Primary sanity skill for collection coverage"
@@ -158,14 +158,14 @@ def test_fetch_skill_artifact_uses_live_content_path_for_binary_payload() -> Non
         assert request.method == "GET"
         assert (
             request.url.path
-            == "/skills/postman.primary.1774130709214-55706/1.0.0/content"
+            == "/skills/postman-primary-1774130709214-55706/1.0.0/content"
         )
         return httpx.Response(200, content=artifact)
 
     client = _client(handler)
 
     content = client.fetch_skill_artifact(
-        "postman.primary.1774130709214-55706", "1.0.0"
+        "postman-primary-1774130709214-55706", "1.0.0"
     )
 
     assert content == artifact
@@ -174,15 +174,15 @@ def test_fetch_skill_artifact_uses_live_content_path_for_binary_payload() -> Non
 def test_fetch_direct_dependencies_treats_null_optional_as_false() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/resolution/python.test/1.0.0"
+        assert request.url.path == "/resolution/python-test/1.0.0"
         return httpx.Response(
             200,
             json={
-                "slug": "python.test",
+                "slug": "python-test",
                 "version": "1.0.0",
                 "depends_on": [
                     {
-                        "slug": "python.base",
+                        "slug": "python-base",
                         "version": "1.1.0",
                         "version_constraint": None,
                         "optional": None,
@@ -194,10 +194,10 @@ def test_fetch_direct_dependencies_treats_null_optional_as_false() -> None:
 
     client = _client(handler)
 
-    dependencies = client.fetch_direct_dependencies("python.test", "1.0.0")
+    dependencies = client.fetch_direct_dependencies("python-test", "1.0.0")
 
     assert len(dependencies) == 1
-    assert dependencies[0].slug == "python.base"
+    assert dependencies[0].slug == "python-base"
     assert dependencies[0].version == "1.1.0"
     assert dependencies[0].optional is False
 
@@ -207,16 +207,16 @@ def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path
 
     def handler(request: httpx.Request) -> httpx.Response:
         request_paths.append(request.url.path)
-        if request.url.path == "/skills/postman.primary.1774130709214-55706":
+        if request.url.path == "/skills/postman-primary-1774130709214-55706":
             return httpx.Response(
                 422,
                 json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
             )
-        assert request.url.path == "/skills/postman.primary.1774130709214-55706/versions"
+        assert request.url.path == "/skills/postman-primary-1774130709214-55706/versions"
         return httpx.Response(
             200,
             json={
-                "slug": "postman.primary.1774130709214-55706",
+                "slug": "postman-primary-1774130709214-55706",
                 "versions": [
                     {
                         "version": "1.0.0",
@@ -231,12 +231,12 @@ def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path
 
     client = _client(handler)
 
-    versions = client.list_skill_versions("postman.primary.1774130709214-55706")
+    versions = client.list_skill_versions("postman-primary-1774130709214-55706")
 
     assert [item.coordinate.version for item in versions] == ["1.0.0"]
     assert request_paths == [
-        "/skills/postman.primary.1774130709214-55706",
-        "/skills/postman.primary.1774130709214-55706/versions",
+        "/skills/postman-primary-1774130709214-55706",
+        "/skills/postman-primary-1774130709214-55706/versions",
     ]
 
 
@@ -245,19 +245,19 @@ def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_need
 
     def handler(request: httpx.Request) -> httpx.Response:
         request_paths.append(request.url.path)
-        if request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0":
+        if request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0":
             return httpx.Response(
                 422,
                 json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
             )
         assert (
             request.url.path
-            == "/skills/postman.primary.1774130709214-55706/versions/1.0.0"
+            == "/skills/postman-primary-1774130709214-55706/versions/1.0.0"
         )
         return httpx.Response(
             200,
             json={
-                "slug": "postman.primary.1774130709214-55706",
+                "slug": "postman-primary-1774130709214-55706",
                 "version": "1.0.0",
                 "content": {
                     "checksum": {
@@ -280,13 +280,13 @@ def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_need
 
     client = _client(handler)
 
-    metadata = client.fetch_skill_metadata("postman.primary.1774130709214-55706", "1.0.0")
+    metadata = client.fetch_skill_metadata("postman-primary-1774130709214-55706", "1.0.0")
 
     assert metadata.coordinate.version == "1.0.0"
     assert metadata.name == "Postman Primary Skill"
     assert request_paths == [
-        "/skills/postman.primary.1774130709214-55706/1.0.0",
-        "/skills/postman.primary.1774130709214-55706/versions/1.0.0",
+        "/skills/postman-primary-1774130709214-55706/1.0.0",
+        "/skills/postman-primary-1774130709214-55706/versions/1.0.0",
     ]
 
 
@@ -296,27 +296,27 @@ def test_fetch_skill_artifact_falls_back_to_versions_content_endpoint_when_neede
 
     def handler(request: httpx.Request) -> httpx.Response:
         request_paths.append(request.url.path)
-        if request.url.path == "/skills/postman.primary.1774130709214-55706/1.0.0/content":
+        if request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0/content":
             return httpx.Response(
                 422,
                 json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
             )
         assert (
             request.url.path
-            == "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content"
+            == "/skills/postman-primary-1774130709214-55706/versions/1.0.0/content"
         )
         return httpx.Response(200, content=artifact)
 
     client = _client(handler)
 
     content = client.fetch_skill_artifact(
-        "postman.primary.1774130709214-55706", "1.0.0"
+        "postman-primary-1774130709214-55706", "1.0.0"
     )
 
     assert content == artifact
     assert request_paths == [
-        "/skills/postman.primary.1774130709214-55706/1.0.0/content",
-        "/skills/postman.primary.1774130709214-55706/versions/1.0.0/content",
+        "/skills/postman-primary-1774130709214-55706/1.0.0/content",
+        "/skills/postman-primary-1774130709214-55706/versions/1.0.0/content",
     ]
 
 
@@ -329,7 +329,7 @@ def test_list_skill_versions_uses_advisory_cache_for_repeat_reads(tmp_path) -> N
         return httpx.Response(
             200,
             json={
-                "slug": "python.lint",
+                "slug": "python-lint",
                 "versions": [
                     {
                         "version": "1.2.3",
@@ -344,8 +344,8 @@ def test_list_skill_versions_uses_advisory_cache_for_repeat_reads(tmp_path) -> N
 
     client = _client(handler, cache_dir=tmp_path / "cache")
 
-    first = client.list_skill_versions("python.lint")
-    second = client.list_skill_versions("python.lint")
+    first = client.list_skill_versions("python-lint")
+    second = client.list_skill_versions("python-lint")
 
     assert [item.coordinate.version for item in first] == ["1.2.3"]
     assert [item.coordinate.version for item in second] == ["1.2.3"]
@@ -364,13 +364,13 @@ def test_fetch_skill_artifact_uses_checksum_cache_key_when_available(tmp_path) -
     client = _client(handler, cache_dir=tmp_path / "cache")
 
     first = client.fetch_skill_artifact(
-        "python.lint",
+        "python-lint",
         "1.2.3",
         checksum_algorithm="sha256",
         checksum_digest="digest-123",
     )
     second = client.fetch_skill_artifact(
-        "python.lint",
+        "python-lint",
         "1.2.3",
         checksum_algorithm="sha256",
         checksum_digest="digest-123",
@@ -394,7 +394,7 @@ def test_registry_client_retries_transient_server_failures_then_succeeds() -> No
         return httpx.Response(
             200,
             json={
-                "slug": "python.lint",
+                "slug": "python-lint",
                 "versions": [
                     {
                         "version": "1.2.3",
@@ -409,7 +409,7 @@ def test_registry_client_retries_transient_server_failures_then_succeeds() -> No
 
     client = _client(handler)
 
-    versions = client.list_skill_versions("python.lint")
+    versions = client.list_skill_versions("python-lint")
 
     assert [item.coordinate.version for item in versions] == ["1.2.3"]
     assert request_count == 3
@@ -429,7 +429,7 @@ def test_registry_client_does_not_retry_non_transient_not_found_errors() -> None
     client = _client(handler)
 
     with pytest.raises(SkillNotFoundError, match="missing"):
-        client.list_skill_versions("missing.skill")
+        client.list_skill_versions("missing-skill")
 
     assert request_count == 1
 
@@ -441,7 +441,7 @@ def test_registry_client_treats_fastapi_route_miss_as_invalid_coordinate() -> No
     client = _client(handler)
 
     with pytest.raises(InvalidCoordinateError):
-        client.fetch_skill_metadata("python.lint", "not-a-semver")
+        client.fetch_skill_metadata("python-lint", "not-a-semver")
 
 
 def test_registry_client_raises_unavailable_after_exhausting_transient_retries() -> (
@@ -460,6 +460,6 @@ def test_registry_client_raises_unavailable_after_exhausting_transient_retries()
     client = _client(handler)
 
     with pytest.raises(RegistryUnavailableError, match="Registry is unavailable"):
-        client.list_skill_versions("python.lint")
+        client.list_skill_versions("python-lint")
 
     assert request_count == 3

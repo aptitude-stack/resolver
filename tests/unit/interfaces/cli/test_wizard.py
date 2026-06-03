@@ -109,7 +109,7 @@ def _record_prompt(events: list[str], answers: Iterator[str]) -> Callable[..., s
 
 def _resolved_result(
     *,
-    slug: str = "python.lint",
+    slug: str = "python-lint",
     version: str = "1.2.3",
     selection_mode: str = "single_candidate",
 ) -> ResolveQueryResultDto:
@@ -119,10 +119,10 @@ def _resolved_result(
         selection_mode=selection_mode,
         selected_coordinate=ResolveCoordinateDto(slug=slug, version=version),
         selected_skill=ResolveSkillSummaryDto(
-            name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+            name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
             description="Linting skill",
             tags=["lint"],
-            runtime="python" if slug == "python.lint" else "javascript",
+            runtime="python" if slug == "python-lint" else "javascript",
             rendered_summary="Lint files consistently.",
             lifecycle_status="published",
             trust_tier="internal",
@@ -133,10 +133,10 @@ def _resolved_result(
                 ResolvedSkillNodeDto(
                     slug=slug,
                     version=version,
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
-                    runtime="python" if slug == "python.lint" else "javascript",
+                    runtime="python" if slug == "python-lint" else "javascript",
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
                     trust_tier="internal",
@@ -162,7 +162,7 @@ def _resolved_result(
                     slug=slug,
                     version=version,
                     artifact_ref=f"/skills/{slug}/{version}/content",
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
                     headers={"runtime": "python"},
@@ -217,7 +217,7 @@ def _selection_required_result() -> ResolveQueryResultDto:
         status="selection_required",
         candidates=[
             DiscoveryCandidateDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 name="Python Lint",
                 description="Lint Python files",
@@ -233,10 +233,10 @@ def _selection_required_result() -> ResolveQueryResultDto:
                 published_at="2026-03-18T00:00:00Z",
                 ranking_position=1,
                 selection_details=["tokens=120", "size=256B"],
-                selection_reason="ranked above js.lint@2.1.0: closer exact name match",
+                selection_reason="ranked above js-lint@2.1.0: closer exact name match",
             ),
             DiscoveryCandidateDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 name="JavaScript Lint",
                 description="Lint JavaScript files",
@@ -266,12 +266,12 @@ def _installed_result(
         requested_query="lint",
         status="installed",
         selection_mode="interactive_choice",
-        selected_coordinate=ResolveCoordinateDto(slug="js.lint", version="2.1.0"),
+        selected_coordinate=ResolveCoordinateDto(slug="js-lint", version="2.1.0"),
         graph=ResolvedGraphDto(
-            root=ResolveCoordinateDto(slug="js.lint", version="2.1.0"),
+            root=ResolveCoordinateDto(slug="js-lint", version="2.1.0"),
             nodes=[],
             edges=[],
-            install_order=[ResolveCoordinateDto(slug="js.lint", version="2.1.0")],
+            install_order=[ResolveCoordinateDto(slug="js-lint", version="2.1.0")],
             conflicts=[],
         ),
         lockfile=LockfileDto(
@@ -280,31 +280,31 @@ def _installed_result(
             root=LockRootDto(
                 request="lint",
                 requested_version=None,
-                selected_node_id="js.lint@2.1.0",
+                selected_node_id="js-lint@2.1.0",
                 selection_mode="interactive_choice",
             ),
             nodes=[],
             edges=[],
-            install_order=["js.lint@2.1.0"],
+            install_order=["js-lint@2.1.0"],
             governance=[],
         ),
         execution_plan=ExecutionPlanDto(
             steps=[
                 ExecutionStepDto(
-                    node_id="js.lint@2.1.0",
-                    skill="js.lint",
+                    node_id="js-lint@2.1.0",
+                    skill="js-lint",
                     version="2.1.0",
-                    artifact_ref="/skills/js.lint/2.1.0/content",
+                    artifact_ref="/skills/js-lint/2.1.0/content",
                     action="materialize_local_skill",
                 )
             ]
         ),
         installed_skills=[
             InstalledSkillDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "js.lint" / "2.1.0"
+                    Path(materialized_root) / "skills" / "js-lint" / "2.1.0"
                 ),
             )
         ],
@@ -338,14 +338,14 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
         resolve_responses=[
             _selection_required_result(),
             _resolved_result(
-                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+                slug="js-lint", version="2.1.0", selection_mode="interactive_choice"
             ),
         ],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
     answers = iter(["lint"])
-    selections = iter(["install", "balanced", "auto", "js.lint"])
+    selections = iter(["install", "balanced", "auto", "js-lint"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -359,9 +359,9 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     wizard.run()
 
     assert len(service.resolve_calls) == 2
-    assert service.resolve_calls[1]["select_slug"] == "js.lint"
+    assert service.resolve_calls[1]["select_slug"] == "js-lint"
     assert service.install_calls[0]["query"] == "lint"
-    assert service.install_calls[0]["select_slug"] == "js.lint"
+    assert service.install_calls[0]["select_slug"] == "js-lint"
     assert "Installation Summary" in transcript.getvalue()
 
 

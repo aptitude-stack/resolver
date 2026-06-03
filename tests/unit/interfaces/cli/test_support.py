@@ -79,7 +79,7 @@ def test_format_cli_error_renders_missing_lockfile_errors_for_humans() -> None:
 
 def test_format_cli_error_renders_missing_selected_slug_errors_for_humans() -> None:
     rendered = support.format_cli_error(
-        SelectionSlugNotFoundError("lint", "missing.skill", ["python.lint", "js.lint"])
+        SelectionSlugNotFoundError("lint", "missing-skill", ["python-lint", "js-lint"])
     )
 
     assert "Requested selection is not available." in rendered
@@ -87,16 +87,16 @@ def test_format_cli_error_renders_missing_selected_slug_errors_for_humans() -> N
         "────────────────────────────────────────────────────────────────" in rendered
     )
     assert "Query: lint" in rendered
-    assert "Selected slug: missing.skill" in rendered
-    assert "python.lint" in rendered
-    assert "js.lint" in rendered
+    assert "Selected slug: missing-skill" in rendered
+    assert "python-lint" in rendered
+    assert "js-lint" in rendered
     assert "omit --select-slug" in rendered
 
 
 def test_format_cli_error_renders_checksum_failures_for_humans() -> None:
     rendered = support.format_cli_error(
         ContentChecksumMismatchError(
-            slug="python.lint",
+            slug="python-lint",
             version="1.2.3",
             algorithm="sha256",
             expected_digest="expected",
@@ -108,7 +108,7 @@ def test_format_cli_error_renders_checksum_failures_for_humans() -> None:
     assert (
         "────────────────────────────────────────────────────────────────" in rendered
     )
-    assert "Skill: python.lint@1.2.3" in rendered
+    assert "Skill: python-lint@1.2.3" in rendered
     assert "Expected digest: expected" in rendered
     assert "Actual digest: actual" in rendered
 

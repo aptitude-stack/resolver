@@ -10,6 +10,7 @@ from aptitude_resolver.domain.models import (
     ResolvedSkillNode,
     SkillMetadata,
     SkillCoordinate,
+    VersionSummary,
 )
 from aptitude_resolver.domain.policy import PolicyEvaluation, SelectionPreferences
 from aptitude_resolver.lockfile import (
@@ -56,6 +57,22 @@ class FakeRegistryClient:
     ) -> list[DependencySpec]:
         return list(self.dependencies_by_coordinate.get((slug, version), []))
 
+    def list_skill_versions(self, slug: str) -> list[VersionSummary]:
+        return [
+            VersionSummary(
+                coordinate=SkillCoordinate(slug=candidate_slug, version=version),
+                is_current_default=True,
+                lifecycle_status=metadata.lifecycle_status,
+                trust_tier=metadata.trust_tier,
+                published_at=metadata.published_at,
+                token_estimate=metadata.token_estimate,
+                content_size_bytes=metadata.content_size_bytes,
+                rendered_summary=metadata.rendered_summary,
+            )
+            for (candidate_slug, version), metadata in self.metadata_by_coordinate.items()
+            if candidate_slug == slug
+        ]
+
 
 def _metadata(slug: str, version: str, *, published_at: str) -> SkillMetadata:
     return SkillMetadata(
@@ -80,8 +97,8 @@ def _metadata(slug: str, version: str, *, published_at: str) -> SkillMetadata:
 
 
 def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -118,13 +135,13 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
 
     assert lockfile.generated_at == "2026-03-18T00:00:00Z"
     assert [node.node_id for node in lockfile.nodes] == [
-        "python.base@1.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-lint@1.2.3",
     ]
     assert lockfile.nodes[0].tags == ["a-tag", "z-tag"]
     assert lockfile.nodes[0].headers == {"entrypoint": "main", "runtime": "python"}
-    assert lockfile.install_order == ["python.base@1.0.0", "python.lint@1.2.3"]
-    assert lockfile.governance[0].node_id == "python.lint@1.2.3"
+    assert lockfile.install_order == ["python-base@1.0.0", "python-lint@1.2.3"]
+    assert lockfile.governance[0].node_id == "python-lint@1.2.3"
     assert lockfile.policy is not None
     assert lockfile.policy.profile == "default"
     assert lockfile.policy.source == "client_default"
@@ -145,8 +162,8 @@ def test_build_lockfile_serializes_and_parses_without_meaningful_loss() -> None:
 
 
 def test_replay_lockfile_uses_only_locked_nodes_edges_and_install_order() -> None:
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -169,19 +186,19 @@ def test_replay_lockfile_uses_only_locked_nodes_edges_and_install_order() -> Non
 
     replayed = replay_lockfile(lockfile)
 
-    assert replayed.root_node.node_id == "python.lint@1.2.3"
+    assert replayed.root_node.node_id == "python-lint@1.2.3"
     assert [node.node_id for node in replayed.install_order] == [
-        "python.base@1.0.0",
-        "python.lint@1.2.3",
+        "python-base@1.0.0",
+        "python-lint@1.2.3",
     ]
     assert [
-        edge.target_node_id for edge in replayed.edges_by_source["python.lint@1.2.3"]
-    ] == ["python.base@1.0.0"]
+        edge.target_node_id for edge in replayed.edges_by_source["python-lint@1.2.3"]
+    ] == ["python-base@1.0.0"]
 
 
 def test_replay_lockfile_rejects_missing_install_order_nodes() -> None:
-    dependency = SkillCoordinate(slug="python.base", version="1.0.0")
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="python-base", version="1.0.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
     graph = ResolutionGraph(
         root=root,
         nodes=[
