@@ -11,6 +11,7 @@ from aptitude_resolver.domain.errors import (
     InvalidCoordinateError,
     RegistryUnavailableError,
     SkillNotFoundError,
+    UnexpectedRegistryResponseError,
 )
 from aptitude_resolver.registry.client import RegistryClient
 from aptitude_resolver.shared.config import Settings
@@ -52,6 +53,37 @@ def test_registry_client_normalizes_trailing_slash_base_url() -> None:
     )
 
     assert client.discover_candidates("Postman") == []
+
+
+def test_registry_client_reports_website_host_when_json_endpoint_returns_html() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/discovery"
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html; charset=utf-8"},
+            content=b"<!DOCTYPE html><title>404: This page could not be found.</title>",
+        )
+
+    client = RegistryClient(
+        Settings(
+            server_base_url="https://aptitude-registry.dev",
+            read_token="reader-token",
+            server_timeout_seconds=5.0,
+            _env_file=None,
+        ),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        cache_store=CacheStore(Path(tempfile.mkdtemp(prefix="resolver-cache-test-"))),
+    )
+
+    with pytest.raises(UnexpectedRegistryResponseError) as exc_info:
+        client.discover_candidates("ty")
+
+    message = str(exc_info.value)
+    assert "POST https://aptitude-registry.dev/discovery" in message
+    assert "HTTP 200" in message
+    assert "content-type text/html; charset=utf-8" in message
+    assert "use https://api.aptitude-registry.dev" in message
 
 
 def test_list_skill_versions_reads_live_contract_from_skill_endpoint() -> None:
