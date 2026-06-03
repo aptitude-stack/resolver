@@ -56,7 +56,7 @@ def resolve_candidate_versions(
         reasons: list[str] = []
         if _normalize_text(selected_version.name) == intent.normalized_query:
             reasons.append("exact_name_match")
-        if match.slug == intent.normalized_query.replace(" ", "."):
+        if match.slug == intent.normalized_query.replace(" ", "-"):
             reasons.append("exact_slug_match")
         if (
             intent.language

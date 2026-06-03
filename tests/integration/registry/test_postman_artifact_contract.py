@@ -13,9 +13,9 @@ from aptitude_resolver.shared.config import Settings
 pytestmark = pytest.mark.integration
 
 
-POSTMAN_PRIMARY_SLUG = "postman.primary.1775674127381-77801"
+POSTMAN_PRIMARY_SLUG = "postman-primary-1775674127381-77801"
 POSTMAN_PRIMARY_VERSION = "1.0.0"
-APTITUDE_DEMO_SLUG = "python.base"
+APTITUDE_DEMO_SLUG = "python-base"
 APTITUDE_DEMO_VERSION = "1.1.0"
 
 

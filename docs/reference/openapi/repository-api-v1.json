@@ -1066,8 +1066,8 @@
               "application/json": {
                 "example": {
                   "candidates": [
-                    "python.lint",
-                    "python.format"
+                    "python-lint",
+                    "python-format"
                   ]
                 },
                 "schema": {
@@ -1224,11 +1224,11 @@
                         "gpu"
                       ],
                       "optional": true,
-                      "slug": "python.base",
+                      "slug": "python-base",
                       "version_constraint": ">=1.0.0,<2.0.0"
                     }
                   ],
-                  "slug": "python.lint",
+                  "slug": "python-lint",
                   "version": "1.2.3"
                 },
                 "schema": {
@@ -1245,10 +1245,10 @@
                   "error": {
                     "code": "SKILL_VERSION_NOT_FOUND",
                     "details": {
-                      "slug": "python.lint",
+                      "slug": "python-lint",
                       "version": "9.9.9"
                     },
-                    "message": "Skill version not found: python.lint@9.9.9"
+                    "message": "Skill version not found: python-lint@9.9.9"
                   }
                 },
                 "schema": {
@@ -1329,7 +1329,7 @@
                     "commit_sha": "aabbccddeeff00112233445566778899aabbccdd",
                     "publisher_identity": "ci/acme-release",
                     "repo_url": "https://github.com/example/skills",
-                    "tree_path": "skills/python.lint"
+                    "tree_path": "skills/python-lint"
                   },
                   "trust_tier": "internal"
                 },
@@ -1363,19 +1363,19 @@
                         "gpu"
                       ],
                       "optional": true,
-                      "slug": "python.base",
+                      "slug": "python-base",
                       "version_constraint": ">=1.0.0,<2.0.0"
                     }
                   ],
                   "extends": [
                     {
-                      "slug": "python.base",
+                      "slug": "python-base",
                       "version": "1.0.0"
                     }
                   ],
                   "overlaps_with": [
                     {
-                      "slug": "python.format",
+                      "slug": "python-format",
                       "version": "1.0.0"
                     }
                   ]
@@ -1426,14 +1426,14 @@
                     "commit_sha": "aabbccddeeff00112233445566778899aabbccdd",
                     "publisher_identity": "ci/acme-release",
                     "repo_url": "https://github.com/example/skills",
-                    "tree_path": "skills/python.lint",
+                    "tree_path": "skills/python-lint",
                     "trust_context": {
                       "policy_profile": "default",
                       "trust_tier": "internal"
                     }
                   },
                   "published_at": "2026-03-10T08:30:00Z",
-                  "slug": "python.lint",
+                  "slug": "python-lint",
                   "trust_tier": "internal",
                   "version": "1.2.3",
                   "version_checksum": {
@@ -1455,9 +1455,9 @@
                   "error": {
                     "code": "SKILL_NOT_FOUND",
                     "details": {
-                      "slug": "python.lint"
+                      "slug": "python-lint"
                     },
-                    "message": "Skill not found: python.lint"
+                    "message": "Skill not found: python-lint"
                   }
                 },
                 "schema": {
@@ -1477,10 +1477,10 @@
                       "error": {
                         "code": "DUPLICATE_SKILL_VERSION",
                         "details": {
-                          "slug": "python.lint",
+                          "slug": "python-lint",
                           "version": "1.2.3"
                         },
-                        "message": "Skill version already exists: python.lint@1.2.3"
+                        "message": "Skill version already exists: python-lint@1.2.3"
                       }
                     }
                   },
@@ -1490,9 +1490,9 @@
                       "error": {
                         "code": "SKILL_ALREADY_EXISTS",
                         "details": {
-                          "slug": "python.lint"
+                          "slug": "python-lint"
                         },
-                        "message": "Skill already exists: python.lint"
+                        "message": "Skill already exists: python-lint"
                       }
                     }
                   }
@@ -1628,14 +1628,14 @@
                     "commit_sha": "aabbccddeeff00112233445566778899aabbccdd",
                     "publisher_identity": "ci/acme-release",
                     "repo_url": "https://github.com/example/skills",
-                    "tree_path": "skills/python.lint",
+                    "tree_path": "skills/python-lint",
                     "trust_context": {
                       "policy_profile": "default",
                       "trust_tier": "internal"
                     }
                   },
                   "published_at": "2026-03-10T08:30:00Z",
-                  "slug": "python.lint",
+                  "slug": "python-lint",
                   "trust_tier": "internal",
                   "version": "1.2.3",
                   "version_checksum": {
@@ -1657,10 +1657,10 @@
                   "error": {
                     "code": "SKILL_VERSION_NOT_FOUND",
                     "details": {
-                      "slug": "python.lint",
+                      "slug": "python-lint",
                       "version": "9.9.9"
                     },
-                    "message": "Skill version not found: python.lint@9.9.9"
+                    "message": "Skill version not found: python-lint@9.9.9"
                   }
                 },
                 "schema": {
@@ -1762,10 +1762,10 @@
                   "error": {
                     "code": "SKILL_VERSION_NOT_FOUND",
                     "details": {
-                      "slug": "python.lint",
+                      "slug": "python-lint",
                       "version": "9.9.9"
                     },
-                    "message": "Skill version not found: python.lint@9.9.9"
+                    "message": "Skill version not found: python-lint@9.9.9"
                   }
                 },
                 "schema": {
@@ -1863,7 +1863,7 @@
                 "example": {
                   "is_current_default": true,
                   "lifecycle_changed_at": "2026-03-11T09:15:00Z",
-                  "slug": "python.lint",
+                  "slug": "python-lint",
                   "status": "deprecated",
                   "trust_tier": "internal",
                   "version": "1.2.3"
@@ -1882,10 +1882,10 @@
                   "error": {
                     "code": "SKILL_VERSION_NOT_FOUND",
                     "details": {
-                      "slug": "python.lint",
+                      "slug": "python-lint",
                       "version": "9.9.9"
                     },
-                    "message": "Skill version not found: python.lint@9.9.9"
+                    "message": "Skill version not found: python-lint@9.9.9"
                   }
                 },
                 "schema": {

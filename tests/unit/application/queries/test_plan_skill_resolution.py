@@ -227,8 +227,8 @@ def _node(
 def test_selection_explanation_trace_marks_user_driven_selection_modes(
     selection_mode: str, expected_signal: str
 ) -> None:
-    selected = _candidate("python.lint", "2.0.0")
-    runner_up = _candidate("js.lint", "1.0.0")
+    selected = _candidate("python-lint", "2.0.0")
+    runner_up = _candidate("js-lint", "1.0.0")
 
     trace = planning_module._selection_explanation_trace(
         candidates=[selected, runner_up],
@@ -244,7 +244,7 @@ def test_selection_explanation_trace_marks_user_driven_selection_modes(
 
 def test_decisive_signals_add_only_supported_rank_deltas() -> None:
     selected = _candidate(
-        "python.lint",
+        "python-lint",
         "2.0.0",
         match_reasons=["exact_name_match"],
         token_estimate=100,
@@ -254,7 +254,7 @@ def test_decisive_signals_add_only_supported_rank_deltas() -> None:
         is_current_default=True,
     )
     runner_up = _candidate(
-        "js.lint",
+        "js-lint",
         "1.0.0",
         token_estimate=200,
         content_size_bytes=512,
@@ -281,8 +281,8 @@ def test_decisive_signals_add_only_supported_rank_deltas() -> None:
 
 
 def test_decisive_signals_accept_semver_prerelease_versions() -> None:
-    selected = _candidate("docs.writer", "0.1.0-publish.20260515115307")
-    runner_up = _candidate("old.docs.writer", "0.1.0-publish.20260515115306")
+    selected = _candidate("docs-writer", "0.1.0-publish.20260515115307")
+    runner_up = _candidate("old-docs-writer", "0.1.0-publish.20260515115306")
 
     signals = planning_module._decisive_signals(
         selected,
@@ -296,7 +296,7 @@ def test_decisive_signals_accept_semver_prerelease_versions() -> None:
 
 def test_decisive_signals_fall_back_to_profile_when_no_decisive_delta_exists() -> None:
     selected = _candidate(
-        "python.lint",
+        "python-lint",
         "1.0.0",
         match_reasons=[],
         token_estimate=200,
@@ -305,7 +305,7 @@ def test_decisive_signals_fall_back_to_profile_when_no_decisive_delta_exists() -
         lifecycle_status="published",
     )
     runner_up = _candidate(
-        "js.lint",
+        "js-lint",
         "1.0.0",
         match_reasons=[],
         token_estimate=200,
@@ -326,33 +326,33 @@ def test_decisive_signals_fall_back_to_profile_when_no_decisive_delta_exists() -
 
 def test_execute_raises_policy_violation_for_resolved_dependency_graph() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.identity_by_slug["verified.root"] = _identity(
-        "verified.root",
+    registry_client.identity_by_slug["verified-root"] = _identity(
+        "verified-root",
         "1.2.3",
         trust_tier="verified",
     )
-    registry_client.versions_by_slug["verified.root"] = [
+    registry_client.versions_by_slug["verified-root"] = [
         _version(
-            "verified.root",
+            "verified-root",
             "1.2.3",
             name="Verified Root",
             trust_tier="verified",
         )
     ]
-    registry_client.metadata_by_coordinate[("verified.root", "1.2.3")] = _metadata(
-        "verified.root",
+    registry_client.metadata_by_coordinate[("verified-root", "1.2.3")] = _metadata(
+        "verified-root",
         "1.2.3",
         name="Verified Root",
         trust_tier="verified",
     )
-    registry_client.metadata_by_coordinate[("internal.dep", "1.0.0")] = _metadata(
-        "internal.dep",
+    registry_client.metadata_by_coordinate[("internal-dep", "1.0.0")] = _metadata(
+        "internal-dep",
         "1.0.0",
         name="Internal Dependency",
         trust_tier="internal",
     )
-    registry_client.dependencies_by_coordinate[("verified.root", "1.2.3")] = [
-        DependencySpec(slug="internal.dep", version="1.0.0")
+    registry_client.dependencies_by_coordinate[("verified-root", "1.2.3")] = [
+        DependencySpec(slug="internal-dep", version="1.0.0")
     ]
 
     query = PlanSkillResolutionQuery(
@@ -363,15 +363,15 @@ def test_execute_raises_policy_violation_for_resolved_dependency_graph() -> None
     with pytest.raises(
         PolicyViolationError, match="Trust tier 'internal' is not allowed."
     ):
-        query.execute(ResolveQueryRequestDto(query="verified.root"))
+        query.execute(ResolveQueryRequestDto(query="verified-root"))
 
     assert registry_client.metadata_calls == [
-        ("verified.root", "1.2.3"),
-        ("internal.dep", "1.0.0"),
+        ("verified-root", "1.2.3"),
+        ("internal-dep", "1.0.0"),
     ]
     assert registry_client.dependency_calls == [
-        ("verified.root", "1.2.3"),
-        ("internal.dep", "1.0.0"),
+        ("verified-root", "1.2.3"),
+        ("internal-dep", "1.0.0"),
     ]
 
 
@@ -379,21 +379,21 @@ def test_execute_validates_graph_before_lock_generation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     registry_client = FakeRegistryClient()
-    registry_client.identity_by_slug["python.lint"] = _identity("python.lint", "1.2.3")
-    registry_client.versions_by_slug["python.lint"] = [
-        _version("python.lint", "1.2.3", name="Python Lint")
+    registry_client.identity_by_slug["python-lint"] = _identity("python-lint", "1.2.3")
+    registry_client.versions_by_slug["python-lint"] = [
+        _version("python-lint", "1.2.3", name="Python Lint")
     ]
 
     invalid_graph = ResolutionGraph(
-        root=SkillCoordinate(slug="python.lint", version="1.2.3"),
-        nodes=[_node("python.lint", "1.2.3", name="Python Lint")],
+        root=SkillCoordinate(slug="python-lint", version="1.2.3"),
+        nodes=[_node("python-lint", "1.2.3", name="Python Lint")],
         edges=[
             DependencyEdge(
-                source=SkillCoordinate(slug="missing.dep", version="9.9.9"),
-                target=SkillCoordinate(slug="python.lint", version="1.2.3"),
+                source=SkillCoordinate(slug="missing-dep", version="9.9.9"),
+                target=SkillCoordinate(slug="python-lint", version="1.2.3"),
             )
         ],
-        install_order=[SkillCoordinate(slug="python.lint", version="1.2.3")],
+        install_order=[SkillCoordinate(slug="python-lint", version="1.2.3")],
     )
 
     monkeypatch.setattr(
@@ -419,4 +419,4 @@ def test_execute_validates_graph_before_lock_generation(
     with pytest.raises(
         ValueError, match="Resolution graph edge source was not present in nodes."
     ):
-        query.execute(ResolveQueryRequestDto(query="python.lint"))
+        query.execute(ResolveQueryRequestDto(query="python-lint"))

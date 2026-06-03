@@ -126,7 +126,7 @@ def _record_prompt(events: list[str], answers: Iterator[str]) -> Callable[..., s
 
 def _resolved_result(
     *,
-    slug: str = "python.lint",
+    slug: str = "python-lint",
     version: str = "1.2.3",
     selection_mode: str = "single_candidate",
 ) -> ResolveQueryResultDto:
@@ -136,10 +136,10 @@ def _resolved_result(
         selection_mode=selection_mode,
         selected_coordinate=ResolveCoordinateDto(slug=slug, version=version),
         selected_skill=ResolveSkillSummaryDto(
-            name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+            name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
             description="Linting skill",
             tags=["lint"],
-            runtime="python" if slug == "python.lint" else "javascript",
+            runtime="python" if slug == "python-lint" else "javascript",
             rendered_summary="Lint files consistently.",
             lifecycle_status="published",
             trust_tier="internal",
@@ -150,10 +150,10 @@ def _resolved_result(
                 ResolvedSkillNodeDto(
                     slug=slug,
                     version=version,
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
-                    runtime="python" if slug == "python.lint" else "javascript",
+                    runtime="python" if slug == "python-lint" else "javascript",
                     rendered_summary="Lint files consistently.",
                     lifecycle_status="published",
                     trust_tier="internal",
@@ -179,7 +179,7 @@ def _resolved_result(
                     slug=slug,
                     version=version,
                     artifact_ref=f"/skills/{slug}/{version}/content",
-                    name="Python Lint" if slug == "python.lint" else "JavaScript Lint",
+                    name="Python Lint" if slug == "python-lint" else "JavaScript Lint",
                     description="Linting skill",
                     tags=["lint"],
                     headers={"runtime": "python"},
@@ -234,7 +234,7 @@ def _selection_required_result() -> ResolveQueryResultDto:
         status="selection_required",
         candidates=[
             DiscoveryCandidateDto(
-                slug="python.lint",
+                slug="python-lint",
                 version="1.2.3",
                 name="Python Lint",
                 description="Lint Python files",
@@ -250,10 +250,10 @@ def _selection_required_result() -> ResolveQueryResultDto:
                 published_at="2026-03-18T00:00:00Z",
                 ranking_position=1,
                 selection_details=["tokens=120", "size=256B"],
-                selection_reason="ranked above js.lint@2.1.0: closer exact name match",
+                selection_reason="ranked above js-lint@2.1.0: closer exact name match",
             ),
             DiscoveryCandidateDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 name="JavaScript Lint",
                 description="Lint JavaScript files",
@@ -283,12 +283,12 @@ def _installed_result(
         requested_query="lint",
         status="installed",
         selection_mode="interactive_choice",
-        selected_coordinate=ResolveCoordinateDto(slug="js.lint", version="2.1.0"),
+        selected_coordinate=ResolveCoordinateDto(slug="js-lint", version="2.1.0"),
         graph=ResolvedGraphDto(
-            root=ResolveCoordinateDto(slug="js.lint", version="2.1.0"),
+            root=ResolveCoordinateDto(slug="js-lint", version="2.1.0"),
             nodes=[],
             edges=[],
-            install_order=[ResolveCoordinateDto(slug="js.lint", version="2.1.0")],
+            install_order=[ResolveCoordinateDto(slug="js-lint", version="2.1.0")],
             conflicts=[],
         ),
         lockfile=LockfileDto(
@@ -297,31 +297,31 @@ def _installed_result(
             root=LockRootDto(
                 request="lint",
                 requested_version=None,
-                selected_node_id="js.lint@2.1.0",
+                selected_node_id="js-lint@2.1.0",
                 selection_mode="interactive_choice",
             ),
             nodes=[],
             edges=[],
-            install_order=["js.lint@2.1.0"],
+            install_order=["js-lint@2.1.0"],
             governance=[],
         ),
         execution_plan=ExecutionPlanDto(
             steps=[
                 ExecutionStepDto(
-                    node_id="js.lint@2.1.0",
-                    skill="js.lint",
+                    node_id="js-lint@2.1.0",
+                    skill="js-lint",
                     version="2.1.0",
-                    artifact_ref="/skills/js.lint/2.1.0/content",
+                    artifact_ref="/skills/js-lint/2.1.0/content",
                     action="materialize_local_skill",
                 )
             ]
         ),
         installed_skills=[
             InstalledSkillDto(
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
                 install_path=str(
-                    Path(materialized_root) / "skills" / "js.lint" / "2.1.0"
+                    Path(materialized_root) / "skills" / "js-lint" / "2.1.0"
                 ),
             )
         ],
@@ -329,16 +329,16 @@ def _installed_result(
             ExportedSkillDto(
                 agent="codex",
                 scope="project",
-                slug="js.lint",
+                slug="js-lint",
                 version="2.1.0",
-                destination_path=str(Path(".codex") / "skills" / "js.lint"),
+                destination_path=str(Path(".codex") / "skills" / "js-lint"),
                 skill_markdown_path=str(
-                    Path(".codex") / "skills" / "js.lint" / "SKILL.md"
+                    Path(".codex") / "skills" / "js-lint" / "SKILL.md"
                 ),
                 metadata_path=str(
                     Path(".codex")
                     / "skills"
-                    / "js.lint"
+                    / "js-lint"
                     / ".aptitude-export.json"
                 ),
             )
@@ -374,14 +374,14 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
         resolve_responses=[
             _selection_required_result(),
             _resolved_result(
-                slug="js.lint", version="2.1.0", selection_mode="interactive_choice"
+                slug="js-lint", version="2.1.0", selection_mode="interactive_choice"
             ),
         ],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
     answers = iter(["lint"])
-    selections = iter(["install", "balanced", "auto", "project", "codex", "js.lint"])
+    selections = iter(["install", "balanced", "auto", "project", "codex", "js-lint"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -395,16 +395,16 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     wizard.run()
 
     assert len(service.resolve_calls) == 2
-    assert service.resolve_calls[1]["select_slug"] == "js.lint"
+    assert service.resolve_calls[1]["select_slug"] == "js-lint"
     assert service.install_calls[0]["query"] == "lint"
-    assert service.install_calls[0]["select_slug"] == "js.lint"
+    assert service.install_calls[0]["select_slug"] == "js-lint"
     assert service.install_calls[0]["agents"] == ["codex"]
     assert service.install_calls[0]["scope"] == "project"
     output = transcript.getvalue()
     assert "Installation Summary" in output
-    assert str(Path(".codex") / "skills" / "js.lint") in output
+    assert str(Path(".codex") / "skills" / "js-lint") in output
     assert str(Path("aptitude.lock.json")) in output
-    assert str(Path("aptitude_state") / "skills" / "js.lint" / "2.1.0") not in output
+    assert str(Path("aptitude_state") / "skills" / "js-lint" / "2.1.0") not in output
 
 
 def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
@@ -1279,7 +1279,7 @@ def test_default_prompt_text_falls_back_when_shift_enter_binding_is_unsupported(
     assert ("c-c",) in binding_calls
 
 
-def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
+def test_default_prompt_text_uses_shift_enter_hint_on_macos(monkeypatch) -> None:
     binding_calls: list[tuple[object, ...]] = []
     window_calls: list[WindowCall] = []
 
@@ -1391,10 +1391,10 @@ def test_default_prompt_text_uses_cmd_return_hint_on_macos(monkeypatch) -> None:
     result = wizard_module._default_prompt_text("Install query", None, large=True)
 
     assert result == "typed query"
-    assert ("escape", "enter") in binding_calls
+    assert ("s-enter",) in binding_calls
     assert ("c-c",) in binding_calls
     footer_fragments = window_calls[1]["args"][0]
-    assert "[Cmd+Return] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
+    assert "[Shift+Enter] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
 
 
 def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(

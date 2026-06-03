@@ -318,7 +318,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.dep\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-dep\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -418,7 +418,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.ext\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-ext\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -518,7 +518,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.overlap\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-overlap\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -546,7 +546,7 @@
             "url": "{{baseUrl}}/skill-versions",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_1}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v1\\n\\nRun `{{runId}}` primary skill version 1.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 1.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 200,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman.conflict.{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
+              "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_1}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v1\\n\\nRun `{{runId}}` primary skill version 1.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 1.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 200,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman-conflict-{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -608,7 +608,7 @@
                 "url": "{{baseUrl}}/skill-versions",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_1}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v1\\n\\nRun `{{runId}}` primary skill version 1.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 1.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 200,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman.conflict.{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_1}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v1\\n\\nRun `{{runId}}` primary skill version 1.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 1.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 200,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman-conflict-{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -625,7 +625,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.primary\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-primary\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -653,7 +653,7 @@
             "url": "{{baseUrl}}/skill-versions",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_2}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v2\\n\\nRun `{{runId}}` primary skill version 2 with a larger body for discovery and content checks.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman.conflict.{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
+              "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_2}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v2\\n\\nRun `{{runId}}` primary skill version 2 with a larger body for discovery and content checks.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman-conflict-{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -716,7 +716,7 @@
                 "url": "{{baseUrl}}/skill-versions",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_2}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v2\\n\\nRun `{{runId}}` primary skill version 2 with a larger body for discovery and content checks.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman.conflict.{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"slug\": \"{{sanity_primary_slug}}\",\n  \"version\": \"{{sanity_version_2}}\",\n  \"content\": {\n    \"raw_markdown\": \"# Postman Primary Skill v2\\n\\nRun `{{runId}}` primary skill version 2 with a larger body for discovery and content checks.\\n\",\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\"postman\", \"sanity\", \"primary\"],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"relationships\": {\n    \"depends_on\": [\n      {\n        \"slug\": \"{{sanity_dependency_slug}}\",\n        \"version\": \"{{sanity_version_1}}\",\n        \"optional\": false,\n        \"markers\": [\"linux\"]\n      }\n    ],\n    \"extends\": [\n      {\n        \"slug\": \"{{sanity_extension_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ],\n    \"conflicts_with\": [\n      {\n        \"slug\": \"postman-conflict-{{runId}}\",\n        \"version\": \"9.9.9\"\n      }\n    ],\n    \"overlaps_with\": [\n      {\n        \"slug\": \"{{sanity_overlap_slug}}\",\n        \"version\": \"{{sanity_version_1}}\"\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -733,7 +733,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.primary\",\n  \"version\": \"2.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-primary\",\n  \"version\": \"2.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -839,7 +839,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.primary\",\n  \"version\": \"2.0.0\",\n  \"status\": \"deprecated\",\n  \"trust_tier\": \"untrusted\",\n  \"lifecycle_changed_at\": \"2026-03-11T09:15:00Z\",\n  \"is_current_default\": false\n}"
+              "body": "{\n  \"slug\": \"python-primary\",\n  \"version\": \"2.0.0\",\n  \"status\": \"deprecated\",\n  \"trust_tier\": \"untrusted\",\n  \"lifecycle_changed_at\": \"2026-03-11T09:15:00Z\",\n  \"is_current_default\": false\n}"
             },
             {
               "name": "Not Found (404)",
@@ -882,7 +882,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python.lint@9.9.9\",\n    \"details\": {\n      \"slug\": \"python.lint\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python-lint@9.9.9\",\n    \"details\": {\n      \"slug\": \"python-lint\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
             }
           ]
         },
@@ -966,7 +966,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.primary\",\n  \"version\": \"2.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"bbbb8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"aaaa8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 108,\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\n      \"postman\",\n      \"sanity\",\n      \"primary\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"lifecycle_status\": \"deprecated\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-primary\",\n  \"version\": \"2.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"bbbb8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"aaaa8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 108,\n    \"rendered_summary\": \"Postman primary skill version 2.\"\n  },\n  \"metadata\": {\n    \"name\": \"Postman Primary Skill\",\n    \"description\": \"Primary sanity skill for collection coverage\",\n    \"tags\": [\n      \"postman\",\n      \"sanity\",\n      \"primary\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 260,\n    \"maturity_score\": 0.92,\n    \"security_score\": 0.97\n  },\n  \"lifecycle_status\": \"deprecated\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -1164,7 +1164,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"candidates\": [\n    \"python.lint\",\n    \"python.format\"\n  ]\n}"
+              "body": "{\n  \"candidates\": [\n    \"python-lint\",\n    \"python-format\"\n  ]\n}"
             }
           ]
         },
@@ -1242,7 +1242,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.lint\",\n  \"version\": \"1.2.3\",\n  \"depends_on\": [\n    {\n      \"slug\": \"python.base\",\n      \"version_constraint\": \">=1.0.0,<2.0.0\",\n      \"optional\": true,\n      \"markers\": [\n        \"linux\",\n        \"gpu\"\n      ]\n    }\n  ]\n}"
+              "body": "{\n  \"slug\": \"python-lint\",\n  \"version\": \"1.2.3\",\n  \"depends_on\": [\n    {\n      \"slug\": \"python-base\",\n      \"version_constraint\": \">=1.0.0,<2.0.0\",\n      \"optional\": true,\n      \"markers\": [\n        \"linux\",\n        \"gpu\"\n      ]\n    }\n  ]\n}"
             }
           ]
         }
@@ -1450,7 +1450,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"slug\": \"python.duplicate\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
+              "body": "{\n  \"slug\": \"python-duplicate\",\n  \"version\": \"1.0.0\",\n  \"version_checksum\": {\n    \"algorithm\": \"sha256\",\n    \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n  },\n  \"content\": {\n    \"checksum\": {\n      \"algorithm\": \"sha256\",\n      \"digest\": \"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\"\n    },\n    \"size_bytes\": 123,\n    \"rendered_summary\": \"Lint Python files consistently.\"\n  },\n  \"metadata\": {\n    \"name\": \"Python Lint\",\n    \"description\": \"Linting skill\",\n    \"tags\": [\n      \"python\",\n      \"lint\"\n    ],\n    \"headers\": {\n      \"runtime\": \"python\"\n    },\n    \"inputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"outputs_schema\": {\n      \"type\": \"object\"\n    },\n    \"token_estimate\": 128,\n    \"maturity_score\": 0.9,\n    \"security_score\": 0.95\n  },\n  \"lifecycle_status\": \"published\",\n  \"trust_tier\": \"untrusted\",\n  \"published_at\": \"2026-03-10T08:30:00Z\"\n}"
             }
           ]
         },
@@ -1555,7 +1555,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"DUPLICATE_SKILL_VERSION\",\n    \"message\": \"Skill version already exists: python.lint@1.2.3\",\n    \"details\": {\n      \"slug\": \"python.lint\",\n      \"version\": \"1.2.3\"\n    }\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": \"DUPLICATE_SKILL_VERSION\",\n    \"message\": \"Skill version already exists: python-lint@1.2.3\",\n    \"details\": {\n      \"slug\": \"python-lint\",\n      \"version\": \"1.2.3\"\n    }\n  }\n}"
             }
           ]
         },
@@ -1632,7 +1632,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python.missing@9.9.9\",\n    \"details\": {\n      \"slug\": \"python.missing\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python-missing@9.9.9\",\n    \"details\": {\n      \"slug\": \"python-missing\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
             }
           ]
         },
@@ -1788,7 +1788,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python.missing@9.9.9\",\n    \"details\": {\n      \"slug\": \"python.missing\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python-missing@9.9.9\",\n    \"details\": {\n      \"slug\": \"python-missing\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
             }
           ]
         },
@@ -2051,7 +2051,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python.lint@9.9.9\",\n    \"details\": {\n      \"slug\": \"python.lint\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": \"SKILL_VERSION_NOT_FOUND\",\n    \"message\": \"Skill version not found: python-lint@9.9.9\",\n    \"details\": {\n      \"slug\": \"python-lint\",\n      \"version\": \"9.9.9\"\n    }\n  }\n}"
             }
           ]
         }
@@ -2073,13 +2073,13 @@
           "  if (forceReset || !runId) {",
           "    runId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;",
           "    pm.collectionVariables.set('runId', runId);",
-          "    pm.collectionVariables.set('sanity_dependency_slug', `postman.dep.${runId}`);",
-          "    pm.collectionVariables.set('sanity_extension_slug', `postman.ext.${runId}`);",
-          "    pm.collectionVariables.set('sanity_overlap_slug', `postman.overlap.${runId}`);",
-          "    pm.collectionVariables.set('sanity_primary_slug', `postman.primary.${runId}`);",
-          "    pm.collectionVariables.set('negative_invalid_slug', `postman.invalid.${runId}`);",
-          "    pm.collectionVariables.set('negative_duplicate_slug', `postman.duplicate.${runId}`);",
-          "    pm.collectionVariables.set('negative_missing_slug', `postman.missing.${runId}`);",
+          "    pm.collectionVariables.set('sanity_dependency_slug', `postman-dep-${runId}`);",
+          "    pm.collectionVariables.set('sanity_extension_slug', `postman-ext-${runId}`);",
+          "    pm.collectionVariables.set('sanity_overlap_slug', `postman-overlap-${runId}`);",
+          "    pm.collectionVariables.set('sanity_primary_slug', `postman-primary-${runId}`);",
+          "    pm.collectionVariables.set('negative_invalid_slug', `postman-invalid-${runId}`);",
+          "    pm.collectionVariables.set('negative_duplicate_slug', `postman-duplicate-${runId}`);",
+          "    pm.collectionVariables.set('negative_missing_slug', `postman-missing-${runId}`);",
           "  }",
           "};",
           "",

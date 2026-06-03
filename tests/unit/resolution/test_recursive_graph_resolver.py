@@ -92,45 +92,45 @@ def _version_summary(
 
 def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.metadata_by_coordinate[("python.lint", "1.2.3")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "1.2.3")] = _metadata(
+        "python-lint",
         "1.2.3",
         name="Python Lint",
     )
-    registry_client.metadata_by_coordinate[("python.base", "1.0.0")] = _metadata(
-        "python.base",
+    registry_client.metadata_by_coordinate[("python-base", "1.0.0")] = _metadata(
+        "python-base",
         "1.0.0",
         name="Python Base",
     )
-    registry_client.metadata_by_coordinate[("python.fs", "2.0.0")] = _metadata(
-        "python.fs",
+    registry_client.metadata_by_coordinate[("python-fs", "2.0.0")] = _metadata(
+        "python-fs",
         "2.0.0",
         name="Python FS",
     )
-    registry_client.dependencies_by_coordinate[("python.lint", "1.2.3")] = [
-        DependencySpec(slug="python.base", version="1.0.0"),
-        DependencySpec(slug="python.fs", version="2.0.0"),
+    registry_client.dependencies_by_coordinate[("python-lint", "1.2.3")] = [
+        DependencySpec(slug="python-base", version="1.0.0"),
+        DependencySpec(slug="python-fs", version="2.0.0"),
     ]
 
     graph, trace = resolve_recursive_graph(
-        SkillCoordinate(slug="python.lint", version="1.2.3"),
+        SkillCoordinate(slug="python-lint", version="1.2.3"),
         registry_client,
     )
 
-    assert graph.root == SkillCoordinate(slug="python.lint", version="1.2.3")
+    assert graph.root == SkillCoordinate(slug="python-lint", version="1.2.3")
     assert [node.coordinate.slug for node in graph.nodes] == [
-        "python.base",
-        "python.fs",
-        "python.lint",
+        "python-base",
+        "python-fs",
+        "python-lint",
     ]
     assert [(edge.source.slug, edge.target.slug) for edge in graph.edges] == [
-        ("python.lint", "python.base"),
-        ("python.lint", "python.fs"),
+        ("python-lint", "python-base"),
+        ("python-lint", "python-fs"),
     ]
     assert [item.slug for item in graph.install_order] == [
-        "python.base",
-        "python.fs",
-        "python.lint",
+        "python-base",
+        "python-fs",
+        "python-lint",
     ]
     assert any(item.action == "visit_node" for item in trace)
     received_trace = next(
@@ -141,25 +141,25 @@ def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
     )
     traversal_traces = [item for item in trace if item.action == "traverse_dependency"]
     assert received_trace.data["dependencies"] == [
-        "python.base@1.0.0",
-        "python.fs@2.0.0",
+        "python-base@1.0.0",
+        "python-fs@2.0.0",
     ]
-    assert sorted_trace.data["dependencies"] == ["python.base@1.0.0", "python.fs@2.0.0"]
+    assert sorted_trace.data["dependencies"] == ["python-base@1.0.0", "python-fs@2.0.0"]
     assert [item.data["target_slug"] for item in traversal_traces] == [
-        "python.base",
-        "python.fs",
+        "python-base",
+        "python-fs",
     ]
     normalization_traces = [
         item for item in trace if item.action == "normalize_dependency_selector"
     ]
     assert len(normalization_traces) == 2
     assert normalization_traces[0].data == {
-        "source_slug": "python.lint",
+        "source_slug": "python-lint",
         "source_version": "1.2.3",
-        "dependency_slug": "python.base",
+        "dependency_slug": "python-base",
         "requested_version": "1.0.0",
         "requested_version_constraint": None,
-        "resolved_slug": "python.base",
+        "resolved_slug": "python-base",
         "resolved_version": "1.0.0",
         "optional": False,
         "markers": [],
@@ -168,53 +168,53 @@ def test_recursive_graph_resolver_builds_full_graph_and_install_order() -> None:
 
 def test_recursive_graph_resolver_selects_version_for_dependency_constraint() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.metadata_by_coordinate[("python.test", "1.0.0")] = _metadata(
-        "python.test",
+    registry_client.metadata_by_coordinate[("python-test", "1.0.0")] = _metadata(
+        "python-test",
         "1.0.0",
         name="Python Test",
     )
-    registry_client.metadata_by_coordinate[("python.lint", "2.1.0")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "2.1.0")] = _metadata(
+        "python-lint",
         "2.1.0",
         name="Python Lint",
     )
-    registry_client.metadata_by_coordinate[("python.lint", "3.0.0")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "3.0.0")] = _metadata(
+        "python-lint",
         "3.0.0",
         name="Python Lint",
     )
-    registry_client.versions_by_slug["python.lint"] = [
-        _version_summary("python.lint", "3.0.0", is_current_default=True),
-        _version_summary("python.lint", "2.1.0"),
+    registry_client.versions_by_slug["python-lint"] = [
+        _version_summary("python-lint", "3.0.0", is_current_default=True),
+        _version_summary("python-lint", "2.1.0"),
     ]
-    registry_client.dependencies_by_coordinate[("python.test", "1.0.0")] = [
+    registry_client.dependencies_by_coordinate[("python-test", "1.0.0")] = [
         DependencySpec(
-            slug="python.lint",
+            slug="python-lint",
             version_constraint=">=2.0.0,<3.0.0",
         )
     ]
 
     graph, trace = resolve_recursive_graph(
-        SkillCoordinate(slug="python.test", version="1.0.0"),
+        SkillCoordinate(slug="python-test", version="1.0.0"),
         registry_client,
     )
 
     assert [item.coordinate for item in graph.nodes] == [
-        SkillCoordinate(slug="python.lint", version="2.1.0"),
-        SkillCoordinate(slug="python.test", version="1.0.0"),
+        SkillCoordinate(slug="python-lint", version="2.1.0"),
+        SkillCoordinate(slug="python-test", version="1.0.0"),
     ]
-    assert graph.edges[0].target == SkillCoordinate(slug="python.lint", version="2.1.0")
+    assert graph.edges[0].target == SkillCoordinate(slug="python-lint", version="2.1.0")
     assert [item.slug for item in graph.install_order] == [
-        "python.lint",
-        "python.test",
+        "python-lint",
+        "python-test",
     ]
     constraint_trace = next(
         item for item in trace if item.action == "select_dependency_version"
     )
     assert constraint_trace.data == {
-        "source_slug": "python.test",
+        "source_slug": "python-test",
         "source_version": "1.0.0",
-        "dependency_slug": "python.lint",
+        "dependency_slug": "python-lint",
         "version_constraint": ">=2.0.0,<3.0.0",
         "resolved_version": "2.1.0",
         "candidate_versions": ["2.1.0"],
@@ -223,26 +223,26 @@ def test_recursive_graph_resolver_selects_version_for_dependency_constraint() ->
 
 def test_recursive_graph_resolver_detects_cycles() -> None:
     registry_client = FakeRegistryClient()
-    registry_client.metadata_by_coordinate[("python.lint", "1.2.3")] = _metadata(
-        "python.lint",
+    registry_client.metadata_by_coordinate[("python-lint", "1.2.3")] = _metadata(
+        "python-lint",
         "1.2.3",
         name="Python Lint",
     )
-    registry_client.metadata_by_coordinate[("python.base", "1.0.0")] = _metadata(
-        "python.base",
+    registry_client.metadata_by_coordinate[("python-base", "1.0.0")] = _metadata(
+        "python-base",
         "1.0.0",
         name="Python Base",
     )
-    registry_client.dependencies_by_coordinate[("python.lint", "1.2.3")] = [
-        DependencySpec(slug="python.base", version="1.0.0")
+    registry_client.dependencies_by_coordinate[("python-lint", "1.2.3")] = [
+        DependencySpec(slug="python-base", version="1.0.0")
     ]
-    registry_client.dependencies_by_coordinate[("python.base", "1.0.0")] = [
-        DependencySpec(slug="python.lint", version="1.2.3")
+    registry_client.dependencies_by_coordinate[("python-base", "1.0.0")] = [
+        DependencySpec(slug="python-lint", version="1.2.3")
     ]
 
     with pytest.raises(DependencyCycleError):
         resolve_recursive_graph(
-            SkillCoordinate(slug="python.lint", version="1.2.3"),
+            SkillCoordinate(slug="python-lint", version="1.2.3"),
             registry_client,
         )
 

@@ -38,20 +38,20 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
 ) -> None:
     target = tmp_path / "aptitude_state"
     graph = ResolutionGraph(
-        root=SkillCoordinate(slug="python.lint", version="1.2.3"),
+        root=SkillCoordinate(slug="python-lint", version="1.2.3"),
         nodes=[
-            _node("python.base", "1.0.0"),
-            _node("python.lint", "1.2.3"),
+            _node("python-base", "1.0.0"),
+            _node("python-lint", "1.2.3"),
         ],
         edges=[
             DependencyEdge(
-                source=SkillCoordinate(slug="python.lint", version="1.2.3"),
-                target=SkillCoordinate(slug="python.base", version="1.0.0"),
+                source=SkillCoordinate(slug="python-lint", version="1.2.3"),
+                target=SkillCoordinate(slug="python-base", version="1.0.0"),
             )
         ],
         install_order=[
-            SkillCoordinate(slug="python.base", version="1.0.0"),
-            SkillCoordinate(slug="python.lint", version="1.2.3"),
+            SkillCoordinate(slug="python-base", version="1.0.0"),
+            SkillCoordinate(slug="python-lint", version="1.2.3"),
         ],
         conflicts=[],
     )
@@ -63,8 +63,8 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
             TraceEntry(
                 stage="execution",
                 action="materialize_locked_skill",
-                message="Materialized locked skill python.base@1.0.0.",
-                data={"node_id": "python.base@1.0.0"},
+                message="Materialized locked skill python-base@1.0.0.",
+                data={"node_id": "python-base@1.0.0"},
             )
         ],
         policy_evaluations=[
@@ -72,7 +72,7 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
                 rule="allowed_lifecycle_status",
                 passed=True,
                 message="Lifecycle allowed.",
-                coordinate=SkillCoordinate(slug="python.lint", version="1.2.3"),
+                coordinate=SkillCoordinate(slug="python-lint", version="1.2.3"),
             )
         ],
     )
@@ -93,17 +93,17 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
         "policy.json",
         "trace.json",
     ]
-    assert graph_payload["root"] == {"slug": "python.lint", "version": "1.2.3"}
+    assert graph_payload["root"] == {"slug": "python-lint", "version": "1.2.3"}
     assert graph_payload["install_order"] == [
-        {"slug": "python.base", "version": "1.0.0"},
-        {"slug": "python.lint", "version": "1.2.3"},
+        {"slug": "python-base", "version": "1.0.0"},
+        {"slug": "python-lint", "version": "1.2.3"},
     ]
     assert trace_payload == [
         {
             "stage": "execution",
             "action": "materialize_locked_skill",
-            "message": "Materialized locked skill python.base@1.0.0.",
-            "data": {"node_id": "python.base@1.0.0"},
+            "message": "Materialized locked skill python-base@1.0.0.",
+            "data": {"node_id": "python-base@1.0.0"},
         }
     ]
     assert policy_payload == [
@@ -111,6 +111,6 @@ def test_write_install_debug_artifacts_writes_expected_files_and_shapes(
             "rule": "allowed_lifecycle_status",
             "passed": True,
             "message": "Lifecycle allowed.",
-            "coordinate": {"slug": "python.lint", "version": "1.2.3"},
+            "coordinate": {"slug": "python-lint", "version": "1.2.3"},
         }
     ]

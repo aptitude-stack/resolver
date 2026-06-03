@@ -312,7 +312,7 @@ COMMANDS = {
         flow_steps=("discovery", "policy filtering", "reranking", "selected preview"),
         examples=(
             '{cli} inspect "Documentation Writing"',
-            '{cli} inspect "Postman" --select-slug postman.primary',
+            '{cli} inspect "Postman" --select-slug postman-primary',
             '{cli} inspect "Postman" --preview-chars 1200 --json',
         ),
         option_groups=(

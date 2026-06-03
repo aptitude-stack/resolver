@@ -148,7 +148,7 @@ def _ranking_components(
 
     normalized_name = normalize_text(version.name)
     exact_name_match = int(normalized_name == intent.normalized_query)
-    exact_slug_match = int(candidate.slug == intent.normalized_query.replace(" ", "."))
+    exact_slug_match = int(candidate.slug == intent.normalized_query.replace(" ", "-"))
     runtime = version.headers.get("runtime")
     runtime_match = int(intent.language is not None and runtime == intent.language)
     matched_labels = len(query_labels.intersection(labels))

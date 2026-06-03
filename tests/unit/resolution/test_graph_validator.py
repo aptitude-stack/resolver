@@ -32,8 +32,8 @@ def _node(slug: str, version: str) -> ResolvedSkillNode:
 
 
 def test_validate_resolution_graph_accepts_edges_referencing_known_nodes() -> None:
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
-    dependency = SkillCoordinate(slug="dep.core", version="0.9.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="dep-core", version="0.9.0")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -48,8 +48,8 @@ def test_validate_resolution_graph_accepts_edges_referencing_known_nodes() -> No
 
 
 def test_validate_resolution_graph_rejects_missing_edge_source() -> None:
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
-    dependency = SkillCoordinate(slug="dep.core", version="0.9.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="dep-core", version="0.9.0")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -58,7 +58,7 @@ def test_validate_resolution_graph_rejects_missing_edge_source() -> None:
         ],
         edges=[
             DependencyEdge(
-                source=SkillCoordinate(slug="missing.dep", version="9.9.9"),
+                source=SkillCoordinate(slug="missing-dep", version="9.9.9"),
                 target=dependency,
             )
         ],
@@ -72,8 +72,8 @@ def test_validate_resolution_graph_rejects_missing_edge_source() -> None:
 
 
 def test_validate_resolution_graph_rejects_missing_edge_target() -> None:
-    root = SkillCoordinate(slug="python.lint", version="1.2.3")
-    dependency = SkillCoordinate(slug="dep.core", version="0.9.0")
+    root = SkillCoordinate(slug="python-lint", version="1.2.3")
+    dependency = SkillCoordinate(slug="dep-core", version="0.9.0")
     graph = ResolutionGraph(
         root=root,
         nodes=[
@@ -83,7 +83,7 @@ def test_validate_resolution_graph_rejects_missing_edge_target() -> None:
         edges=[
             DependencyEdge(
                 source=root,
-                target=SkillCoordinate(slug="missing.dep", version="9.9.9"),
+                target=SkillCoordinate(slug="missing-dep", version="9.9.9"),
             )
         ],
         install_order=[dependency, root],
