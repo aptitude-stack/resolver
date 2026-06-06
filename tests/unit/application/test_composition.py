@@ -199,6 +199,32 @@ def test_build_resolve_use_case_merges_selection_preferences_with_cli_precedence
     assert FakeRegistryClient.instances[0].closed is True
 
 
+def test_build_resolve_use_case_applies_candidate_limit_selection_preference(
+    monkeypatch,
+) -> None:
+    FakeRegistryClient.instances = []
+    monkeypatch.setattr(composition, "Settings", FakeSettings)
+    monkeypatch.setattr(composition, "RegistryClient", FakeRegistryClient)
+    monkeypatch.setattr(composition, "load_user_aptitude_config", lambda: None)
+    monkeypatch.setattr(
+        composition,
+        "load_workspace_aptitude_config",
+        lambda cwd=None: AptitudeConfig(selection=SelectionConfig(candidate_limit=3)),
+    )
+    monkeypatch.setattr(
+        composition,
+        "read_env_selection_overrides",
+        lambda env=None: SelectionConfig(candidate_limit=4),
+    )
+
+    use_case, close = composition.build_resolve_use_case()
+
+    assert use_case._planner._selection_preferences.candidate_limit == 4
+
+    close()
+    assert FakeRegistryClient.instances[0].closed is True
+
+
 def test_build_resolve_use_case_raises_for_invalid_selection_preference_source(
     monkeypatch,
 ) -> None:

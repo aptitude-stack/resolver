@@ -10,8 +10,10 @@ class SelectionConfigSnapshotDto(BaseModel):
 
     profile: str | None = None
     interaction_mode: str | None = None
+    candidate_limit: int | None = None
     profile_source: str | None = None
     interaction_mode_source: str | None = None
+    candidate_limit_source: str | None = None
 
 
 class PolicyConfigSnapshotDto(BaseModel):

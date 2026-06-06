@@ -21,6 +21,35 @@ class FinalCandidateSelection:
     trace: list[TraceEntry] = field(default_factory=list)
 
 
+def limit_candidates_for_prompt(
+    candidates: list[DiscoveryCandidate],
+    *,
+    candidate_limit: int,
+) -> tuple[list[DiscoveryCandidate], list[TraceEntry]]:
+    """Return the top ranked candidates shown to a human selection prompt."""
+
+    if len(candidates) <= candidate_limit:
+        return list(candidates), []
+
+    visible_candidates = list(candidates[:candidate_limit])
+    return visible_candidates, [
+        TraceEntry(
+            stage="selection",
+            action="limit_selection_candidates",
+            message=(
+                f"Limited interactive candidate choices to the top {candidate_limit} "
+                f"of {len(candidates)} ranked candidates."
+            ),
+            data={
+                "candidate_limit": candidate_limit,
+                "input_count": len(candidates),
+                "visible_count": len(visible_candidates),
+                "slugs": [candidate.slug for candidate in visible_candidates],
+            },
+        )
+    ]
+
+
 def select_final_candidate(
     *,
     query: str,

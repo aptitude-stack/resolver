@@ -24,8 +24,10 @@ class SelectionPreferences:
 
     profile: str = "balanced"
     interaction_mode: str = "auto"
+    candidate_limit: int = 5
     profile_source: str = "default"
     interaction_mode_source: str = "default"
+    candidate_limit_source: str = "default"
 
     def __post_init__(self) -> None:
         if self.profile not in VALID_SELECTION_PROFILES:
@@ -38,3 +40,5 @@ class SelectionPreferences:
                 "Unknown interaction mode: "
                 f"{self.interaction_mode}. Expected one of {', '.join(VALID_INTERACTION_MODES)}."
             )
+        if self.candidate_limit < 1:
+            raise ValueError("Candidate limit must be greater than or equal to 1.")

@@ -18,7 +18,10 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
 )
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
 from aptitude_resolver.execution.archive import preview_tar_zstd_artifact
-from aptitude_resolver.resolution.solver import select_final_candidate
+from aptitude_resolver.resolution.solver import (
+    limit_candidates_for_prompt,
+    select_final_candidate,
+)
 
 
 class InspectRegistryPort(Protocol):
@@ -80,11 +83,16 @@ class InspectSkillUseCase:
         )
         trace.extend(selection.trace)
         if selection.selected_candidate is None or selection.selection_mode is None:
+            visible_candidates, limit_trace = limit_candidates_for_prompt(
+                ranked.candidates,
+                candidate_limit=self._selection_preferences.candidate_limit,
+            )
+            trace.extend(limit_trace)
             return InspectSkillResultDto(
                 requested_query=request.query,
                 requested_version=request.version,
                 status="selection_required",
-                candidates=[candidate_to_dto(item) for item in ranked.candidates],
+                candidates=[candidate_to_dto(item) for item in visible_candidates],
                 trace=[trace_to_dto(item) for item in trace],
             )
 
