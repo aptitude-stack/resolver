@@ -708,7 +708,7 @@ def _fallback_select_many(
             if not raw_indices:
                 print("Select at least one option.")
                 continue
-            selected_indices: list[int] = []
+            prompt_selected_indices: list[int] = []
             invalid = False
             for raw_index in raw_indices:
                 try:
@@ -719,30 +719,31 @@ def _fallback_select_many(
                 if selected_index < 1 or selected_index > len(options):
                     invalid = True
                     break
-                if selected_index not in selected_indices:
-                    selected_indices.append(selected_index)
+                if selected_index not in prompt_selected_indices:
+                    prompt_selected_indices.append(selected_index)
             if invalid:
                 print("Enter valid option numbers.")
                 continue
-            return [options[index - 1][1] for index in selected_indices]
+            return [options[index - 1][1] for index in prompt_selected_indices]
 
-    state = {"index": 0, "error": ""}
+    state_index = 0
+    state_error = ""
     selected_indices: set[int] = set()
 
     def render_lines() -> list[str]:
         lines = [title]
         if help_text:
             lines.append(help_text)
-        if state["error"]:
-            lines.append(state["error"])
+        if state_error:
+            lines.append(state_error)
         lines.append("")
         active_description = _active_menu_description(
             options,
-            index=state["index"],
+            index=state_index,
             descriptions=descriptions,
         )
         for option_index, (label, _) in enumerate(options):
-            active = option_index == state["index"]
+            active = option_index == state_index
             cursor = ">" if active else " "
             marker = "[x]" if option_index in selected_indices else "[ ]"
             description = (
@@ -780,24 +781,24 @@ def _fallback_select_many(
         while True:
             key = read_key()
             if key == "\x1b[A":
-                state["index"] = (state["index"] - 1) % len(options)
-                state["error"] = ""
+                state_index = (state_index - 1) % len(options)
+                state_error = ""
                 draw(render_lines())
             elif key == "\x1b[B":
-                state["index"] = (state["index"] + 1) % len(options)
-                state["error"] = ""
+                state_index = (state_index + 1) % len(options)
+                state_error = ""
                 draw(render_lines())
             elif key == " ":
-                index = state["index"]
+                index = state_index
                 if index in selected_indices:
                     selected_indices.remove(index)
                 else:
                     selected_indices.add(index)
-                state["error"] = ""
+                state_error = ""
                 draw(render_lines())
             elif key in {"\r", "\n"}:
                 if not selected_indices:
-                    state["error"] = "Select at least one option."
+                    state_error = "Select at least one option."
                     draw(render_lines())
                     continue
                 sys.stdout.write("\x1b[2J\x1b[H\n\x1b[?25h")
@@ -1043,7 +1044,7 @@ class CliWizard:
         console: Console | None = None,
         prompt_text: PromptText | None = None,
         select_one: SelectPrompt[object] | None = None,
-        select_many: MultiSelectPrompt[object] | None = None,
+        select_many: MultiSelectPrompt[Any] | None = None,
         confirm: ConfirmPrompt | None = None,
         target: Path | None = None,
         banner_style: BannerStyle = "classic",
