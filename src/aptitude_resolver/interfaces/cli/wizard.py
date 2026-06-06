@@ -1292,19 +1292,15 @@ class CliWizard:
 
         scope = self._select(
             "Install scope",
-            _with_return_option(INSTALL_SCOPE_OPTIONS),
+            INSTALL_SCOPE_OPTIONS,
             "Choose where the selected agent should see this skill.",
         )
-        if scope == RETURN_OPTION_VALUE:
-            return None
 
         selected_agents = self._select_multi(
             "Agent targets",
-            _with_return_option(AGENT_OPTIONS),
+            AGENT_OPTIONS,
             "Choose one or more agent formats and roots to export into.",
         )
-        if RETURN_OPTION_VALUE in selected_agents:
-            return None
 
         agents: list[str] = []
         for agent in selected_agents:
