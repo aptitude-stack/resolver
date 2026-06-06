@@ -245,7 +245,7 @@ def can_launch_cli_wizard() -> bool:
     return (
         sys.stdin.isatty()
         and sys.stdout.isatty()
-        and _stream_supports_text(sys.stdout, "─●→✓↑↓╭╮╰╯▫▪")
+        and _stream_supports_text(sys.stdout, "─●→✓↑↓╭╮╰╯□■")
     )
 
 
@@ -272,7 +272,7 @@ def _render_choice_line(
 def _render_multi_select_marker(*, selected: bool) -> str:
     """Render one compact multi-select state marker."""
 
-    return "▪" if selected else "▫"
+    return "■" if selected else "□"
 
 
 def _with_return_option(
