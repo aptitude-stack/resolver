@@ -245,7 +245,7 @@ def can_launch_cli_wizard() -> bool:
     return (
         sys.stdin.isatty()
         and sys.stdout.isatty()
-        and _stream_supports_text(sys.stdout, "─●→✓↑↓╭╮╰╯")
+        and _stream_supports_text(sys.stdout, "─●→✓↑↓╭╮╰╯▫▪")
     )
 
 
@@ -267,6 +267,12 @@ def _render_choice_line(
     if active and description:
         return f"{marker} {label} - {description}"
     return f"{marker} {label}"
+
+
+def _render_multi_select_marker(*, selected: bool) -> str:
+    """Render one compact multi-select state marker."""
+
+    return "▪" if selected else "▫"
 
 
 def _with_return_option(
@@ -745,7 +751,9 @@ def _fallback_select_many(
         for option_index, (label, _) in enumerate(options):
             active = option_index == state_index
             cursor = ">" if active else " "
-            marker = "[x]" if option_index in selected_indices else "[ ]"
+            marker = _render_multi_select_marker(
+                selected=option_index in selected_indices
+            )
             description = (
                 f" - {active_description}"
                 if active and active_description
@@ -947,7 +955,7 @@ def _default_select_many(
             is_active = index == active_index
             is_selected = index in selected_indices
             cursor = ">" if is_active else " "
-            marker = "[x]" if is_selected else "[ ]"
+            marker = _render_multi_select_marker(selected=is_selected)
             marker_style = "class:marker-active" if is_selected else "class:item"
             label_style = "class:active" if is_active else "class:item"
             fragments.append((label_style, f"{cursor} "))
