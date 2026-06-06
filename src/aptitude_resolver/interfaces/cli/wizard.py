@@ -761,7 +761,7 @@ def _fallback_select_many(
             )
             lines.append(f"{cursor} {marker} {label}{description}")
         lines.append("")
-        lines.append("[↑↓] move  [space] toggle  [enter] confirm  [q] cancel")
+        lines.append("[↑↓] move  [space] select  [enter] confirm  [q] cancel")
         lines.append("")
         return lines
 
@@ -967,7 +967,7 @@ def _default_select_many(
         fragments.append(
             (
                 "class:hint",
-                "\n[↑↓] move  [space] toggle  [enter] confirm  [q] cancel\n\n",
+                "\n[↑↓] move  [space] select  [enter] confirm  [q] cancel\n\n",
             )
         )
         return fragments

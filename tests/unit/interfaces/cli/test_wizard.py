@@ -1677,7 +1677,7 @@ def test_default_select_many_prompt_toolkit_shows_toggle_key_hint(monkeypatch) -
     assert ("class:marker-active", "■ ") in fragments
     assert fragments[-1] == (
         "class:hint",
-        "\n[↑↓] move  [space] toggle  [enter] confirm  [q] cancel\n\n",
+        "\n[↑↓] move  [space] select  [enter] confirm  [q] cancel\n\n",
     )
 
 
