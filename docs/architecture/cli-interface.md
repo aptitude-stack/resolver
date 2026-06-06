@@ -123,10 +123,8 @@ The guided install flow is:
 
 ```text
 query input
--> selection profile
--> interaction mode
 -> install scope
--> agent target
+-> agent targets
 -> resolve
 -> optional candidate selection
 -> review plan
@@ -138,17 +136,16 @@ query input
 Key properties:
 
 - the query prompt uses a larger free-text input surface
-- selection profile is explicit: `balanced`, `low-cost`, or `high-trust`
-- interaction mode is explicit: `auto`, `always`, or `never`
+- the wizard uses the standard install defaults for candidate ranking and ambiguity handling
 - install scope is explicit in the wizard: project, global, or custom path
-- agent target is explicit in the wizard: Codex, Claude Code, GitHub Copilot, Cursor, Gemini CLI, OpenCode, Windsurf, Universal, or detected roots
+- agent targets are explicit and multi-select in the wizard: Codex, Claude Code, GitHub Copilot, Cursor, Gemini CLI, OpenCode, Windsurf, Universal, or detected roots
 - ambiguity remains root-only; the wizard may ask the user to choose one candidate
 - the user sees a compact review panel before installation begins
 - cancellation before installation is explicit and non-destructive
 
 Fresh installs keep Aptitude-owned cache and state outside the repository by default. On Windows those paths are `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`; project-scoped installs write only agent-facing skill packages into the repository.
 
-The install flow also supports returning from profile selection back to the query prompt. That is the current escape hatch for revising intent without restarting the whole wizard.
+The install flow also supports returning from destination selection back to the query prompt. That is the current escape hatch for revising intent without restarting the whole wizard.
 
 ### Sync Flow
 

@@ -70,12 +70,6 @@ except ModuleNotFoundError:  # pragma: no cover - exercised via import simulatio
     tty = None  # type: ignore[assignment]
 
 
-PROFILE_OPTIONS: list[tuple[str, str]] = [
-    ("Balanced", "balanced"),
-    ("Low cost", "low-cost"),
-    ("High trust", "high-trust"),
-]
-
 WizardEntryFlow = Literal["install", "sync"]
 WizardLauncherAction = Literal["install", "sync", "help", "exit"]
 ReturnOption = Literal["__return__"]
@@ -96,11 +90,6 @@ FLOW_DESCRIPTIONS: dict[WizardLauncherAction, str] = {
     "exit": "Leave the wizard without running a command.",
 }
 
-INTERACTION_OPTIONS: list[tuple[str, InteractionMode]] = [
-    ("Auto", "auto"),
-    ("Always ask", "always"),
-    ("Never ask", "never"),
-]
 INSTALL_SCOPE_OPTIONS: list[tuple[str, Literal["project", "global", "custom"]]] = [
     ("Project", "project"),
     ("Global", "global"),
@@ -170,6 +159,16 @@ class SelectPrompt(Protocol, Generic[T]):
         help_text: str | None = None,
         descriptions: Mapping[T, str] | None = None,
     ) -> T: ...
+
+
+class MultiSelectPrompt(Protocol, Generic[T]):
+    def __call__(
+        self,
+        title: str,
+        options: Sequence[tuple[str, T]],
+        help_text: str | None = None,
+        descriptions: Mapping[T, str] | None = None,
+    ) -> list[T]: ...
 
 
 class WorkflowServicePort(Protocol):
@@ -308,8 +307,6 @@ def _format_plan_summary_row(*items: tuple[str, object]) -> str:
 def _render_plan_panel(
     result: ResolveQueryResultDto,
     *,
-    selection_profile: str,
-    interaction_mode: InteractionMode,
     scope: str,
     export_roots: Mapping[str, Path],
 ) -> Panel:
@@ -344,18 +341,6 @@ def _render_plan_panel(
                 ("Lifecycle", skill.lifecycle_status if skill else "unknown"),
             ),
             style=THEME.text_detail,
-        ),
-        Text(
-            _format_plan_summary_row(
-                ("Profile", selection_profile),
-            ),
-            style=THEME.text_muted,
-        ),
-        Text(
-            _format_plan_summary_row(
-                ("Interaction", interaction_mode),
-            ),
-            style=THEME.text_muted,
         ),
         Text(
             _format_plan_summary_row(
@@ -691,6 +676,143 @@ def _fallback_select_one(
         sys.stdout.flush()
 
 
+def _fallback_select_many(
+    title: str,
+    options: Sequence[tuple[str, T]],
+    help_text: str | None = None,
+    descriptions: Mapping[T, str] | None = None,
+) -> list[T]:
+    """Select one or more options without prompt_toolkit."""
+
+    if not options:
+        raise ValueError("Expected at least one option.")
+
+    if (
+        not sys.stdin.isatty()
+        or not sys.stdout.isatty()
+        or termios is None
+        or tty is None
+    ):
+        print(title)
+        if help_text:
+            print(help_text)
+        for index, (label, _) in enumerate(options, start=1):
+            print(f"  {index}. {label}")
+        while True:
+            raw_choice = input(
+                "Select one or more options by number, comma-separated: "
+            ).strip()
+            if raw_choice.lower() == "q":
+                raise WizardCancelled()
+            raw_indices = raw_choice.replace(",", " ").split()
+            if not raw_indices:
+                print("Select at least one option.")
+                continue
+            selected_indices: list[int] = []
+            invalid = False
+            for raw_index in raw_indices:
+                try:
+                    selected_index = int(raw_index)
+                except ValueError:
+                    invalid = True
+                    break
+                if selected_index < 1 or selected_index > len(options):
+                    invalid = True
+                    break
+                if selected_index not in selected_indices:
+                    selected_indices.append(selected_index)
+            if invalid:
+                print("Enter valid option numbers.")
+                continue
+            return [options[index - 1][1] for index in selected_indices]
+
+    state = {"index": 0, "error": ""}
+    selected_indices: set[int] = set()
+
+    def render_lines() -> list[str]:
+        lines = [title]
+        if help_text:
+            lines.append(help_text)
+        if state["error"]:
+            lines.append(state["error"])
+        lines.append("")
+        active_description = _active_menu_description(
+            options,
+            index=state["index"],
+            descriptions=descriptions,
+        )
+        for option_index, (label, _) in enumerate(options):
+            active = option_index == state["index"]
+            cursor = ">" if active else " "
+            marker = "[x]" if option_index in selected_indices else "[ ]"
+            description = (
+                f" - {active_description}"
+                if active and active_description
+                else ""
+            )
+            lines.append(f"{cursor} {marker} {label}{description}")
+        lines.append("")
+        lines.append("[↑↓] move  [space] toggle  [enter] confirm  [q] cancel")
+        lines.append("")
+        return lines
+
+    def draw(lines: list[str]) -> None:
+        sys.stdout.write("\x1b[H\x1b[2J")
+        sys.stdout.write("\n".join(lines))
+        sys.stdout.flush()
+
+    def read_key() -> str:
+        first = sys.stdin.read(1)
+        if first != "\x1b":
+            return first
+        second = sys.stdin.read(1)
+        third = sys.stdin.read(1)
+        return first + second + third
+
+    fd = sys.stdin.fileno()
+    termios_module = cast(Any, termios)
+    tty_module = cast(Any, tty)
+    original = termios_module.tcgetattr(fd)
+    try:
+        tty_module.setraw(fd)
+        sys.stdout.write("\x1b[?25l")
+        draw(render_lines())
+        while True:
+            key = read_key()
+            if key == "\x1b[A":
+                state["index"] = (state["index"] - 1) % len(options)
+                state["error"] = ""
+                draw(render_lines())
+            elif key == "\x1b[B":
+                state["index"] = (state["index"] + 1) % len(options)
+                state["error"] = ""
+                draw(render_lines())
+            elif key == " ":
+                index = state["index"]
+                if index in selected_indices:
+                    selected_indices.remove(index)
+                else:
+                    selected_indices.add(index)
+                state["error"] = ""
+                draw(render_lines())
+            elif key in {"\r", "\n"}:
+                if not selected_indices:
+                    state["error"] = "Select at least one option."
+                    draw(render_lines())
+                    continue
+                sys.stdout.write("\x1b[2J\x1b[H\n\x1b[?25h")
+                sys.stdout.flush()
+                return [options[index][1] for index in sorted(selected_indices)]
+            elif key in {"q", "\x03"}:
+                sys.stdout.write("\x1b[2J\x1b[H\n\x1b[?25h")
+                sys.stdout.flush()
+                raise WizardCancelled()
+    finally:
+        termios_module.tcsetattr(fd, termios_module.TCSADRAIN, original)
+        sys.stdout.write("\x1b[?25h")
+        sys.stdout.flush()
+
+
 def _default_select_one(
     title: str,
     options: Sequence[tuple[str, T]],
@@ -780,6 +902,127 @@ def _default_select_one(
     return application.run()
 
 
+def _default_select_many(
+    title: str,
+    options: Sequence[tuple[str, T]],
+    help_text: str | None = None,
+    descriptions: Mapping[T, str] | None = None,
+) -> list[T]:
+    """Select one or more options with an inline keyboard-driven menu."""
+
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        return _fallback_select_many(title, options, help_text, descriptions)
+
+    try:
+        from prompt_toolkit.application import Application
+        from prompt_toolkit.key_binding import KeyBindings
+        from prompt_toolkit.layout import Layout
+        from prompt_toolkit.layout.containers import HSplit, Window
+        from prompt_toolkit.layout.controls import FormattedTextControl
+        from prompt_toolkit.styles import Style
+    except ModuleNotFoundError:
+        return _fallback_select_many(title, options, help_text, descriptions)
+
+    if not options:
+        raise ValueError("Expected at least one option.")
+
+    state: dict[str, object] = {"index": 0, "error": ""}
+    selected_indices: set[int] = set()
+
+    def render_menu() -> list[tuple[str, str]]:
+        fragments: list[tuple[str, str]] = [("class:title", f"{title}\n")]
+        if help_text:
+            fragments.append(("class:hint", f"{help_text}\n"))
+        if state["error"]:
+            fragments.append(("class:error", f"{state['error']}\n"))
+        fragments.append(("class:hint", "\n"))
+        active_index = cast(int, state["index"])
+        active_description = _active_menu_description(
+            options,
+            index=active_index,
+            descriptions=descriptions,
+        )
+        for index, (label, _) in enumerate(options):
+            is_active = index == active_index
+            is_selected = index in selected_indices
+            cursor = ">" if is_active else " "
+            marker = "[x]" if is_selected else "[ ]"
+            marker_style = "class:marker-active" if is_selected else "class:item"
+            label_style = "class:active" if is_active else "class:item"
+            fragments.append((label_style, f"{cursor} "))
+            fragments.append((marker_style, f"{marker} "))
+            fragments.append((label_style, label))
+            if is_active and active_description:
+                fragments.append(("class:detail", f" - {active_description}"))
+            fragments.append(("", "\n"))
+        fragments.append(
+            (
+                "class:hint",
+                "\n[↑↓] move  [space] toggle  [enter] confirm  [q] cancel\n\n",
+            )
+        )
+        return fragments
+
+    control = FormattedTextControl(render_menu, focusable=True)
+    bindings = KeyBindings()
+
+    @bindings.add("up")
+    def _move_up(event) -> None:
+        state["index"] = (cast(int, state["index"]) - 1) % len(options)
+        state["error"] = ""
+        event.app.invalidate()
+
+    @bindings.add("down")
+    def _move_down(event) -> None:
+        state["index"] = (cast(int, state["index"]) + 1) % len(options)
+        state["error"] = ""
+        event.app.invalidate()
+
+    @bindings.add("space")
+    def _toggle(event) -> None:
+        index = cast(int, state["index"])
+        if index in selected_indices:
+            selected_indices.remove(index)
+        else:
+            selected_indices.add(index)
+        state["error"] = ""
+        event.app.invalidate()
+
+    @bindings.add("enter")
+    def _accept(event) -> None:
+        if not selected_indices:
+            state["error"] = "Select at least one option."
+            event.app.invalidate()
+            return
+        event.app.exit(
+            result=[options[index][1] for index in sorted(selected_indices)]
+        )
+
+    @bindings.add("q")
+    @bindings.add("c-c")
+    def _abort(event) -> None:
+        event.app.exit(exception=WizardCancelled())
+
+    application: Application[list[T]] = Application(
+        layout=Layout(HSplit([Window(control, always_hide_cursor=True)])),
+        key_bindings=bindings,
+        mouse_support=False,
+        full_screen=False,
+        style=Style.from_dict(
+            {
+                "title": "bold #ffffff",
+                "item": "#b8b8b8",
+                "active": "bold #ffffff",
+                "marker-active": f"bold {THEME.accent}",
+                "hint": "#7a7a7a",
+                "detail": "#d8d8d8",
+                "error": "#ffd166",
+            }
+        ),
+    )
+    return application.run()
+
+
 def _default_confirm(label: str, default: bool) -> bool:
     """Confirm one choice with the inline menu helper."""
 
@@ -800,6 +1043,7 @@ class CliWizard:
         console: Console | None = None,
         prompt_text: PromptText | None = None,
         select_one: SelectPrompt[object] | None = None,
+        select_many: MultiSelectPrompt[object] | None = None,
         confirm: ConfirmPrompt | None = None,
         target: Path | None = None,
         banner_style: BannerStyle = "classic",
@@ -808,6 +1052,7 @@ class CliWizard:
         self._console = console or Console()
         self._prompt_text = prompt_text or _default_prompt_text
         self._select_one = select_one or _default_select_one
+        self._select_many = select_many or _default_select_many
         self._confirm = confirm or _default_confirm
         self._target = target or default_sync_materialization_root()
         self._banner_style = banner_style
@@ -844,6 +1089,30 @@ class CliWizard:
         return cast(
             T,
             self._select_one(
+                title,
+                cast(Sequence[tuple[str, object]], options),
+                help_text,
+                object_descriptions,
+            ),
+        )
+
+    def _select_multi(
+        self,
+        title: str,
+        options: Sequence[tuple[str, T]],
+        help_text: str | None = None,
+        descriptions: Mapping[T, str] | None = None,
+    ) -> list[T]:
+        """Return one or more typed selections from the generic menu helper."""
+
+        object_descriptions = (
+            cast(Mapping[object, str], descriptions)
+            if descriptions is not None
+            else None
+        )
+        return cast(
+            list[T],
+            self._select_many(
                 title,
                 cast(Sequence[tuple[str, object]], options),
                 help_text,
@@ -930,96 +1199,74 @@ class CliWizard:
             self._console.print("No query entered. Exiting.", style="yellow")
             return None
 
+        selection_profile = DEFAULT_INSTALL_SELECTION_PROFILE
+        interaction_mode = DEFAULT_INSTALL_INTERACTION_MODE
+        options = build_workflow_options(
+            prefer=selection_profile,
+            interaction_mode=interaction_mode,
+        )
+
         while True:
             if skip_initial_separator:
                 skip_initial_separator = False
             else:
                 self._print_step_separator()
-            selection_profile = self._select(
-                "Selection profile",
-                _with_return_option(PROFILE_OPTIONS),
-                "Choose how candidates should be ranked.",
-            )
-            if selection_profile == RETURN_OPTION_VALUE:
+
+            destination = self._prompt_install_destination()
+            if destination is None:
                 self._print_step_separator()
                 query = self._prompt_install_query()
                 if not query:
                     self._console.print("No query entered. Exiting.", style="yellow")
                     return None
                 continue
+            agents, scope, export_root, export_roots = destination
 
+            retry_query = False
             while True:
-                retry_query = False
                 self._print_step_separator()
-                interaction_mode = self._select(
-                    "Interaction mode",
-                    _with_return_option(INTERACTION_OPTIONS),
-                    "Choose how ambiguity should be handled.",
-                )
-                if interaction_mode == RETURN_OPTION_VALUE:
-                    break
-
-                self._print_step_separator()
-                destination = self._prompt_install_destination()
-                if destination is None:
-                    break
-                agents, scope, export_root, export_roots = destination
-
-                options = build_workflow_options(
-                    prefer=str(selection_profile),
-                    interaction_mode=interaction_mode,
-                )
-
-                while True:
-                    try:
-                        resolve_result = self._resolve(query=query, options=options)
-                    except DiscoveryNoCandidatesError as exc:
-                        self._print_step_separator()
-                        self._print_error(exc)
-                        self._print_step_separator()
-                        query = self._prompt_install_query()
-                        if not query:
-                            self._console.print(
-                                "No query entered. Exiting.",
-                                style="yellow",
-                            )
-                            return None
-                        retry_query = True
-                        break
-
-                    if resolve_result is None:
-                        break
-
+                try:
+                    resolve_result = self._resolve(query=query, options=options)
+                except DiscoveryNoCandidatesError as exc:
                     self._print_step_separator()
-                    self._console.print(
-                        _render_plan_panel(
-                            resolve_result,
-                            selection_profile=str(selection_profile),
-                            interaction_mode=interaction_mode,
-                            scope=scope,
-                            export_roots=export_roots,
+                    self._print_error(exc)
+                    self._print_step_separator()
+                    query = self._prompt_install_query()
+                    if not query:
+                        self._console.print(
+                            "No query entered. Exiting.",
+                            style="yellow",
                         )
-                    )
-                    self._print_step_separator()
-                    if not self._confirm("Proceed with installation?", True):
-                        self._console.print("Installation cancelled.", style="yellow")
                         return None
-
-                    return self._install(
-                        query=query,
-                        select_slug=resolve_result.selected_coordinate.slug
-                        if resolve_result.selected_coordinate is not None
-                        else None,
-                        agents=agents,
-                        scope=scope,
-                        export_root=export_root,
-                        options=options,
-                    )
-
-                if retry_query:
+                    retry_query = True
                     break
+
                 if resolve_result is None:
-                    continue
+                    break
+
+                self._print_step_separator()
+                self._console.print(
+                    _render_plan_panel(
+                        resolve_result,
+                        scope=scope,
+                        export_roots=export_roots,
+                    )
+                )
+                self._print_step_separator()
+                if not self._confirm("Proceed with installation?", True):
+                    self._console.print("Installation cancelled.", style="yellow")
+                    return None
+
+                return self._install(
+                    query=query,
+                    select_slug=resolve_result.selected_coordinate.slug
+                    if resolve_result.selected_coordinate is not None
+                    else None,
+                    agents=agents,
+                    scope=scope,
+                    export_root=export_root,
+                    options=options,
+                )
 
             if retry_query:
                 continue
@@ -1042,19 +1289,21 @@ class CliWizard:
         if scope == RETURN_OPTION_VALUE:
             return None
 
-        agent = self._select(
-            "Agent target",
+        selected_agents = self._select_multi(
+            "Agent targets",
             _with_return_option(AGENT_OPTIONS),
-            "Choose the agent format and root to export into.",
+            "Choose one or more agent formats and roots to export into.",
         )
-        if agent == RETURN_OPTION_VALUE:
+        if RETURN_OPTION_VALUE in selected_agents:
             return None
 
-        agents = (
-            detect_available_agent_targets()
-            if agent == "detected"
-            else [str(agent)]
-        )
+        agents: list[str] = []
+        for agent in selected_agents:
+            if agent == "detected":
+                agents.extend(detect_available_agent_targets())
+            else:
+                agents.append(str(agent))
+        agents = list(dict.fromkeys(agents))
         if not agents:
             self._console.print(
                 "No supported agent skill roots were detected.",
