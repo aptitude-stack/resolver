@@ -77,33 +77,44 @@ class FakeWorkflowService:
 def _select_direct_install_option(select_calls: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         select_calls.append(title)
-        if title == "Selection profile":
-            return "balanced"
-        if title == "Interaction mode":
-            return "auto"
         if title == "Install scope":
             return "project"
-        if title == "Agent target":
-            return "codex"
         return "auto"
 
     return select_one
+
+
+def _select_direct_install_agent_targets(
+    select_calls: list[str],
+    agents: list[str] | None = None,
+) -> Callable[..., list[str]]:
+    def select_many(title: str, *_args: object, **_kwargs: object) -> list[str]:
+        select_calls.append(title)
+        if title == "Agent targets":
+            return list(agents or ["codex"])
+        return []
+
+    return select_many
 
 
 def _select_direct_install_event(events: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         events.append(f"select:{title}")
-        if title == "Selection profile":
-            return "balanced"
-        if title == "Interaction mode":
-            return "auto"
         if title == "Install scope":
             return "project"
-        if title == "Agent target":
-            return "codex"
         return "auto"
 
     return select_one
+
+
+def _select_direct_install_agent_event(events: list[str]) -> Callable[..., list[str]]:
+    def select_many(title: str, *_args: object, **_kwargs: object) -> list[str]:
+        events.append(f"select-many:{title}")
+        if title == "Agent targets":
+            return ["codex"]
+        return []
+
+    return select_many
 
 
 def _record_separator(
@@ -381,7 +392,7 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     )
     transcript = StringIO()
     answers = iter(["lint"])
-    selections = iter(["install", "balanced", "auto", "project", "codex", "js-lint"])
+    selections = iter(["install", "project", "js-lint"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -389,6 +400,7 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -407,6 +419,57 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     assert str(Path("aptitude_state") / "skills" / "js-lint" / "2.1.0") not in output
 
 
+def test_cli_wizard_installs_to_multiple_selected_agent_targets() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    selections = iter(["install", "project"])
+    confirmations = iter([True])
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "postman primary skill",
+        select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex", "cursor"],
+        confirm=lambda *_, **__: next(confirmations),
+    )
+
+    wizard.run()
+
+    assert service.install_calls[0]["agents"] == ["codex", "cursor"]
+
+
+def test_cli_wizard_multi_agent_selection_expands_detected_targets(monkeypatch) -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    transcript = StringIO()
+    selections = iter(["install", "project"])
+    confirmations = iter([True])
+    monkeypatch.setattr(
+        wizard_module,
+        "detect_available_agent_targets",
+        lambda: ["codex", "cursor"],
+    )
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "postman primary skill",
+        select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["detected", "codex"],
+        confirm=lambda *_, **__: next(confirmations),
+    )
+
+    wizard.run()
+
+    assert service.install_calls[0]["agents"] == ["codex", "cursor"]
+
+
 def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
@@ -414,7 +477,7 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
     )
     transcript = StringIO()
     answers = iter(["python lint"])
-    selections = iter(["install", "balanced", "auto", "project", "codex"])
+    selections = iter(["install", "project"])
     confirmations = iter([True])
 
     @contextmanager
@@ -432,6 +495,7 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
             console=Console(file=transcript, force_terminal=False, color_system=None),
             prompt_text=lambda *_, **__: next(answers),
             select_one=lambda *_, **__: next(selections),
+            select_many=lambda *_, **__: ["codex"],
             confirm=lambda *_, **__: next(confirmations),
         )
 
@@ -614,9 +678,9 @@ def test_format_plan_summary_row_aligns_one_label_value_pair() -> None:
     )
     assert (
         wizard_module._format_plan_summary_row(
-            ("Interaction", "auto"),
+            ("Scope", "project"),
         )
-        == "Interaction    : auto"
+        == "Scope          : project"
     )
 
 
@@ -654,7 +718,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["balanced", "auto", "project", "codex"])
+    selections = iter(["project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -662,6 +726,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -673,7 +738,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
+def test_cli_wizard_starts_at_install_scope_with_initial_query() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
@@ -697,6 +762,7 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=prompt_text,
         select_one=_select_direct_install_option(select_calls),
+        select_many=_select_direct_install_agent_targets(select_calls),
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -705,12 +771,7 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     output = transcript.getvalue()
     assert "Choose a flow" not in output
     assert prompt_calls == []
-    assert select_calls[:4] == [
-        "Selection profile",
-        "Interaction mode",
-        "Install scope",
-        "Agent target",
-    ]
+    assert select_calls[:2] == ["Install scope", "Agent targets"]
     assert service.resolve_calls[0]["query"] == "postman primary skill"
     options = cast(InstallWorkflowOptions, service.resolve_calls[0]["options"])
     assert options.selection_profile == "balanced"
@@ -718,7 +779,7 @@ def test_cli_wizard_starts_at_selection_profile_with_initial_query() -> None:
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_direct_install_flow_starts_at_selection_profile_without_separator() -> (
+def test_cli_wizard_direct_install_flow_starts_at_install_scope_without_separator() -> (
     None
 ):
     service = FakeWorkflowService(
@@ -734,6 +795,7 @@ def test_cli_wizard_direct_install_flow_starts_at_selection_profile_without_sepa
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: "",
         select_one=_select_direct_install_event(events),
+        select_many=_select_direct_install_agent_event(events),
         confirm=lambda *_, **__: next(confirmations),
     )
     original_print_step_separator = wizard._print_step_separator
@@ -743,7 +805,7 @@ def test_cli_wizard_direct_install_flow_starts_at_selection_profile_without_sepa
 
     wizard.run(initial_flow="install", initial_query="postman primary skill")
 
-    assert events[0] == "select:Selection profile"
+    assert events[0] == "select:Install scope"
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
@@ -801,7 +863,7 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
     transcript = StringIO()
     prompt_calls: list[tuple[str, str | None, bool]] = []
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "balanced", "auto", "project", "codex"])
+    selections = iter(["install", "project"])
     confirmations = iter([True])
 
     def prompt_text(
@@ -818,6 +880,7 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=prompt_text,
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -826,14 +889,14 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
     assert prompt_calls == [("Install query", None, True)]
 
 
-def test_cli_wizard_return_from_profile_menu_reopens_query_prompt() -> None:
+def test_cli_wizard_return_from_install_scope_reopens_query_prompt() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
     answers = iter(["Postman", "Postman Primary Skill"])
-    selections = iter(["install", "__return__", "balanced", "auto", "project", "codex"])
+    selections = iter(["install", "__return__", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -841,6 +904,7 @@ def test_cli_wizard_return_from_profile_menu_reopens_query_prompt() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -856,7 +920,7 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "balanced", "auto", "project", "codex"])
+    selections = iter(["install", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -864,6 +928,7 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
 
@@ -880,14 +945,8 @@ def test_cli_wizard_retries_install_query_after_no_matches() -> None:
     selections = iter(
         [
             "install",
-            "balanced",
-            "auto",
             "project",
-            "codex",
-            "balanced",
-            "auto",
             "project",
-            "codex",
         ]
     )
     confirmations = iter([True])
@@ -904,6 +963,7 @@ def test_cli_wizard_retries_install_query_after_no_matches() -> None:
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
         select_one=lambda *_, **__: next(selections),
+        select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
     service.resolve_query = resolve_query  # type: ignore[method-assign]
@@ -973,12 +1033,29 @@ def test_default_select_one_falls_back_to_number_prompt_when_not_a_tty(
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
 
     result = wizard_module._default_select_one(
-        "Selection profile",
-        [("Balanced", "balanced"), ("High trust", "high-trust")],
-        "Choose how candidates should be ranked.",
+        "Install scope",
+        [("Project", "project"), ("Global", "global")],
+        "Choose where the selected agent should see this skill.",
     )
 
-    assert result == "high-trust"
+    assert result == "global"
+
+
+def test_default_select_many_falls_back_to_comma_separated_number_prompt(
+    monkeypatch,
+) -> None:
+    responses = iter(["1, 2"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(responses))
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
+
+    result = wizard_module._default_select_many(
+        "Agent targets",
+        [("Codex", "codex"), ("Cursor", "cursor"), ("Return", "__return__")],
+        "Choose one or more agent formats and roots to export into.",
+    )
+
+    assert result == ["codex", "cursor"]
 
 
 def test_fallback_select_one_uses_number_prompt_when_raw_terminal_control_is_unavailable(
@@ -992,12 +1069,31 @@ def test_fallback_select_one_uses_number_prompt_when_raw_terminal_control_is_una
     monkeypatch.setattr(wizard_module, "tty", None)
 
     result = wizard_module._fallback_select_one(
-        "Selection profile",
-        [("Balanced", "balanced"), ("High trust", "high-trust")],
-        "Choose how candidates should be ranked.",
+        "Install scope",
+        [("Project", "project"), ("Global", "global")],
+        "Choose where the selected agent should see this skill.",
     )
 
-    assert result == "high-trust"
+    assert result == "global"
+
+
+def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_unavailable(
+    monkeypatch,
+) -> None:
+    responses = iter(["1 2"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(responses))
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module, "termios", None)
+    monkeypatch.setattr(wizard_module, "tty", None)
+
+    result = wizard_module._fallback_select_many(
+        "Agent targets",
+        [("Codex", "codex"), ("Cursor", "cursor")],
+        "Choose one or more agent formats and roots to export into.",
+    )
+
+    assert result == ["codex", "cursor"]
 
 
 def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
@@ -1411,7 +1507,7 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
             captured["application_kwargs"] = kwargs
 
         def run(self) -> str:
-            return "auto"
+            return "project"
 
     setattr(prompt_toolkit_application, "Application", FakeApplication)
 
@@ -1472,17 +1568,108 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
     monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", prompt_toolkit_styles)
 
     result = wizard_module._default_select_one(
-        "Interaction mode",
-        [("Auto", "auto"), ("Always ask", "always")],
-        "Choose how ambiguity should be handled.",
+        "Install scope",
+        [("Project", "project"), ("Global", "global")],
+        "Choose where the selected agent should see this skill.",
     )
 
     render_menu = cast(Callable[[], list[tuple[str, str]]], captured["control"])
     fragments = render_menu()
-    assert result == "auto"
+    assert result == "project"
     assert fragments[-1] == (
         "class:hint",
         "\n[↑↓] move  [enter] confirm  [q] cancel\n\n",
+    )
+
+
+def test_default_select_many_prompt_toolkit_shows_toggle_key_hint(monkeypatch) -> None:
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: True)
+
+    prompt_toolkit_application = ModuleType("prompt_toolkit.application")
+    captured: dict[str, object] = {}
+
+    class FakeApplication:
+        def __init__(self, **kwargs) -> None:
+            captured["application_kwargs"] = kwargs
+
+        def run(self) -> list[str]:
+            return ["codex", "cursor"]
+
+    setattr(prompt_toolkit_application, "Application", FakeApplication)
+
+    prompt_toolkit_key_binding = ModuleType("prompt_toolkit.key_binding")
+    binding_calls: list[tuple[str, ...]] = []
+
+    class FakeKeyBindings:
+        def add(self, *keys):
+            binding_calls.append(keys)
+
+            def decorator(func):
+                return func
+
+            return decorator
+
+    setattr(prompt_toolkit_key_binding, "KeyBindings", FakeKeyBindings)
+
+    prompt_toolkit_layout = ModuleType("prompt_toolkit.layout")
+    setattr(prompt_toolkit_layout, "Layout", lambda container, **_: container)
+
+    prompt_toolkit_containers = ModuleType("prompt_toolkit.layout.containers")
+    setattr(prompt_toolkit_containers, "HSplit", lambda children, **_: children)
+    setattr(prompt_toolkit_containers, "Window", lambda control, **_: control)
+
+    prompt_toolkit_controls = ModuleType("prompt_toolkit.layout.controls")
+
+    def fake_formatted_text_control(render_menu, **kwargs):
+        captured["control"] = render_menu
+        return render_menu
+
+    setattr(
+        prompt_toolkit_controls,
+        "FormattedTextControl",
+        fake_formatted_text_control,
+    )
+
+    prompt_toolkit_styles = ModuleType("prompt_toolkit.styles")
+    setattr(
+        prompt_toolkit_styles,
+        "Style",
+        SimpleNamespace(from_dict=lambda style_map: style_map),
+    )
+
+    monkeypatch.setitem(
+        sys.modules, "prompt_toolkit.application", prompt_toolkit_application
+    )
+    monkeypatch.setitem(
+        sys.modules, "prompt_toolkit.key_binding", prompt_toolkit_key_binding
+    )
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.layout", prompt_toolkit_layout)
+    monkeypatch.setitem(
+        sys.modules,
+        "prompt_toolkit.layout.containers",
+        prompt_toolkit_containers,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "prompt_toolkit.layout.controls",
+        prompt_toolkit_controls,
+    )
+    monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", prompt_toolkit_styles)
+
+    result = wizard_module._default_select_many(
+        "Agent targets",
+        [("Codex", "codex"), ("Cursor", "cursor")],
+        "Choose one or more agent formats and roots to export into.",
+    )
+
+    render_menu = cast(Callable[[], list[tuple[str, str]]], captured["control"])
+    fragments = render_menu()
+    assert result == ["codex", "cursor"]
+    assert ("space",) in binding_calls
+    assert fragments[-1] == (
+        "class:hint",
+        "\n[↑↓] move  [space] toggle  [enter] confirm  [q] cancel\n\n",
     )
 
 
