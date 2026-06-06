@@ -240,6 +240,9 @@ def _effective_selection_preferences_from_layers(
     effective_interaction_mode = default_preferences.interaction_mode
     effective_interaction_source = "default"
     effective_interaction_error_source = "default"
+    effective_candidate_limit = default_preferences.candidate_limit
+    effective_candidate_limit_source = "default"
+    effective_candidate_limit_error_source = "default"
 
     for layer in layers:
         selection_config = layer.selection
@@ -253,20 +256,28 @@ def _effective_selection_preferences_from_layers(
             effective_interaction_mode = selection_config.interaction_mode
             effective_interaction_source = layer.source
             effective_interaction_error_source = layer.label
+        if selection_config.candidate_limit is not None:
+            effective_candidate_limit = selection_config.candidate_limit
+            effective_candidate_limit_source = layer.source
+            effective_candidate_limit_error_source = layer.label
 
     try:
         return SelectionPreferences(
             profile=effective_profile,
             interaction_mode=effective_interaction_mode,
+            candidate_limit=effective_candidate_limit,
             profile_source=effective_profile_source,
             interaction_mode_source=effective_interaction_source,
+            candidate_limit_source=effective_candidate_limit_source,
         )
     except ValueError as exc:
-        source = (
-            effective_profile_error_source
-            if "profile" in str(exc).lower()
-            else effective_interaction_error_source
-        )
+        error = str(exc).lower()
+        if "profile" in error:
+            source = effective_profile_error_source
+        elif "interaction" in error:
+            source = effective_interaction_error_source
+        else:
+            source = effective_candidate_limit_error_source
         raise InvalidResolverConfigurationError(source, str(exc)) from exc
 
 
@@ -375,8 +386,10 @@ def build_effective_policy_report(
         effective_selection=SelectionConfigSnapshotDto(
             profile=selection.profile,
             interaction_mode=selection.interaction_mode,
+            candidate_limit=selection.candidate_limit,
             profile_source=selection.profile_source,
             interaction_mode_source=selection.interaction_mode_source,
+            candidate_limit_source=selection.candidate_limit_source,
         ),
         effective_policy=PolicyConfigSnapshotDto(
             source=policy.source,
@@ -419,6 +432,7 @@ def _selection_snapshot_from_config(
     return SelectionConfigSnapshotDto(
         profile=config.profile,
         interaction_mode=config.interaction_mode,
+        candidate_limit=config.candidate_limit,
     )
 
 

@@ -34,6 +34,7 @@ from aptitude_resolver.lockfile import Lockfile, build_lockfile
 from aptitude_resolver.resolution.graph import resolve_recursive_graph
 from aptitude_resolver.resolution.solver import (
     RegistryCandidateVersionPort,
+    limit_candidates_for_prompt,
     resolve_candidate_versions,
     select_final_candidate,
 )
@@ -118,6 +119,7 @@ class PlanSkillResolutionQuery:
                     data={
                         "profile": self._selection_preferences.profile,
                         "interaction_mode": effective_interaction_mode,
+                        "candidate_limit": self._selection_preferences.candidate_limit,
                         "profile_source": self._selection_preferences.profile_source,
                         "interaction_mode_source": (
                             "request"
@@ -171,10 +173,15 @@ class PlanSkillResolutionQuery:
             candidates = ranked_candidates
             trace.extend(selection.trace)
             if selection.selected_candidate is None or selection.selection_mode is None:
+                visible_candidates, limit_trace = limit_candidates_for_prompt(
+                    candidates,
+                    candidate_limit=self._selection_preferences.candidate_limit,
+                )
+                trace.extend(limit_trace)
                 return SelectionRequiredResult(
                     requested_query=request.query,
                     requested_version=request.version,
-                    candidates=candidates,
+                    candidates=visible_candidates,
                     trace=trace,
                 )
             candidate = selection.selected_candidate

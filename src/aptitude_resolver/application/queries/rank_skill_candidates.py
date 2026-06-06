@@ -76,6 +76,7 @@ class RankSkillCandidatesQuery:
                     data={
                         "profile": self._selection_preferences.profile,
                         "interaction_mode": effective_interaction_mode,
+                        "candidate_limit": self._selection_preferences.candidate_limit,
                         "profile_source": self._selection_preferences.profile_source,
                         "interaction_mode_source": (
                             "request"

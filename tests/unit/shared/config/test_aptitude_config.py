@@ -27,6 +27,7 @@ def test_load_aptitude_config_reads_selection_section(tmp_path) -> None:
 [selection]
 profile = "low-cost"
 interaction_mode = "always"
+candidate_limit = 7
 """.strip(),
         encoding="utf-8",
     )
@@ -37,6 +38,7 @@ interaction_mode = "always"
     assert config.selection == SelectionConfig(
         profile="low-cost",
         interaction_mode="always",
+        candidate_limit=7,
     )
 
 
@@ -166,13 +168,20 @@ def test_read_env_selection_overrides_reads_selection_fields() -> None:
         {
             "APTITUDE_PREFER": "high-trust",
             "APTITUDE_INTERACTION_MODE": "never",
+            "APTITUDE_CANDIDATE_LIMIT": "9",
         }
     )
 
     assert config == SelectionConfig(
         profile="high-trust",
         interaction_mode="never",
+        candidate_limit=9,
     )
+
+
+def test_read_env_selection_overrides_rejects_invalid_candidate_limit() -> None:
+    with pytest.raises(ValueError, match="APTITUDE_CANDIDATE_LIMIT"):
+        read_env_selection_overrides({"APTITUDE_CANDIDATE_LIMIT": "0"})
 
 
 def test_read_env_execution_overrides_reads_concurrency_fields() -> None:
