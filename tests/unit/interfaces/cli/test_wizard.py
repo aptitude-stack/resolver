@@ -889,27 +889,51 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
     assert prompt_calls == [("Install query", None, True)]
 
 
-def test_cli_wizard_return_from_install_scope_reopens_query_prompt() -> None:
+def test_cli_wizard_install_destination_excludes_return_options() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
-    answers = iter(["Postman", "Postman Primary Skill"])
-    selections = iter(["install", "__return__", "project"])
+    answers = iter(["Postman Primary Skill"])
+    selections = iter(["install", "project"])
     confirmations = iter([True])
+    install_scope_options: list[str] = []
+    agent_target_options: list[str] = []
+
+    def select_one(
+        title: str,
+        options: Sequence[tuple[str, object]],
+        *_args: object,
+        **_kwargs: object,
+    ) -> object:
+        if title == "Install scope":
+            install_scope_options.extend(label for label, _ in options)
+        return next(selections)
+
+    def select_many(
+        title: str,
+        options: Sequence[tuple[str, object]],
+        *_args: object,
+        **_kwargs: object,
+    ) -> list[str]:
+        if title == "Agent targets":
+            agent_target_options.extend(label for label, _ in options)
+        return ["codex"]
 
     wizard = CliWizard(
         workflow_service=service,
         console=Console(file=transcript, force_terminal=False, color_system=None),
         prompt_text=lambda *_, **__: next(answers),
-        select_one=lambda *_, **__: next(selections),
-        select_many=lambda *_, **__: ["codex"],
+        select_one=select_one,
+        select_many=select_many,
         confirm=lambda *_, **__: next(confirmations),
     )
 
     wizard.run()
 
+    assert "Return" not in install_scope_options
+    assert "Return" not in agent_target_options
     assert service.install_calls[0]["query"] == "Postman Primary Skill"
 
 
