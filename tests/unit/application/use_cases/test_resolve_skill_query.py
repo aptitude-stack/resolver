@@ -208,6 +208,60 @@ def test_query_use_case_returns_selection_required_for_interactive_ambiguity() -
     assert registry_client.metadata_calls == []
 
 
+def test_query_use_case_limits_interactive_candidates_from_selection_preferences() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["python"] = [
+        "python-lint",
+        "python-types",
+        "python-tests",
+    ]
+    registry_client.versions_by_slug["python-lint"] = [
+        _version_summary(
+            "python-lint",
+            "1.2.3",
+            name="Python Lint",
+            tags=["python", "lint"],
+            token_estimate=100,
+        )
+    ]
+    registry_client.versions_by_slug["python-types"] = [
+        _version_summary(
+            "python-types",
+            "1.0.0",
+            name="Python Types",
+            tags=["python", "typing"],
+            token_estimate=200,
+        )
+    ]
+    registry_client.versions_by_slug["python-tests"] = [
+        _version_summary(
+            "python-tests",
+            "1.0.0",
+            name="Python Tests",
+            tags=["python", "testing"],
+            token_estimate=300,
+        )
+    ]
+
+    result = ResolveSkillQueryUseCase(
+        registry_client,
+        selection_preferences=SelectionPreferences(candidate_limit=2),
+    ).execute(
+        ResolveQueryRequestDto(
+            query="python",
+            interaction_mode="auto",
+            prompt_capable=True,
+        )
+    )
+
+    assert result.status == "selection_required"
+    assert [item.slug for item in result.candidates] == [
+        "python-lint",
+        "python-types",
+    ]
+    assert any(item.data.get("candidate_limit") == 2 for item in result.trace)
+
+
 def test_query_use_case_returns_interactive_candidate_details_from_core_ranking() -> (
     None
 ):

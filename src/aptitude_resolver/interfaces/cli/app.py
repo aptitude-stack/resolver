@@ -1009,6 +1009,8 @@ def _render_layer_details(layer) -> list[str]:
             lines.append(f"profile {selection.profile}")
         if selection.interaction_mode is not None:
             lines.append(f"interaction {selection.interaction_mode}")
+        if selection.candidate_limit is not None:
+            lines.append(f"candidates {selection.candidate_limit}")
 
     policy = layer.policy
     if policy is not None:
@@ -1086,6 +1088,10 @@ def _format_policy_report(report: EffectivePolicyReportDto) -> str:
             f"interaction mode: {report.effective_selection.interaction_mode} "
             f"(from: {_source_label(report.effective_selection.interaction_mode_source)})"
         ),
+        (
+            f"candidate limit: {report.effective_selection.candidate_limit} "
+            f"(from: {_source_label(report.effective_selection.candidate_limit_source)})"
+        ),
         "",
         "Effective Policy",
         separator,
@@ -1152,6 +1158,11 @@ def _policy_summary_grid(report: EffectivePolicyReportDto) -> Table:
     grid.add_row(
         "From",
         _source_label(report.effective_selection.interaction_mode_source),
+    )
+    grid.add_row("Candidates", str(report.effective_selection.candidate_limit))
+    grid.add_row(
+        "From",
+        _source_label(report.effective_selection.candidate_limit_source),
     )
     return grid
 

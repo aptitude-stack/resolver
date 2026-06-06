@@ -1398,7 +1398,7 @@ class CliWizard:
                         version=None,
                         select_slug=None,
                         interaction_mode=None,
-                        prompt_capable=False,
+                        prompt_capable=True,
                         selection_source="wizard",
                         options=options,
                     )
@@ -1439,7 +1439,7 @@ class CliWizard:
                         select_slug=str(chosen_slug),
                         interaction_mode="never",
                         prompt_capable=False,
-                        selection_source="wizard",
+                        selection_source="interactive",
                         options=options,
                     )
         except Exception:

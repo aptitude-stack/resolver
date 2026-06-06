@@ -407,7 +407,9 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     wizard.run()
 
     assert len(service.resolve_calls) == 2
+    assert service.resolve_calls[0]["prompt_capable"] is True
     assert service.resolve_calls[1]["select_slug"] == "js-lint"
+    assert service.resolve_calls[1]["selection_source"] == "interactive"
     assert service.install_calls[0]["query"] == "lint"
     assert service.install_calls[0]["select_slug"] == "js-lint"
     assert service.install_calls[0]["agents"] == ["codex"]

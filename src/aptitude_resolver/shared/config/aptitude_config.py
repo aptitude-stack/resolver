@@ -20,6 +20,7 @@ class SelectionConfig(BaseModel):
 
     profile: str | None = None
     interaction_mode: str | None = None
+    candidate_limit: int | None = Field(default=None, ge=1)
 
 
 class PolicyConfig(BaseModel):
@@ -191,12 +192,20 @@ def read_env_selection_overrides(
     env_map = os.environ if env is None else env
     profile = env_map.get("APTITUDE_PREFER")
     interaction_mode = env_map.get("APTITUDE_INTERACTION_MODE")
-    if profile is None and interaction_mode is None:
+    candidate_limit = env_map.get("APTITUDE_CANDIDATE_LIMIT")
+    if profile is None and interaction_mode is None and candidate_limit is None:
         return None
-    return SelectionConfig(
-        profile=profile,
-        interaction_mode=interaction_mode,
-    )
+    try:
+        return SelectionConfig(
+            profile=profile,
+            interaction_mode=interaction_mode,
+            candidate_limit=None if candidate_limit is None else int(candidate_limit),
+        )
+    except (ValueError, ValidationError) as exc:
+        raise ValueError(
+            "Invalid environment selection config: "
+            "APTITUDE_CANDIDATE_LIMIT must be an integer greater than or equal to 1."
+        ) from exc
 
 
 def read_env_execution_overrides(
