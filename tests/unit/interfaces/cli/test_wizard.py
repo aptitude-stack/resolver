@@ -1669,12 +1669,12 @@ def test_default_select_many_prompt_toolkit_shows_toggle_key_hint(monkeypatch) -
     fragments = render_menu()
     assert result == ["codex", "cursor"]
     assert ("space",) in binding_calls
-    assert ("class:item", "▫ ") in fragments
+    assert ("class:item", "□ ") in fragments
     binding_handlers[("space",)](
         SimpleNamespace(app=SimpleNamespace(invalidate=lambda: None))
     )
     fragments = render_menu()
-    assert ("class:marker-active", "▪ ") in fragments
+    assert ("class:marker-active", "■ ") in fragments
     assert fragments[-1] == (
         "class:hint",
         "\n[↑↓] move  [space] toggle  [enter] confirm  [q] cancel\n\n",
@@ -1711,8 +1711,8 @@ def test_render_choice_line_marks_active_option_with_filled_bullet() -> None:
 
 
 def test_render_multi_select_marker_uses_compact_squares() -> None:
-    assert wizard_module._render_multi_select_marker(selected=False) == "▫"
-    assert wizard_module._render_multi_select_marker(selected=True) == "▪"
+    assert wizard_module._render_multi_select_marker(selected=False) == "□"
+    assert wizard_module._render_multi_select_marker(selected=True) == "■"
 
 
 def test_cli_wizard_exits_cleanly_when_selection_is_cancelled() -> None:
