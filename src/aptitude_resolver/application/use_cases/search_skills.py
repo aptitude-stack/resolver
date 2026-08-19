@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from aptitude_resolver.application.dto import SearchSkillsRequestDto, SearchSkillsResultDto
+from aptitude_resolver.application.dto import (
+    SearchSkillsRequestDto,
+    SearchSkillsResultDto,
+)
 from aptitude_resolver.application.queries import RankSkillCandidatesQuery
 from aptitude_resolver.application.use_cases.resolution_mapping import (
     candidate_to_dto,

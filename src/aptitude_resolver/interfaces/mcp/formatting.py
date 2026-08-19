@@ -177,8 +177,7 @@ def _format_resolve_result(result: ResolveQueryResultDto) -> str:
                 f"Graph edges: {len(result.graph.edges)}",
                 "Install order: "
                 + ", ".join(
-                    f"{item.slug}@{item.version}"
-                    for item in result.graph.install_order
+                    f"{item.slug}@{item.version}" for item in result.graph.install_order
                 ),
             ]
         )

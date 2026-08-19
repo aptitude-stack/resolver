@@ -204,7 +204,9 @@ def _final_trace_entries(
     trace: list[TraceEntry] = []
     for item in materialized_results:
         data = dict(item.trace.data)
-        data["install_path"] = str(target / "skills" / item.skill.slug / item.skill.version)
+        data["install_path"] = str(
+            target / "skills" / item.skill.slug / item.skill.version
+        )
         trace.append(
             TraceEntry(
                 stage=item.trace.stage,
@@ -365,9 +367,7 @@ def _resolve_download_worker_count(
     if artifact_count <= 0:
         return 1
     worker_count = (
-        options.concurrent_downloads
-        if options.concurrent_downloads is not None
-        else 8
+        options.concurrent_downloads if options.concurrent_downloads is not None else 8
     )
     return max(1, min(worker_count, artifact_count))
 

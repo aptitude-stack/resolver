@@ -111,7 +111,7 @@ def build_lockfile(
     effective_policy = policy_context or PolicyContext()
 
     return Lockfile(
-        version=1,
+        version=2,
         generated_at=generated_at,
         client_version=client_version,
         root=LockRoot(
@@ -120,6 +120,14 @@ def build_lockfile(
             selected_node_id=_node_id(graph.root.slug, graph.root.version),
             selection_mode=selection_mode,
         ),
+        roots=[
+            LockRoot(
+                request=requested_query,
+                requested_version=requested_version,
+                selected_node_id=_node_id(graph.root.slug, graph.root.version),
+                selection_mode=selection_mode,
+            )
+        ],
         nodes=nodes,
         edges=edges,
         install_order=install_order,
@@ -158,7 +166,8 @@ def serialize_lockfile(lockfile: Lockfile) -> str:
 def lockfile_to_dict(lockfile: Lockfile) -> dict[str, object]:
     """Convert one lockfile dataclass to a JSON-safe mapping."""
 
-    return {
+    roots = lockfile.roots or [lockfile.root]
+    payload: dict[str, object] = {
         "version": lockfile.version,
         "generated_at": lockfile.generated_at,
         "client_version": lockfile.client_version,
@@ -237,6 +246,17 @@ def lockfile_to_dict(lockfile: Lockfile) -> dict[str, object]:
             for item in lockfile.governance
         ],
     }
+    if lockfile.version >= 2:
+        payload["roots"] = [
+            {
+                "request": root.request,
+                "requested_version": root.requested_version,
+                "selected_node_id": root.selected_node_id,
+                "selection_mode": root.selection_mode,
+            }
+            for root in roots
+        ]
+    return payload
 
 
 def _node_id(slug: str, version: str) -> str:

@@ -208,7 +208,9 @@ def test_query_use_case_returns_selection_required_for_interactive_ambiguity() -
     assert registry_client.metadata_calls == []
 
 
-def test_query_use_case_limits_interactive_candidates_from_selection_preferences() -> None:
+def test_query_use_case_limits_interactive_candidates_from_selection_preferences() -> (
+    None
+):
     registry_client = FakeRegistryClient()
     registry_client.discovery_by_query["python"] = [
         "python-lint",

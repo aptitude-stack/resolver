@@ -53,7 +53,9 @@ def emit_stage_timings(
 ) -> None:
     """Emit one structured log event per recorded stage timing."""
 
-    if logger is None and os.getenv("APTITUDE_EMIT_TELEMETRY", "").strip().lower() not in {
+    if logger is None and os.getenv(
+        "APTITUDE_EMIT_TELEMETRY", ""
+    ).strip().lower() not in {
         "1",
         "true",
         "yes",

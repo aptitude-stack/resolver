@@ -10,9 +10,16 @@ from aptitude_resolver.discovery import (
     RegistryCandidatePort,
 )
 from aptitude_resolver.discovery.reranking import rerank_candidates
-from aptitude_resolver.domain.errors import DiscoveryNoCandidatesError, PolicyViolationError
+from aptitude_resolver.domain.errors import (
+    DiscoveryNoCandidatesError,
+    PolicyViolationError,
+)
 from aptitude_resolver.domain.models import DiscoveryCandidate, SearchIntent
-from aptitude_resolver.domain.policy import PolicyContext, PolicyEvaluation, SelectionPreferences
+from aptitude_resolver.domain.policy import (
+    PolicyContext,
+    PolicyEvaluation,
+    SelectionPreferences,
+)
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.governance import filter_policy_compliant_candidates
 from aptitude_resolver.resolution.solver import (
@@ -22,7 +29,9 @@ from aptitude_resolver.resolution.solver import (
 from aptitude_resolver.telemetry import TelemetryCollector, emit_stage_timings
 
 
-class RankedCandidatesRegistryPort(RegistryCandidatePort, RegistryCandidateVersionPort, Protocol):
+class RankedCandidatesRegistryPort(
+    RegistryCandidatePort, RegistryCandidateVersionPort, Protocol
+):
     """Registry operations required for candidate ranking before final selection."""
 
 
@@ -104,7 +113,9 @@ class RankSkillCandidatesQuery:
                 )
             trace.extend(governance_trace)
             if not candidates:
-                raise PolicyViolationError("All discovered candidates were rejected by policy.")
+                raise PolicyViolationError(
+                    "All discovered candidates were rejected by policy."
+                )
 
             candidates = rerank_candidates(
                 discovery_result.intent,

@@ -169,9 +169,7 @@ def render_cli_error_panel(message: str, *, stream: object | None = None) -> Pan
         return bool(stripped) and set(stripped) <= {"-", "─"}
 
     lines = [
-        line
-        for line in message.splitlines()
-        if line.strip() and not is_separator(line)
+        line for line in message.splitlines() if line.strip() and not is_separator(line)
     ]
     title = lines[0] if lines else "Aptitude error."
     body = "\n".join(lines[1:]).strip() if len(lines) > 1 else message

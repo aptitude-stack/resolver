@@ -755,9 +755,7 @@ def _fallback_select_many(
                 selected=option_index in selected_indices
             )
             description = (
-                f" - {active_description}"
-                if active and active_description
-                else ""
+                f" - {active_description}" if active and active_description else ""
             )
             lines.append(f"{cursor} {marker} {label}{description}")
         lines.append("")
@@ -1003,9 +1001,7 @@ def _default_select_many(
             state["error"] = "Select at least one option."
             event.app.invalidate()
             return
-        event.app.exit(
-            result=[options[index][1] for index in sorted(selected_indices)]
-        )
+        event.app.exit(result=[options[index][1] for index in sorted(selected_indices)])
 
     @bindings.add("q")
     @bindings.add("c-c")
@@ -1287,7 +1283,15 @@ class CliWizard:
 
     def _prompt_install_destination(
         self,
-    ) -> tuple[list[str], Literal["project", "global", "custom"], Path | None, dict[str, Path]] | None:
+    ) -> (
+        tuple[
+            list[str],
+            Literal["project", "global", "custom"],
+            Path | None,
+            dict[str, Path],
+        ]
+        | None
+    ):
         """Prompt for agent export destination using the same selector style."""
 
         scope = self._select(

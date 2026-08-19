@@ -141,7 +141,9 @@ def test_format_unexpected_error_renders_generic_failures_without_traceback() ->
 def test_render_cli_error_panel_wraps_error_without_plain_separator() -> None:
     message = support.format_cli_error(DiscoveryNoCandidatesError("Doc"))
     transcript = StringIO()
-    console = Console(file=transcript, force_terminal=False, color_system=None, width=80)
+    console = Console(
+        file=transcript, force_terminal=False, color_system=None, width=80
+    )
 
     console.print(support.render_cli_error_panel(message, stream=transcript))
 
@@ -156,7 +158,9 @@ def test_render_cli_error_panel_wraps_error_without_plain_separator() -> None:
 def test_render_cli_error_panel_falls_back_to_ascii_for_limited_encodings() -> None:
     message = support.format_cli_error(DiscoveryNoCandidatesError("Doc"))
     transcript = StringIO()
-    console = Console(file=transcript, force_terminal=False, color_system=None, width=80)
+    console = Console(
+        file=transcript, force_terminal=False, color_system=None, width=80
+    )
 
     console.print(
         support.render_cli_error_panel(

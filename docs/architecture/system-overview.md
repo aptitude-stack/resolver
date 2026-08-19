@@ -35,7 +35,7 @@ This is the flow behind:
 - `aptitude install`
 - hidden `aptitude resolve`
 
-Fresh install materialization is internal Aptitude state. The user-facing install result is an agent-ready skill export. By default, Aptitude stores downloaded artifacts under the platform cache directory and lock/plan/trace/provenance state under the platform state directory. On Windows these are `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`. Project-scope installs also write a replayable `aptitude.lock.json` to the project root.
+Fresh install materialization is internal Aptitude state. The user-facing install result is an agent-ready skill export. By default, Aptitude stores downloaded artifacts under the platform cache directory and lock/plan/trace/provenance state under the platform state directory. On Windows these are `%LOCALAPPDATA%\aptitude\cache` and `%LOCALAPPDATA%\aptitude\state`. Project-scope installs write a replayable, cumulative `aptitude.lock.json` to the project root; global-scope installs write the same cumulative lock to the Aptitude state directory. Each new install retains existing pins and adds its resolved root graph.
 
 ### Lock Replay
 

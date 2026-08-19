@@ -28,7 +28,12 @@ from aptitude_resolver.execution import ExecutionPlan
 from aptitude_resolver.application.queries.plan_skill_resolution import (
     ResolutionArtifact,
 )
-from aptitude_resolver.domain.models import DiscoveryCandidate, ResolutionGraph, SkillMetadata, VersionSummary
+from aptitude_resolver.domain.models import (
+    DiscoveryCandidate,
+    ResolutionGraph,
+    SkillMetadata,
+    VersionSummary,
+)
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.lockfile import Lockfile
@@ -161,6 +166,15 @@ def lockfile_to_dto(lockfile: Lockfile) -> LockfileDto:
             selected_node_id=lockfile.root.selected_node_id,
             selection_mode=lockfile.root.selection_mode,
         ),
+        roots=[
+            LockRootDto(
+                request=root.request,
+                requested_version=root.requested_version,
+                selected_node_id=root.selected_node_id,
+                selection_mode=root.selection_mode,
+            )
+            for root in (lockfile.roots or [lockfile.root])
+        ],
         nodes=[
             LockedSkillDto(
                 node_id=node.node_id,

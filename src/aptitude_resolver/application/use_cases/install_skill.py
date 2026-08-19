@@ -33,8 +33,14 @@ from aptitude_resolver.execution import (
     materialize_lockfile,
     write_install_debug_artifacts,
 )
-from aptitude_resolver.lockfile import Lockfile, serialize_lockfile
+from aptitude_resolver.lockfile import (
+    Lockfile,
+    load_lockfile,
+    merge_lockfiles,
+    serialize_lockfile,
+)
 from aptitude_resolver.shared.config import (
+    default_aptitude_state_dir,
     default_install_materialization_root,
     resolve_agent_install_roots,
 )
@@ -148,9 +154,12 @@ class InstallSkillUseCase:
                         )
                         for item in export_result.exported_skills
                     )
-            project_lock_path = _project_lock_path(request)
-            if project_lock_path is not None:
-                _write_project_lockfile(project_lock_path, plan.lockfile)
+            lock_path = _scope_lock_path(request)
+            lockfile = (
+                _update_scope_lockfile(lock_path, plan.lockfile)
+                if lock_path is not None
+                else plan.lockfile
+            )
             return InstallResultDto(
                 requested_query=plan.requested_query,
                 requested_version=plan.requested_version,
@@ -161,7 +170,7 @@ class InstallSkillUseCase:
                     version=plan.graph.root.version,
                 ),
                 graph=graph_to_dto(plan.graph),
-                lockfile=lockfile_to_dto(plan.lockfile),
+                lockfile=lockfile_to_dto(lockfile),
                 execution_plan=execution_plan_to_dto(materialization.execution_plan),
                 installed_skills=[
                     InstalledSkillDto(
@@ -173,15 +182,11 @@ class InstallSkillUseCase:
                 ],
                 exported_skills=exported_skills,
                 materialized_root=materialization.materialized_root,
-                lock_path=str(project_lock_path)
-                if project_lock_path is not None
-                else None,
+                lock_path=str(lock_path) if lock_path is not None else None,
                 export_root=next(iter(export_roots.values())).as_posix()
                 if len(export_roots) == 1
                 else None,
-                export_roots={
-                    agent: str(root) for agent, root in export_roots.items()
-                },
+                export_roots={agent: str(root) for agent, root in export_roots.items()},
                 trace=[trace_to_dto(item) for item in trace],
                 policy_evaluations=[
                     policy_to_dto(item) for item in plan.policy_evaluations
@@ -214,15 +219,20 @@ def _export_roots(request: InstallRequestDto) -> dict[str, Path]:
         raise InvalidInstallTargetError(str(exc)) from exc
 
 
-def _project_lock_path(request: InstallRequestDto) -> Path | None:
-    if request.scope != "project":
-        return None
-    project_root = (
-        request.cwd.expanduser().resolve() if request.cwd else Path.cwd().resolve()
-    )
-    return project_root / "aptitude.lock.json"
+def _scope_lock_path(request: InstallRequestDto) -> Path | None:
+    if request.scope == "global":
+        return default_aptitude_state_dir() / "aptitude.lock.json"
+    if request.scope == "project":
+        project_root = (
+            request.cwd.expanduser().resolve() if request.cwd else Path.cwd().resolve()
+        )
+        return project_root / "aptitude.lock.json"
+    return None
 
 
-def _write_project_lockfile(path: Path, lockfile: Lockfile) -> None:
+def _update_scope_lockfile(path: Path, lockfile: Lockfile) -> Lockfile:
+    existing = load_lockfile(path) if path.exists() else None
+    merged = merge_lockfiles(existing, lockfile)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(serialize_lockfile(lockfile), encoding="utf-8")
+    path.write_text(serialize_lockfile(merged), encoding="utf-8")
+    return merged

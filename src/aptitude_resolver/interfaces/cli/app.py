@@ -299,7 +299,9 @@ def _format_candidate_line(candidate: DiscoveryCandidateDto) -> str:
 def _candidate_tags(candidate: DiscoveryCandidateDto) -> str:
     """Return the most useful human-facing labels for one candidate."""
 
-    return ", ".join(candidate.matched_labels or candidate.tags or candidate.labels) or "-"
+    return (
+        ", ".join(candidate.matched_labels or candidate.tags or candidate.labels) or "-"
+    )
 
 
 def _candidate_runtime(candidate: DiscoveryCandidateDto) -> str:
@@ -366,10 +368,14 @@ def _render_search_result_panel(result: SearchSkillsResultDto) -> Group:
     )
     candidates.add_column("#", style=THEME.text_subtle, min_width=3, no_wrap=True)
     candidates.add_column("Skill", style=THEME.text_primary, min_width=22)
-    candidates.add_column("Version", style=THEME.text_subtle, min_width=14, no_wrap=True)
+    candidates.add_column(
+        "Version", style=THEME.text_subtle, min_width=14, no_wrap=True
+    )
     candidates.add_column("Runtime", style=THEME.text_body, min_width=10, no_wrap=True)
     candidates.add_column("Trust", style=THEME.text_body, min_width=10, no_wrap=True)
-    candidates.add_column("Lifecycle", style=THEME.text_body, min_width=10, no_wrap=True)
+    candidates.add_column(
+        "Lifecycle", style=THEME.text_body, min_width=10, no_wrap=True
+    )
     candidates.add_column("Stats", style=THEME.text_subtle, ratio=1)
     candidates.add_column("Tags", style=THEME.text_body, ratio=2)
     for index, candidate in enumerate(result.candidates, start=1):
@@ -443,7 +449,9 @@ def _format_inspect_result(result: InspectSkillResultDto) -> str:
     ]
     if result.status == "selection_required":
         lines.extend(["", "Selection required. Matching candidates:"])
-        lines.extend(_format_candidate_line(candidate) for candidate in result.candidates)
+        lines.extend(
+            _format_candidate_line(candidate) for candidate in result.candidates
+        )
         return "\n".join(lines)
 
     if result.selected_coordinate is not None:
@@ -485,7 +493,9 @@ def _format_inspect_result(result: InspectSkillResultDto) -> str:
 
     if result.content_preview is not None:
         suffix = " (truncated)" if result.content_preview_truncated else ""
-        lines.extend(["", f"Content Preview{suffix}", separator, result.content_preview])
+        lines.extend(
+            ["", f"Content Preview{suffix}", separator, result.content_preview]
+        )
 
     return "\n".join(lines)
 
@@ -493,7 +503,11 @@ def _format_inspect_result(result: InspectSkillResultDto) -> str:
 def _skill_description(result: InspectSkillResultDto) -> str:
     if result.skill is None:
         return "No description available."
-    return result.skill.description or result.skill.rendered_summary or "No description available."
+    return (
+        result.skill.description
+        or result.skill.rendered_summary
+        or "No description available."
+    )
 
 
 def _render_inspect_selection_required_panel(result: InspectSkillResultDto) -> Group:
@@ -508,7 +522,9 @@ def _render_inspect_selection_required_panel(result: InspectSkillResultDto) -> G
     )
     candidates.add_column("#", style=THEME.text_subtle, min_width=3, no_wrap=True)
     candidates.add_column("Skill", style=THEME.text_primary, min_width=22)
-    candidates.add_column("Version", style=THEME.text_subtle, min_width=14, no_wrap=True)
+    candidates.add_column(
+        "Version", style=THEME.text_subtle, min_width=14, no_wrap=True
+    )
     candidates.add_column("Runtime", style=THEME.text_body, min_width=10, no_wrap=True)
     candidates.add_column("Trust", style=THEME.text_body, min_width=10, no_wrap=True)
     candidates.add_column("Tags", style=THEME.text_body, ratio=2)
@@ -581,7 +597,9 @@ def _render_inspect_result_panel(result: InspectSkillResultDto) -> Group:
         metadata.add_row("Lifecycle", skill.lifecycle_status)
         metadata.add_row("Tags", ", ".join(skill.tags) if skill.tags else "-")
         metadata.add_row("Tokens", _format_policy_limit(skill.token_estimate))
-        metadata.add_row("Size", f"{_format_policy_limit(skill.content_size_bytes)} bytes")
+        metadata.add_row(
+            "Size", f"{_format_policy_limit(skill.content_size_bytes)} bytes"
+        )
         metadata.add_row("Published", _format_published_at(skill.published_at))
         if skill.content_checksum_algorithm and skill.content_checksum_digest:
             metadata.add_row(
@@ -828,7 +846,9 @@ def _render_install_success_panel(
     if result.export_roots:
         summary.add_row(
             "Agent roots",
-            ", ".join(f"{agent}: {path}" for agent, path in result.export_roots.items()),
+            ", ".join(
+                f"{agent}: {path}" for agent, path in result.export_roots.items()
+            ),
         )
     if result.lock_path:
         summary.add_row("Lockfile", str(result.lock_path))
@@ -1018,8 +1038,7 @@ def _render_layer_details(layer) -> list[str]:
             lines.append("trust " + _format_policy_list(policy.allowed_trust_tiers))
         if policy.allowed_lifecycle_statuses is not None:
             lines.append(
-                "lifecycle "
-                + _format_policy_list(policy.allowed_lifecycle_statuses)
+                "lifecycle " + _format_policy_list(policy.allowed_lifecycle_statuses)
             )
         if policy.max_token_estimate is not None:
             lines.append(f"skill tokens <= {policy.max_token_estimate}")
@@ -1056,8 +1075,7 @@ def _format_policy_layer(line_report: EffectivePolicyReportDto, layer) -> list[s
         lines.append("default: built-in defaults")
     elif layer.source == "workspace_config" and layer.path is None:
         lines.append(
-            "workspace config: no aptitude.toml found upward from "
-            f"{line_report.cwd}"
+            f"workspace config: no aptitude.toml found upward from {line_report.cwd}"
         )
     elif layer.path is not None and layer.active:
         lines.append(f"{layer.label}: {layer.path}")

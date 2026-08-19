@@ -89,6 +89,7 @@ class Lockfile:
     generated_at: str | None
     client_version: str | None
     root: LockRoot
+    roots: list[LockRoot] = field(default_factory=list)
     nodes: list[LockedSkill] = field(default_factory=list)
     edges: list[LockedEdge] = field(default_factory=list)
     install_order: list[str] = field(default_factory=list)

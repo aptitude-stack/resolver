@@ -53,7 +53,9 @@ def extract_tar_zstd_artifact(
                     with source, destination.open("wb") as output:
                         shutil.copyfileobj(source, output)
                     _apply_safe_file_mode(destination, member.mode)
-                    extracted_paths.append(_relative_output_path(target_dir, destination))
+                    extracted_paths.append(
+                        _relative_output_path(target_dir, destination)
+                    )
     except InvalidArtifactError:
         raise
     except Exception as exc:

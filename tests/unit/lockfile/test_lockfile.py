@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import replace
+import json
+
 import pytest
 
 from aptitude_resolver.domain.errors import InvalidLockfileError
@@ -15,6 +18,10 @@ from aptitude_resolver.domain.models import (
 from aptitude_resolver.domain.policy import PolicyEvaluation, SelectionPreferences
 from aptitude_resolver.lockfile import (
     build_lockfile,
+    lockfile_to_dict,
+    LockRoot,
+    Lockfile,
+    merge_lockfiles,
     parse_lockfile,
     replay_lockfile,
     serialize_lockfile,
@@ -100,6 +107,24 @@ def _metadata(slug: str, version: str, *, published_at: str) -> SkillMetadata:
         lifecycle_status="published",
         trust_tier="internal",
         published_at=published_at,
+    )
+
+
+def _single_root_lock(slug: str, version: str) -> Lockfile:
+    coordinate = SkillCoordinate(slug=slug, version=version)
+    graph = ResolutionGraph(
+        root=coordinate,
+        nodes=[_node(slug, version, published_at="2026-03-18T00:00:00Z")],
+        edges=[],
+        install_order=[coordinate],
+        conflicts=[],
+    )
+    return build_lockfile(
+        graph=graph,
+        requested_query=slug,
+        requested_version=version,
+        selection_mode="exact",
+        policy_evaluations=[],
     )
 
 
@@ -228,6 +253,56 @@ def test_replay_lockfile_rejects_missing_install_order_nodes() -> None:
 
     with pytest.raises(InvalidLockfileError):
         replay_lockfile(lockfile)
+
+
+def test_merge_lockfiles_accumulates_roots_and_preserves_existing_pins() -> None:
+    first = _single_root_lock("python-lint", "1.2.3")
+    second = _single_root_lock("js-lint", "2.1.0")
+
+    merged = merge_lockfiles(first, second)
+
+    assert merged.version == 2
+    assert merged.root.selected_node_id == "js-lint@2.1.0"
+    assert [root.selected_node_id for root in merged.roots] == [
+        "python-lint@1.2.3",
+        "js-lint@2.1.0",
+    ]
+    assert [node.node_id for node in merged.nodes] == [
+        "python-lint@1.2.3",
+        "js-lint@2.1.0",
+    ]
+    assert merged.install_order == ["python-lint@1.2.3", "js-lint@2.1.0"]
+
+
+def test_merge_lockfiles_is_idempotent_and_accepts_v1_locks() -> None:
+    lockfile = _single_root_lock("python-lint", "1.2.3")
+    payload = lockfile_to_dict(lockfile)
+    payload["version"] = 1
+    payload.pop("roots")
+    v1_lockfile = parse_lockfile(json.dumps(payload))
+
+    merged = merge_lockfiles(v1_lockfile, lockfile)
+
+    assert [root.selected_node_id for root in merged.roots] == ["python-lint@1.2.3"]
+    assert [node.node_id for node in merged.nodes] == ["python-lint@1.2.3"]
+
+
+def test_replay_lockfile_rejects_missing_cumulative_root() -> None:
+    lockfile = _single_root_lock("python-lint", "1.2.3")
+    corrupted = replace(
+        lockfile,
+        roots=[
+            LockRoot(
+                request="missing",
+                requested_version=None,
+                selected_node_id="missing@1.0.0",
+                selection_mode="exact",
+            )
+        ],
+    )
+
+    with pytest.raises(InvalidLockfileError, match="missing@1.0.0"):
+        replay_lockfile(corrupted)
 
 
 def test_lockfile_bytes_are_identical_across_reordered_registry_dependency_inputs() -> (

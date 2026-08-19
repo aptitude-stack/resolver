@@ -33,6 +33,11 @@ config, then environment. The last non-null value wins.
 
 The lockfile is the durable resolved schema for execution.
 
+Project and global install locks are cumulative: each successful install adds a
+root and its pinned graph without changing existing pins. New lockfiles write
+both `roots` (the complete root set) and the legacy `root` field (the most
+recent root); v1 single-root lockfiles remain readable.
+
 It must preserve:
 
 - selected coordinates

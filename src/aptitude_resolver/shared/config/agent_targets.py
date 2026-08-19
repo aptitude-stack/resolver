@@ -168,7 +168,9 @@ def normalize_agent_list(
         )
 
     requested = set(raw_agents)
-    return [preset.agent for preset in SUPPORTED_AGENT_TARGETS if preset.agent in requested]
+    return [
+        preset.agent for preset in SUPPORTED_AGENT_TARGETS if preset.agent in requested
+    ]
 
 
 def detect_available_agent_targets(

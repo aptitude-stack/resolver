@@ -16,7 +16,9 @@ def test_build_discovery_query_preserves_user_text_and_preferences() -> None:
     assert query.trust_tiers == ["verified"]
 
 
-def test_build_discovery_query_does_not_turn_slug_like_query_into_required_tags() -> None:
+def test_build_discovery_query_does_not_turn_slug_like_query_into_required_tags() -> (
+    None
+):
     intent = parse_search_intent("python-patterns")
 
     query = build_discovery_query(intent)

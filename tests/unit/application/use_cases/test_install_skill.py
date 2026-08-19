@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 
+import aptitude_resolver.application.use_cases.install_skill as install_skill_module
 from aptitude_resolver.application.dto import InstallRequestDto
 from aptitude_resolver.application.use_cases import InstallSkillUseCase
 from aptitude_resolver.domain.errors import SkillNotFoundError
+from aptitude_resolver.lockfile import load_lockfile
 from aptitude_resolver.domain.models import (
     DependencySpec,
     DiscoveryQuery,
@@ -117,6 +119,24 @@ def _version_summary(
     )
 
 
+def _add_independent_skill(
+    registry_client: FakeRegistryClient,
+    *,
+    query: str,
+    slug: str,
+    version: str,
+) -> None:
+    artifact = _artifact(f"# {slug}\n")
+    registry_client.discovery_by_query[query] = [slug]
+    registry_client.versions_by_slug[slug] = [
+        _version_summary(slug, version, name=slug, artifact=artifact)
+    ]
+    registry_client.metadata_by_coordinate[(slug, version)] = _metadata(
+        slug, version, name=slug, artifact=artifact
+    )
+    registry_client.artifact_by_coordinate[(slug, version)] = artifact
+
+
 def test_install_use_case_reuses_one_planned_graph_for_materialization(
     tmp_path,
 ) -> None:
@@ -149,7 +169,9 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
         DependencySpec(slug="python-base", version="1.0.0")
     ]
     registry_client.artifact_by_coordinate[("python-lint", "1.2.3")] = root_artifact
-    registry_client.artifact_by_coordinate[("python-base", "1.0.0")] = dependency_artifact
+    registry_client.artifact_by_coordinate[("python-base", "1.0.0")] = (
+        dependency_artifact
+    )
 
     result = InstallSkillUseCase(registry_client).execute(
         InstallRequestDto(
@@ -194,6 +216,73 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
     assert graph_payload["root"] == {"slug": "python-lint", "version": "1.2.3"}
     project_lock_payload = json.loads(project_lock_path.read_text(encoding="utf-8"))
     assert project_lock_payload["root"]["selected_node_id"] == "python-lint@1.2.3"
+    assert project_lock_payload["roots"] == [project_lock_payload["root"]]
+
+
+def test_install_use_case_accumulates_project_lockfile(tmp_path) -> None:
+    registry_client = FakeRegistryClient()
+    _add_independent_skill(
+        registry_client,
+        query="python lint",
+        slug="python-lint",
+        version="1.2.3",
+    )
+    _add_independent_skill(
+        registry_client,
+        query="js lint",
+        slug="js-lint",
+        version="2.1.0",
+    )
+    use_case = InstallSkillUseCase(registry_client)
+    request = {"target": tmp_path / "aptitude_state", "cwd": tmp_path}
+
+    use_case.execute(InstallRequestDto(query="python lint", **request))
+    result = use_case.execute(InstallRequestDto(query="js lint", **request))
+
+    assert result.lockfile is not None
+    assert [root.selected_node_id for root in result.lockfile.roots] == [
+        "python-lint@1.2.3",
+        "js-lint@2.1.0",
+    ]
+    assert [
+        root.selected_node_id
+        for root in load_lockfile(tmp_path / "aptitude.lock.json").roots
+    ] == [root.selected_node_id for root in result.lockfile.roots]
+
+
+def test_install_use_case_accumulates_global_lockfile(tmp_path, monkeypatch) -> None:
+    registry_client = FakeRegistryClient()
+    _add_independent_skill(
+        registry_client,
+        query="python lint",
+        slug="python-lint",
+        version="1.2.3",
+    )
+    _add_independent_skill(
+        registry_client,
+        query="js lint",
+        slug="js-lint",
+        version="2.1.0",
+    )
+    global_state_dir = tmp_path / "global-state"
+    monkeypatch.setattr(
+        install_skill_module, "default_aptitude_state_dir", lambda: global_state_dir
+    )
+    monkeypatch.setattr(
+        install_skill_module, "resolve_agent_install_roots", lambda **_: {}
+    )
+    use_case = InstallSkillUseCase(registry_client)
+    request = {"target": tmp_path / "aptitude_state", "scope": "global"}
+
+    use_case.execute(InstallRequestDto(query="python lint", **request))
+    result = use_case.execute(InstallRequestDto(query="js lint", **request))
+
+    lock_path = global_state_dir / "aptitude.lock.json"
+    assert result.lock_path == str(lock_path)
+    assert [root.selected_node_id for root in load_lockfile(lock_path).roots] == [
+        "python-lint@1.2.3",
+        "js-lint@2.1.0",
+    ]
 
 
 def test_install_use_case_returns_selection_required_before_dependency_resolution_or_materialization(

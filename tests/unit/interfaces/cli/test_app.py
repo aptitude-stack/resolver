@@ -979,7 +979,9 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
 def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     target = tmp_path / "aptitude_state"
     export_root = tmp_path / ".codex" / "skills"
-    use_case = QueueUseCase(responses=[_installed_result(str(target), str(export_root))])
+    use_case = QueueUseCase(
+        responses=[_installed_result(str(target), str(export_root))]
+    )
     close_calls: list[str] = []
     builder_kwargs: dict[str, object] = {}
 
@@ -1467,7 +1469,9 @@ def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailab
         lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
     )
 
-    result = runner.invoke(app_module.app, ["install", "python lint", "--agent", "codex"])
+    result = runner.invoke(
+        app_module.app, ["install", "python lint", "--agent", "codex"]
+    )
 
     assert result.exit_code == 0
     assert calls == []
@@ -1687,7 +1691,10 @@ def test_cli_policy_show_renders_human_readable_report(monkeypatch) -> None:
     assert "allowed trust tiers: verified, internal" in result.stdout
     assert "System config: Not found" in result.stdout
     assert "selection: more specific values win" in result.stdout
-    assert "install/resolve flags like --allow-trust are one-off policy overrides" in result.stdout
+    assert (
+        "install/resolve flags like --allow-trust are one-off policy overrides"
+        in result.stdout
+    )
 
 
 def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
@@ -1700,7 +1707,10 @@ def test_cli_policy_show_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Config Sources" in result.stdout
     assert "How It Works" in result.stdout
     assert "CLI override" in result.stdout
-    assert "Install/resolve flags like --allow-trust are one-off policy overrides." in result.stdout
+    assert (
+        "Install/resolve flags like --allow-trust are one-off policy overrides."
+        in result.stdout
+    )
 
 
 def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:

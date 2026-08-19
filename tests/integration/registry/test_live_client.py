@@ -10,6 +10,7 @@ from aptitude_resolver.domain.errors import InvalidCoordinateError, SkillNotFoun
 from aptitude_resolver.registry.client import RegistryClient
 from aptitude_resolver.shared.config import Settings
 from tests.integration.registry.support import (
+    build_publish_files,
     build_publish_payload,
     ensure_publish_ready,
 )
@@ -33,15 +34,14 @@ class PublishedSkillSet:
 @pytest.fixture(scope="session")
 def published_skill_set(integration_config, publish_token: str) -> PublishedSkillSet:
     run_id = uuid.uuid4().hex
-    dependency_slug = f"it.dep.{run_id}"
-    primary_slug = f"it.primary.{run_id}"
+    dependency_slug = f"it-dep-{run_id}"
+    primary_slug = f"it-primary-{run_id}"
     dependency_name = f"Integration Dependency Skill {run_id}"
     primary_name = f"Integration Primary Skill {run_id}"
     version = "1.0.0"
 
     publish_headers = {
         "Accept": "application/json",
-        "Content-Type": "application/json",
         "Authorization": f"Bearer {publish_token}",
     }
 
@@ -82,14 +82,14 @@ def published_skill_set(integration_config, publish_token: str) -> PublishedSkil
         dependency_response = client.post(
             f"/skills/{dependency_slug}",
             headers=publish_headers,
-            json=dependency_payload,
+            files=build_publish_files(dependency_payload),
         )
         ensure_publish_ready(dependency_response)
 
         primary_response = client.post(
             f"/skills/{primary_slug}",
             headers=publish_headers,
-            json=primary_payload,
+            files=build_publish_files(primary_payload),
         )
         ensure_publish_ready(primary_response)
 
@@ -118,7 +118,7 @@ def test_fetch_skill_metadata_against_live_server(
     assert metadata.coordinate.version == published_skill_set.primary_version
     assert metadata.name == published_skill_set.primary_name
     assert metadata.description == (
-        f"Primary seed for registry adapter integration tests ({published_skill_set.primary_slug.split('.')[-1]})"
+        f"Primary seed for registry adapter integration tests ({published_skill_set.primary_slug.rsplit('-', 1)[-1]})"
     )
     assert metadata.content_checksum_algorithm == "sha256"
     assert metadata.content_checksum_digest
@@ -162,7 +162,7 @@ def test_fetch_missing_coordinate_against_live_server(
     client = RegistryClient(integration_settings)
 
     with pytest.raises(SkillNotFoundError):
-        client.fetch_skill_metadata(f"it.missing.{uuid.uuid4().hex}", "9.9.9")
+        client.fetch_skill_metadata(f"it-missing-{uuid.uuid4().hex}", "9.9.9")
 
 
 def test_fetch_invalid_version_against_live_server(

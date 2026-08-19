@@ -473,9 +473,7 @@ def _preview_install_destinations(
             {"agent": preset.agent, "display_name": preset.display_name}
             for preset in supported_agent_targets()
         ],
-        "destination_roots": {
-            agent: str(root) for agent, root in roots.items()
-        },
+        "destination_roots": {agent: str(root) for agent, root in roots.items()},
         "warnings": [
             "Install will write agent-facing skill packages to destination_roots.",
             "Aptitude cache and state remain outside the repository by default.",
