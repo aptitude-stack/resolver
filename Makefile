@@ -18,7 +18,7 @@ run:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude\033[0m\n"
 	@printf "\033[0;36m  Mode:\033[0m  Interactive CLI wizard\n"
 	@printf "\033[0;36m  Stop:\033[0m  Ctrl+C\n\n"
-	@PYTHONPATH=src .venv/bin/python -m aptitude_resolver
+	@APTITUDE_SERVER_BASE_URL=http://localhost:8000 PYTHONPATH=src .venv/bin/python -m aptitude_resolver
 
 debug:
 	@printf "\033[1;36m==>\033[0m \033[1mStarting Aptitude in debug mode\033[0m\n"
