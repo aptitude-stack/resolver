@@ -50,11 +50,14 @@ def default_aptitude_cache_dir(
     effective_os_name = os.name if os_name is None else os_name
 
     if effective_os_name == "nt":
-        return default_aptitude_data_dir(
-            env=env_map,
-            home=effective_home,
-            os_name=effective_os_name,
-        ) / "cache"
+        return (
+            default_aptitude_data_dir(
+                env=env_map,
+                home=effective_home,
+                os_name=effective_os_name,
+            )
+            / "cache"
+        )
 
     xdg_cache_home = env_map.get("XDG_CACHE_HOME")
     base = (
@@ -78,11 +81,14 @@ def default_aptitude_state_dir(
     effective_os_name = os.name if os_name is None else os_name
 
     if effective_os_name == "nt":
-        return default_aptitude_data_dir(
-            env=env_map,
-            home=effective_home,
-            os_name=effective_os_name,
-        ) / "state"
+        return (
+            default_aptitude_data_dir(
+                env=env_map,
+                home=effective_home,
+                os_name=effective_os_name,
+            )
+            / "state"
+        )
 
     xdg_state_home = env_map.get("XDG_STATE_HOME")
     base = (

@@ -109,8 +109,8 @@ def test_build_publish_payload_matches_current_live_publish_shape() -> None:
     )
 
     assert payload["intent"] == "create_skill"
-    assert payload["content"] == {"raw_markdown": "# Demo\n"}
-    assert "rendered_summary" not in payload["content"]
+    assert payload["bundle_raw_markdown"] == "# Demo\n"
+    assert "content" not in payload
     assert "headers" not in payload["metadata"]
     assert payload["governance"] == {"trust_tier": "untrusted"}
     assert "lifecycle_status" not in payload["governance"]

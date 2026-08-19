@@ -10,6 +10,7 @@ from aptitude_resolver.domain.models import DiscoveryQuery
 from aptitude_resolver.registry.client import RegistryClient
 from aptitude_resolver.shared.config import Settings
 from tests.integration.registry.support import (
+    build_publish_files,
     build_publish_payload,
     ensure_publish_ready,
 )
@@ -29,14 +30,13 @@ class PublishedSkill:
 @pytest.fixture(scope="session")
 def published_skill(integration_config, publish_token: str) -> PublishedSkill:
     run_id = uuid.uuid4().hex
-    slug = f"it.discovery.{run_id}"
+    slug = f"it-discovery-{run_id}"
     name = f"Integration Discovery Skill {run_id}"
     version = "1.0.0"
     content = f"# {name}\n\nRun `{run_id}` discovery version 1.\n"
 
     publish_headers = {
         "Accept": "application/json",
-        "Content-Type": "application/json",
         "Authorization": f"Bearer {publish_token}",
     }
     payload = build_publish_payload(
@@ -57,7 +57,7 @@ def published_skill(integration_config, publish_token: str) -> PublishedSkill:
         response = client.post(
             f"/skills/{slug}",
             headers=publish_headers,
-            json=payload,
+            files=build_publish_files(payload),
         )
         ensure_publish_ready(response)
 
@@ -97,7 +97,9 @@ def test_fetch_skill_artifact_against_live_server(
 ) -> None:
     client = RegistryClient(integration_settings)
 
-    artifact = client.fetch_skill_artifact(published_skill.slug, published_skill.version)
+    artifact = client.fetch_skill_artifact(
+        published_skill.slug, published_skill.version
+    )
 
     assert artifact
 

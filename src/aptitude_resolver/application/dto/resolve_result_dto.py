@@ -119,6 +119,7 @@ class LockfileDto(BaseModel):
     generated_at: str | None = None
     client_version: str | None = None
     root: LockRootDto
+    roots: list[LockRootDto] = Field(default_factory=list)
     nodes: list[LockedSkillDto] = Field(default_factory=list)
     edges: list[LockedEdgeDto] = Field(default_factory=list)
     install_order: list[str] = Field(default_factory=list)

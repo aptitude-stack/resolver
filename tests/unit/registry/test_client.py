@@ -153,7 +153,9 @@ def test_fetch_skill_identity_uses_version_list_endpoint_as_exact_slug_probe() -
     assert identity.current_trust_tier == "internal"
 
 
-def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summary() -> None:
+def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summary() -> (
+    None
+):
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
         assert request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0"
@@ -253,7 +255,9 @@ def test_fetch_direct_dependencies_treats_null_optional_as_false() -> None:
     assert dependencies[0].optional is False
 
 
-def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path_is_rejected() -> None:
+def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path_is_rejected() -> (
+    None
+):
     request_paths: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -261,9 +265,16 @@ def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path
         if request.url.path == "/skills/postman-primary-1774130709214-55706":
             return httpx.Response(
                 422,
-                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+                json={
+                    "error": {
+                        "code": "INVALID_REQUEST",
+                        "message": "Request validation failed.",
+                    }
+                },
             )
-        assert request.url.path == "/skills/postman-primary-1774130709214-55706/versions"
+        assert (
+            request.url.path == "/skills/postman-primary-1774130709214-55706/versions"
+        )
         return httpx.Response(
             200,
             json={
@@ -291,7 +302,9 @@ def test_list_skill_versions_falls_back_to_versions_endpoint_when_canonical_path
     ]
 
 
-def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_needed() -> None:
+def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_needed() -> (
+    None
+):
     request_paths: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -299,7 +312,12 @@ def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_need
         if request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0":
             return httpx.Response(
                 422,
-                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+                json={
+                    "error": {
+                        "code": "INVALID_REQUEST",
+                        "message": "Request validation failed.",
+                    }
+                },
             )
         assert (
             request.url.path
@@ -331,7 +349,9 @@ def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_need
 
     client = _client(handler)
 
-    metadata = client.fetch_skill_metadata("postman-primary-1774130709214-55706", "1.0.0")
+    metadata = client.fetch_skill_metadata(
+        "postman-primary-1774130709214-55706", "1.0.0"
+    )
 
     assert metadata.coordinate.version == "1.0.0"
     assert metadata.name == "Postman Primary Skill"
@@ -341,16 +361,26 @@ def test_fetch_skill_metadata_falls_back_to_versions_metadata_endpoint_when_need
     ]
 
 
-def test_fetch_skill_artifact_falls_back_to_versions_content_endpoint_when_needed() -> None:
+def test_fetch_skill_artifact_falls_back_to_versions_content_endpoint_when_needed() -> (
+    None
+):
     artifact = b"legacy artifact bytes"
     request_paths: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         request_paths.append(request.url.path)
-        if request.url.path == "/skills/postman-primary-1774130709214-55706/1.0.0/content":
+        if (
+            request.url.path
+            == "/skills/postman-primary-1774130709214-55706/1.0.0/content"
+        ):
             return httpx.Response(
                 422,
-                json={"error": {"code": "INVALID_REQUEST", "message": "Request validation failed."}},
+                json={
+                    "error": {
+                        "code": "INVALID_REQUEST",
+                        "message": "Request validation failed.",
+                    }
+                },
             )
         assert (
             request.url.path

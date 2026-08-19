@@ -30,22 +30,39 @@ def parse_lockfile(payload: str) -> Lockfile:
         raise InvalidLockfileError("Lockfile payload must be a JSON object.")
 
     root_data = _expect_dict(data, "root")
+    roots_data = data.get("roots")
+    if roots_data is not None and not isinstance(roots_data, list):
+        raise InvalidLockfileError("Lockfile field 'roots' must be a list.")
     nodes_data = _expect_list(data, "nodes")
     edges_data = _expect_list(data, "edges")
     selection_data = _expect_optional_dict(data, "selection")
     policy_data = _expect_optional_dict(data, "policy")
     governance_data = _expect_list(data, "governance")
 
+    root = LockRoot(
+        request=_expect_str(root_data, "request"),
+        requested_version=_expect_optional_str(root_data, "requested_version"),
+        selected_node_id=_expect_str(root_data, "selected_node_id"),
+        selection_mode=_expect_str(root_data, "selection_mode"),
+    )
+
     return Lockfile(
         version=_expect_int(data, "version"),
         generated_at=_expect_optional_str(data, "generated_at"),
         client_version=_expect_optional_str(data, "client_version"),
-        root=LockRoot(
-            request=_expect_str(root_data, "request"),
-            requested_version=_expect_optional_str(root_data, "requested_version"),
-            selected_node_id=_expect_str(root_data, "selected_node_id"),
-            selection_mode=_expect_str(root_data, "selection_mode"),
-        ),
+        root=root,
+        roots=[
+            LockRoot(
+                request=_expect_str(item, "request"),
+                requested_version=_expect_optional_str(item, "requested_version"),
+                selected_node_id=_expect_str(item, "selected_node_id"),
+                selection_mode=_expect_str(item, "selection_mode"),
+            )
+            for item in (
+                _expect_mapping(item, "roots item")
+                for item in roots_data or [root_data]
+            )
+        ],
         nodes=[
             LockedSkill(
                 node_id=_expect_str(node_data, "node_id"),

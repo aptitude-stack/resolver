@@ -86,6 +86,7 @@ def horizontal_separator_for_stream(stream: object | None = None) -> str:
         return HORIZONTAL_SEPARATOR
     return ASCII_SEPARATOR
 
+
 OPTIONS = {
     "version_select": OptionSurface(
         key="version_select",
@@ -696,9 +697,7 @@ def build_manifest_text(program_name: str | None = None) -> str:
                 "           flags: "
                 + ", ".join(OPTIONS[key].signature for key in option_keys)
             )
-    lines.extend(
-        ["", separator, "Advanced/Internal Commands", separator]
-    )
+    lines.extend(["", separator, "Advanced/Internal Commands", separator])
     for command in advanced_commands:
         lines.append(
             f"  {command.name:<8} "
@@ -773,7 +772,9 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
         ),
         Text(
             "policy   "
-            + _render_command_text("{cli} policy show [--json]", program_name=program_name),
+            + _render_command_text(
+                "{cli} policy show [--json]", program_name=program_name
+            ),
             style=THEME.text_primary,
         ),
         Text(""),

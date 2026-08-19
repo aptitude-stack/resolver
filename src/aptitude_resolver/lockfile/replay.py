@@ -30,10 +30,12 @@ def replay_lockfile(lockfile: Lockfile) -> ReplayedLock:
             )
         nodes_by_id[node.node_id] = node
 
-    if lockfile.root.selected_node_id not in nodes_by_id:
-        raise InvalidLockfileError(
-            f"Lockfile root selected node is missing: {lockfile.root.selected_node_id}"
-        )
+    roots = lockfile.roots or [lockfile.root]
+    for root in roots:
+        if root.selected_node_id not in nodes_by_id:
+            raise InvalidLockfileError(
+                f"Lockfile root selected node is missing: {root.selected_node_id}"
+            )
 
     install_order_nodes: list[LockedSkill] = []
     seen_install_order: set[str] = set()

@@ -57,8 +57,12 @@ class _WorkflowPolicyInput(_StrictInput):
 class SearchSkillsInput(_WorkflowPolicyInput):
     """Input for the discovery-only search tool."""
 
-    query: str = Field(..., min_length=1, max_length=500, description="Skill search query.")
-    limit: int = Field(default=20, ge=1, le=100, description="Maximum candidates to return.")
+    query: str = Field(
+        ..., min_length=1, max_length=500, description="Skill search query."
+    )
+    limit: int = Field(
+        default=20, ge=1, le=100, description="Maximum candidates to return."
+    )
     offset: int = Field(default=0, ge=0, description="Number of candidates to skip.")
     response_format: ResponseFormat = Field(
         default=ResponseFormat.MARKDOWN,
@@ -69,7 +73,9 @@ class SearchSkillsInput(_WorkflowPolicyInput):
 class InspectSkillInput(_WorkflowPolicyInput):
     """Input for the selected-skill inspection tool."""
 
-    query: str = Field(..., min_length=1, max_length=500, description="Skill query or slug.")
+    query: str = Field(
+        ..., min_length=1, max_length=500, description="Skill query or slug."
+    )
     version: str | None = Field(default=None, description="Optional exact version.")
     select_slug: str | None = Field(
         default=None,
@@ -89,7 +95,9 @@ class ResolveSkillInput(_WorkflowPolicyInput):
 
     query: str = Field(..., min_length=1, max_length=500, description="Skill query.")
     version: str | None = Field(default=None, description="Optional requested version.")
-    select_slug: str | None = Field(default=None, description="Optional explicit selected slug.")
+    select_slug: str | None = Field(
+        default=None, description="Optional explicit selected slug."
+    )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
 
@@ -146,7 +154,9 @@ class InstallSkillInput(_WorkflowPolicyInput):
         description="Custom export root used with scope=custom.",
     )
     version: str | None = Field(default=None, description="Optional requested version.")
-    select_slug: str | None = Field(default=None, description="Optional explicit selected slug.")
+    select_slug: str | None = Field(
+        default=None, description="Optional explicit selected slug."
+    )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
 
@@ -154,7 +164,9 @@ class SyncLockInput(_StrictInput):
     """Input for lock-driven local materialization."""
 
     lock_path: Path = Field(..., description="Path to an existing Aptitude lockfile.")
-    target: Path = Field(..., description="Explicit directory where locked skills are materialized.")
+    target: Path = Field(
+        ..., description="Explicit directory where locked skills are materialized."
+    )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
     @field_validator("lock_path")
