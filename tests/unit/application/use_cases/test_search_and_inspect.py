@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 from aptitude_resolver.application.dto import (
     InspectSkillRequestDto,
@@ -37,7 +38,7 @@ class FakeRegistryClient:
 
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
         self.discovery_calls.append(query)
-        return list(self.discovery_by_query.get(query.name, []))
+        return list(self.discovery_by_query.get(query.query, []))
 
     def fetch_skill_identity(self, slug: str) -> SkillIdentity:
         self.identity_calls.append(slug)
@@ -64,6 +65,18 @@ class FakeRegistryClient:
     ) -> bytes:
         self.artifact_calls.append((slug, version))
         return self.artifact_by_coordinate[(slug, version)]
+
+
+def test_search_use_case_forwards_cwd_to_discovery_query(tmp_path: Path) -> None:
+    use_case = SearchSkillsUseCase(FakeRegistryClient(), cwd=tmp_path)
+
+    assert use_case._rank_candidates._discover_candidates._cwd == tmp_path
+
+
+def test_inspect_use_case_forwards_cwd_to_discovery_query(tmp_path: Path) -> None:
+    use_case = InspectSkillUseCase(FakeRegistryClient(), cwd=tmp_path)
+
+    assert use_case._rank_candidates._discover_candidates._cwd == tmp_path
 
 
 def _artifact(content: str) -> bytes:
@@ -163,9 +176,10 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
     assert registry_client.artifact_calls == []
 
 
-def test_search_use_case_resolves_exact_hyphenated_slug_without_discovery() -> None:
+def test_search_use_case_posts_hyphenated_slug_to_discovery() -> None:
     artifact = _artifact("# Python Patterns\n")
     registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["python-patterns"] = ["python-patterns"]
     registry_client.identity_by_slug["python-patterns"] = SkillIdentity(
         slug="python-patterns",
         status="active",
@@ -199,8 +213,10 @@ def test_search_use_case_resolves_exact_hyphenated_slug_without_discovery() -> N
     )
 
     assert [item.slug for item in result.candidates] == ["python-patterns"]
-    assert registry_client.identity_calls == ["python-patterns"]
-    assert registry_client.discovery_calls == []
+    assert registry_client.identity_calls == []
+    assert [item.query for item in registry_client.discovery_calls] == [
+        "python-patterns"
+    ]
 
 
 def test_search_use_case_applies_policy_filtering_before_returning_candidates() -> None:

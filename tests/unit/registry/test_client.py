@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from aptitude_resolver.domain.errors import (
     SkillNotFoundError,
     UnexpectedRegistryResponseError,
 )
+from aptitude_resolver.domain.models import DiscoveryQuery, SkillCoordinate
 from aptitude_resolver.registry.client import RegistryClient
 from aptitude_resolver.shared.config import Settings
 
@@ -84,6 +86,27 @@ def test_registry_client_reports_website_host_when_json_endpoint_returns_html() 
     assert "HTTP 200" in message
     assert "content-type text/html; charset=utf-8" in message
     assert "use https://api.aptitude-registry.dev" in message
+
+
+def test_registry_client_posts_query_and_context_coordinates_without_empty_tags() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/discovery"
+        assert json.loads(request.read()) == {
+            "query": "lint",
+            "context_skills": [{"slug": "python-lint", "version": "1.2.3"}],
+        }
+        return httpx.Response(200, json={"candidates": []})
+
+    client = _client(handler)
+
+    assert client.discover_candidate_slugs(
+        DiscoveryQuery(
+            query="lint",
+            tags=[],
+            context_skills=[SkillCoordinate(slug="python-lint", version="1.2.3")],
+        )
+    ) == []
 
 
 def test_list_skill_versions_reads_live_contract_from_skill_endpoint() -> None:

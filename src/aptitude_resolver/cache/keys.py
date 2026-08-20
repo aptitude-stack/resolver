@@ -18,9 +18,12 @@ def version_list_key(slug: str) -> str:
 
 def discovery_key(query: DiscoveryQuery) -> str:
     payload = {
-        "name": query.name,
-        "description": query.description,
+        "query": query.query,
         "tags": list(query.tags),
+        "context_skills": [
+            {"slug": coordinate.slug, "version": coordinate.version}
+            for coordinate in query.context_skills
+        ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "discovery:" + hashlib.sha256(encoded).hexdigest()

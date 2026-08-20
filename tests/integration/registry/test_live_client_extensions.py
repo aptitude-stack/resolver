@@ -112,9 +112,9 @@ def test_discover_candidate_slugs_against_live_server(
 
     candidates = client.discover_candidate_slugs(
         DiscoveryQuery(
-            name=published_skill.name,
-            description=published_skill.name,
+            query=published_skill.name,
             tags=["integration", "discovery"],
+            context_skills=[],
         )
     )
 

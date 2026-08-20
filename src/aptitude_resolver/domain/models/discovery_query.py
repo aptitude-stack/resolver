@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aptitude_resolver.domain.models.skill_coordinate import SkillCoordinate
+
 
 @dataclass(frozen=True)
 class DiscoveryQuery:
     """Client-owned discovery request shape prior to registry transport mapping."""
 
-    name: str
-    description: str | None = None
+    query: str
     tags: list[str] = field(default_factory=list)
-    language: str | None = None
-    trust_tiers: list[str] = field(default_factory=list)
+    context_skills: list[SkillCoordinate] = field(default_factory=list)

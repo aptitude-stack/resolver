@@ -80,6 +80,7 @@ class InstallSkillUseCase:
         materialization_options: MaterializationOptions | None = None,
         policy_context: PolicyContext | None = None,
         selection_preferences: SelectionPreferences | None = None,
+        cwd: Path | None = None,
     ) -> None:
         self._registry_client = registry_client
         self._materialization_options = (
@@ -89,6 +90,7 @@ class InstallSkillUseCase:
             registry_client,
             policy_context=policy_context or PolicyContext(),
             selection_preferences=selection_preferences or SelectionPreferences(),
+            cwd=cwd,
         )
 
     def execute(self, request: InstallRequestDto) -> InstallResultDto:
@@ -98,6 +100,7 @@ class InstallSkillUseCase:
                 ResolveQueryRequestDto(
                     query=request.query,
                     version=request.version,
+                    exact=request.exact,
                     select_slug=request.select_slug,
                     interaction_mode=request.interaction_mode,
                     prompt_capable=request.prompt_capable,

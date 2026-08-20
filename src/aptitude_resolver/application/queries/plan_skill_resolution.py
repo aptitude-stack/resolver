@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import ResolveQueryRequestDto
@@ -14,6 +15,7 @@ from aptitude_resolver.discovery.reranking import rerank_candidates
 from aptitude_resolver.domain.errors import (
     DiscoveryNoCandidatesError,
     PolicyViolationError,
+    SkillNotFoundError,
 )
 from aptitude_resolver.domain.models import DiscoveryCandidate, ResolutionGraph
 from aptitude_resolver.domain.policy import (
@@ -85,9 +87,13 @@ class PlanSkillResolutionQuery:
         *,
         policy_context: PolicyContext | None = None,
         selection_preferences: SelectionPreferences | None = None,
+        cwd: Path | None = None,
     ) -> None:
         self._registry_client = registry_client
-        self._discover_candidates = DiscoverSkillCandidatesQuery(registry_client)
+        self._discover_candidates = DiscoverSkillCandidatesQuery(
+            registry_client,
+            cwd=cwd,
+        )
         self._policy_context = policy_context or PolicyContext()
         self._selection_preferences = selection_preferences or SelectionPreferences()
 
@@ -98,7 +104,10 @@ class PlanSkillResolutionQuery:
         telemetry = TelemetryCollector()
         try:
             with telemetry.measure("discovery"):
-                discovery_result = self._discover_candidates.execute(request.query)
+                discovery_result = self._discover_candidates.execute(
+                    request.query,
+                    exact=request.exact,
+                )
             effective_interaction_mode = (
                 request.interaction_mode or self._selection_preferences.interaction_mode
             )
@@ -111,6 +120,16 @@ class PlanSkillResolutionQuery:
                     version=request.version,
                 )
             trace.extend(version_trace)
+            if (
+                request.exact
+                and request.version is not None
+                and not candidates
+                and len(discovery_result.matches) == 1
+            ):
+                raise SkillNotFoundError(
+                    f"Skill version not found: "
+                    f"{discovery_result.matches[0].slug}@{request.version}"
+                )
             trace.append(
                 TraceEntry(
                     stage="selection",

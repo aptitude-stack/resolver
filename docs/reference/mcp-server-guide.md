@@ -182,7 +182,7 @@ A new user needs these pieces of information from the Aptitude team or server op
 - the Aptitude Server base URL
 - a read token for the server
 - the recommended MCP client
-- the target directory policy for installs, if the organization has one
+- the agent and scope policy for installs, if the organization has one
 
 If the user only wants to inspect the local policy, the server token is less important. If the user wants discovery, resolve, install, or sync, the server connection is required.
 
@@ -264,6 +264,7 @@ Use it when:
 Key inputs:
 
 - `query`
+- `cwd` (optional workspace directory for project lock discovery context; defaults to the current process directory)
 - `limit`
 - `offset`
 - `response_format`: `markdown`, `json`, or `toon`
@@ -287,6 +288,7 @@ Use it when:
 Key inputs:
 
 - `query`
+- `cwd` (optional workspace directory for project lock discovery context; defaults to the current process directory)
 - `version`
 - `select_slug`
 - `preview_char_limit`
@@ -311,6 +313,7 @@ Use it when:
 Key inputs:
 
 - `query`
+- `cwd` (optional workspace directory for project lock discovery context; defaults to the current process directory)
 - `version`
 - `select_slug`
 - policy overrides
@@ -344,18 +347,21 @@ Behavior:
 
 ### `aptitude_install_skill`
 
-Resolves and materializes a skill into an explicit local target directory.
+Resolves and exports a skill into the selected local agent roots and scope.
 
 Use it when:
 
 - the user has approved installation
 - the assistant has already inspected or resolved the plan
-- the target directory is known
+- the agent targets and install scope are known
 
 Key inputs:
 
 - `query`
-- `target`
+- `agents`
+- `scope`
+- `cwd` (optional workspace directory for project lock discovery context and project-scope destinations; defaults to the current process directory)
+- `export_root` (optional custom export root when using `scope=custom`)
 - `version`
 - `select_slug`
 - policy overrides
@@ -365,7 +371,7 @@ Behavior:
 
 - writes to the local filesystem
 - annotated as destructive
-- requires explicit `target`
+- requires explicit `agents` and `scope`
 - still goes through discovery, resolver, governance, lock generation, and execution planning
 
 ### `aptitude_sync_lock`
@@ -422,7 +428,7 @@ user request
 -> aptitude_inspect_skill for likely candidates
 -> aptitude_resolve_skill
 -> user reviews selected coordinate, lockfile, and plan
--> aptitude_install_skill with explicit target
+-> aptitude_install_skill with explicit agents and scope
 ```
 
 For lock replay:
@@ -515,7 +521,7 @@ TOON is useful when an agent needs structure but should spend fewer tokens than 
 
 Read-only tools are annotated as read-only and non-destructive.
 
-Install and sync are annotated as destructive because they write files. They require explicit paths and should be called only after the user understands the target and intended result.
+Install and sync are annotated as destructive because they write files. Install requires explicit agents and scope; sync requires explicit lock and target paths. Call either only after the user understands the intended result.
 
 The host application may add its own approval prompts, but the server itself still makes mutating operations explicit.
 
@@ -543,7 +549,7 @@ If Aptitude tools return configuration errors:
 
 If install or sync fails:
 
-- verify the target path
+- verify the install agents, scope, and export paths
 - verify the lockfile path for sync
 - inspect the resolver or materialization error
 - retry only after understanding the failed step

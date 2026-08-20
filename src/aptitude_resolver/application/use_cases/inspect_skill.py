@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import (
@@ -54,6 +55,7 @@ class InspectSkillUseCase:
         *,
         policy_context: PolicyContext | None = None,
         selection_preferences: SelectionPreferences | None = None,
+        cwd: Path | None = None,
     ) -> None:
         self._registry_client = registry_client
         self._selection_preferences = selection_preferences or SelectionPreferences()
@@ -61,6 +63,7 @@ class InspectSkillUseCase:
             registry_client,
             policy_context=policy_context or PolicyContext(),
             selection_preferences=self._selection_preferences,
+            cwd=cwd,
         )
 
     def execute(self, request: InspectSkillRequestDto) -> InspectSkillResultDto:

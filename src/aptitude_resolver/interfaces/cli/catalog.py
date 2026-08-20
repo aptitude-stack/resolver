@@ -244,6 +244,15 @@ PLANNING_OPTION_KEYS = (
     "max_tokens",
     "max_content_size",
 )
+INSTALL_OPTION_KEYS = (
+    "version_select",
+    "prefer",
+    "interaction_mode",
+    "allow_trust",
+    "allow_lifecycle",
+    "max_tokens",
+    "max_content_size",
+)
 SEARCH_OPTION_KEYS = (
     "prefer",
     "allow_trust",
@@ -348,9 +357,9 @@ COMMANDS = {
     "install": CommandSurface(
         name="install",
         audience="public",
-        summary="fresh planning from a query and agent skill export",
-        usage='{cli} install "query"',
-        description="Install a skill query into one or more agent skill roots.",
+        summary="fresh exact-slug planning and agent skill export",
+        usage="{cli} install SLUG",
+        description="Install an exact skill slug into one or more agent skill roots.",
         flow_title="Fresh planning flow",
         flow_steps=(
             "discovery",
@@ -360,16 +369,16 @@ COMMANDS = {
             "execution",
         ),
         examples=(
-            '{cli} install "Postman Primary Skill"',
-            '{cli} install "Postman" --interaction-mode always',
-            '{cli} install "Postman Primary Skill" --agent codex --scope project',
-            '{cli} install "Postman Primary Skill" --agent claude-code --global',
-            '{cli} install "Postman Primary Skill" --json',
+            "{cli} install postman-primary",
+            "{cli} install postman-primary --version 1.2.3",
+            "{cli} install postman-primary --agent codex --scope project",
+            "{cli} install postman-primary --agent claude-code --global",
+            "{cli} install postman-primary --json",
         ),
         option_groups=(
             OptionGroup(
                 title="Selection behavior",
-                option_keys=("select_slug", "prefer", "interaction_mode"),
+                option_keys=("prefer", "interaction_mode"),
             ),
             OptionGroup(
                 title="Policy behavior",
@@ -585,17 +594,17 @@ def build_root_help(program_name: str | None = None) -> str:
             ),
             "  "
             + _render_command_text(
-                '{cli} install "Postman Primary Skill"',
+                "{cli} install postman-primary",
                 program_name=program_name,
             ),
             "  "
             + _render_command_text(
-                '{cli} install "Postman" --interaction-mode always',
+                "{cli} install postman-primary --version 1.2.3",
                 program_name=program_name,
             ),
             "  "
             + _render_command_text(
-                '{cli} install "Postman Primary Skill" --prefer low-cost',
+                "{cli} install postman-primary --prefer low-cost",
                 program_name=program_name,
             ),
             "  "
@@ -720,7 +729,7 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
 
     install_option_signatures = (
         "--prefer balanced|low-cost|high-trust  --interaction-mode auto|always|never",
-        "--select-slug slug  --allow-trust a,b  --allow-lifecycle a,b",
+        "--allow-trust a,b  --allow-lifecycle a,b",
         "--max-tokens N  --max-content-size N  --agent codex  --scope project  --json",
     )
     body = Group(
@@ -744,7 +753,7 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
         Text(
             "install  "
             + _render_command_text(
-                '{cli} install "query" [flags]',
+                "{cli} install SLUG [flags]",
                 program_name=program_name,
             ),
             style=THEME.text_primary,
@@ -821,7 +830,7 @@ def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
     if command_name == "inspect":
         return INSPECT_OPTION_KEYS
     if command_name == "install":
-        return PLANNING_OPTION_KEYS + (
+        return INSTALL_OPTION_KEYS + (
             "install_agent",
             "install_scope",
             "install_global",

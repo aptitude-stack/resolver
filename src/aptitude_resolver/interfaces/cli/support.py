@@ -7,6 +7,7 @@ import re
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import cast
 
 import typer
@@ -56,6 +57,7 @@ def build_workflow_options(
     allow_lifecycle: str | None = None,
     max_tokens: int | None = None,
     max_content_size: int | None = None,
+    cwd: Path | None = None,
 ) -> InstallWorkflowOptions:
     """Build one validated set of workflow overrides from CLI-style values."""
 
@@ -69,6 +71,7 @@ def build_workflow_options(
         ),
         max_token_estimate=max_tokens,
         max_content_size_bytes=max_content_size,
+        cwd=cwd,
     )
 
 

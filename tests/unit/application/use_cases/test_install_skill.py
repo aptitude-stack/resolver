@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 import aptitude_resolver.application.use_cases.install_skill as install_skill_module
+import pytest
 from aptitude_resolver.application.dto import InstallRequestDto
 from aptitude_resolver.application.use_cases import InstallSkillUseCase
 from aptitude_resolver.domain.errors import SkillNotFoundError
@@ -37,7 +39,7 @@ class FakeRegistryClient:
 
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
         self.discovery_calls.append(query)
-        return list(self.discovery_by_query.get(query.name, []))
+        return list(self.discovery_by_query.get(query.query, []))
 
     def fetch_skill_identity(self, slug: str) -> SkillIdentity:
         try:
@@ -69,6 +71,12 @@ class FakeRegistryClient:
     ) -> bytes:
         self.artifact_calls.append((slug, version))
         return self.artifact_by_coordinate[(slug, version)]
+
+
+def test_install_use_case_forwards_cwd_to_discovery_query(tmp_path: Path) -> None:
+    use_case = InstallSkillUseCase(FakeRegistryClient(), cwd=tmp_path)
+
+    assert use_case._planner._discover_candidates._cwd == tmp_path
 
 
 def _artifact(content: str) -> bytes:
@@ -137,6 +145,89 @@ def _add_independent_skill(
     registry_client.artifact_by_coordinate[(slug, version)] = artifact
 
 
+def test_exact_install_bypasses_discovery_and_materializes_requested_slug(tmp_path) -> None:
+    registry_client = FakeRegistryClient()
+    slug = "python-lint"
+    version = "1.2.3"
+    artifact = _artifact("# Python Lint\n")
+    registry_client.identity_by_slug[slug] = SkillIdentity(
+        slug=slug,
+        status="active",
+        current_version=SkillCoordinate(slug=slug, version=version),
+        current_lifecycle_status="published",
+        current_trust_tier="internal",
+        current_published_at="2026-03-18T00:00:00Z",
+        created_at=None,
+        updated_at=None,
+    )
+    registry_client.versions_by_slug[slug] = [
+        _version_summary(slug, version, name="Python Lint", artifact=artifact)
+    ]
+    registry_client.metadata_by_coordinate[(slug, version)] = _metadata(
+        slug, version, name="Python Lint", artifact=artifact
+    )
+    registry_client.artifact_by_coordinate[(slug, version)] = artifact
+
+    result = InstallSkillUseCase(registry_client).execute(
+        InstallRequestDto(
+            query=slug,
+            exact=True,
+            target=tmp_path / "aptitude_state",
+            cwd=tmp_path,
+        )
+    )
+
+    assert result.status == "installed"
+    assert result.selected_coordinate is not None
+    assert result.selected_coordinate.slug == slug
+    assert registry_client.discovery_calls == []
+
+
+def test_exact_install_missing_requested_version_names_slug_and_version(tmp_path) -> None:
+    class MissingVersionRegistryClient(FakeRegistryClient):
+        def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
+            try:
+                return super().fetch_skill_metadata(slug, version)
+            except KeyError as exc:
+                raise SkillNotFoundError(
+                    f"Skill version not found: {slug}@{version}"
+                ) from exc
+
+    registry_client = MissingVersionRegistryClient()
+    slug = "python-lint"
+    registry_client.identity_by_slug[slug] = SkillIdentity(
+        slug=slug,
+        status="active",
+        current_version=SkillCoordinate(slug=slug, version="1.2.3"),
+        current_lifecycle_status="published",
+        current_trust_tier="internal",
+        current_published_at="2026-03-18T00:00:00Z",
+        created_at=None,
+        updated_at=None,
+    )
+    registry_client.versions_by_slug[slug] = [
+        _version_summary(
+            slug,
+            "1.2.3",
+            name="Python Lint",
+            artifact=_artifact("# Python Lint\n"),
+        )
+    ]
+
+    with pytest.raises(SkillNotFoundError, match=r"python-lint@9\.9\.9"):
+        InstallSkillUseCase(registry_client).execute(
+            InstallRequestDto(
+                query=slug,
+                version="9.9.9",
+                exact=True,
+                target=tmp_path / "aptitude_state",
+                cwd=tmp_path,
+            )
+        )
+
+    assert registry_client.discovery_calls == []
+
+
 def test_install_use_case_reuses_one_planned_graph_for_materialization(
     tmp_path,
 ) -> None:
@@ -189,7 +280,7 @@ def test_install_use_case_reuses_one_planned_graph_for_materialization(
         "python-base@1.0.0",
         "python-lint@1.2.3",
     ]
-    assert registry_client.discovery_calls[0].name == "python lint"
+    assert registry_client.discovery_calls[0].query == "python lint"
     assert registry_client.version_calls == ["python-lint"]
     assert registry_client.metadata_calls == [
         ("python-lint", "1.2.3"),

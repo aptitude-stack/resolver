@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from aptitude_resolver.application.dto import ResolveQueryRequestDto
@@ -40,7 +42,7 @@ class FakeRegistryClient:
 
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
         self.discovery_calls.append(query)
-        return list(self.discovery_by_query.get(query.name, []))
+        return list(self.discovery_by_query.get(query.query, []))
 
     def fetch_skill_identity(self, slug: str) -> SkillIdentity:
         self.identity_calls.append(slug)
@@ -67,6 +69,12 @@ class FakeRegistryClient:
     ) -> list[DependencySpec]:
         self.dependency_calls.append((slug, version))
         return list(self.dependencies_by_coordinate.get((slug, version), []))
+
+
+def test_resolve_use_case_forwards_cwd_to_discovery_query(tmp_path: Path) -> None:
+    use_case = ResolveSkillQueryUseCase(FakeRegistryClient(), cwd=tmp_path)
+
+    assert use_case._planner._discover_candidates._cwd == tmp_path
 
 
 def _metadata(
@@ -156,7 +164,7 @@ def test_query_use_case_resolves_exact_slug_without_discovery() -> None:
     )
 
     result = ResolveSkillQueryUseCase(registry_client).execute(
-        ResolveQueryRequestDto(query="python-lint")
+        ResolveQueryRequestDto(query="python-lint", exact=True)
     )
 
     assert registry_client.discovery_calls == []

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import (
@@ -37,11 +38,13 @@ class SearchSkillsUseCase:
         *,
         policy_context: PolicyContext | None = None,
         selection_preferences: SelectionPreferences | None = None,
+        cwd: Path | None = None,
     ) -> None:
         self._rank_candidates = RankSkillCandidatesQuery(
             registry_client,
             policy_context=policy_context or PolicyContext(),
             selection_preferences=selection_preferences or SelectionPreferences(),
+            cwd=cwd,
         )
 
     def execute(self, request: SearchSkillsRequestDto) -> SearchSkillsResultDto:
