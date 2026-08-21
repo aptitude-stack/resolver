@@ -325,7 +325,7 @@ def _candidate_menu_columns(
     """Build aligned candidate labels and focused-row details."""
 
     header = (
-        "Skill                            Version    Scores (M/S)  Installs   Stars"
+        "Skill                            Version    Maturity   Security   Installs   Stars"
     )
     options: list[tuple[str, str]] = []
     descriptions: dict[str, str] = {}
@@ -346,8 +346,8 @@ def _candidate_menu_columns(
         stars = "—" if candidate.star_count is None else str(candidate.star_count)
         options.append((f"{candidate.slug:<{CANDIDATE_SKILL_WIDTH}}", candidate.slug))
         descriptions[candidate.slug] = (
-            f"{candidate.version:<11}{f'{maturity} / {security}':<18}"
-            f"{installs:>3}{stars:>8}"
+            f"{candidate.version:<11}{maturity:<11}{security:<11}"
+            f"{installs:>8}{stars:>8}"
         )
     return header, options, descriptions
 
@@ -641,9 +641,12 @@ def _fallback_select_one(
             print(help_text)
         if column_header:
             print(column_header)
+            print("─" * len(column_header))
         for index, (label, _) in enumerate(options, start=1):
             detail = descriptions.get(options[index - 1][1]) if descriptions else None
             print(f"  {index}. {label}{f' {detail}' if detail else ''}")
+        print("[↑↓] move  [enter] confirm  [q] cancel")
+        print()
         while True:
             raw_choice = input("Select option by number: ").strip()
             if raw_choice.lower() == "q":
@@ -748,6 +751,8 @@ def _fallback_select_many(
             print(help_text)
         for index, (label, _) in enumerate(options, start=1):
             print(f"  {index}. {label}")
+        print("[↑↓] move  [space] select  [enter] confirm  [q] cancel")
+        print()
         while True:
             raw_choice = input(
                 "Select one or more options by number, comma-separated: "
@@ -913,6 +918,9 @@ def _default_select_one(
         fragments.append(("class:hint", "\n"))
         if column_header:
             fragments.append(("class:column-header", f"  {column_header}\n"))
+            fragments.append(
+                ("class:column-header", f"  {'─' * len(column_header)}\n")
+            )
         active_description = _active_menu_description(
             options,
             index=state["index"],
@@ -1477,6 +1485,7 @@ class CliWizard:
         )
 
         telemetry = []
+        self._console.print()
         try:
             with self._console.status(
                 f"[{THEME.text_primary}]Syncing lockfile...",
@@ -1491,6 +1500,8 @@ class CliWizard:
         except Exception:
             self._print_operation_telemetry("Sync", telemetry)
             raise
+        finally:
+            self._console.print()
         self._print_operation_telemetry("Sync", telemetry)
         return result
 
@@ -1503,6 +1514,7 @@ class CliWizard:
         """Search candidates before prompting for installation details."""
 
         telemetry = []
+        self._console.print()
         try:
             with self._console.status(
                 f"[{THEME.text_primary}]Searching resolver skills...",
@@ -1517,6 +1529,8 @@ class CliWizard:
         except Exception:
             self._print_operation_telemetry("Search query", telemetry)
             raise
+        finally:
+            self._console.print()
         self._print_operation_telemetry("Search query", telemetry)
         return result
 
@@ -1530,6 +1544,7 @@ class CliWizard:
         """Resolve the explicitly selected candidate."""
 
         telemetry = []
+        self._console.print()
         try:
             with self._console.status(
                 f"[{THEME.text_primary}]Resolving query...",
@@ -1549,6 +1564,8 @@ class CliWizard:
         except Exception:
             self._print_operation_telemetry("Resolve query", telemetry)
             raise
+        finally:
+            self._console.print()
         self._print_operation_telemetry("Resolve query", telemetry)
 
         return result
@@ -1626,7 +1643,7 @@ class CliWizard:
     def _print_step_separator(self) -> None:
         """Print one blank-line-separated divider between wizard steps."""
 
-        self._write_separator(prefix_newline=True, suffix_newline=True)
+        self._write_separator(prefix_newline=False, suffix_newline=True)
 
     def _write_separator(
         self,
@@ -1637,7 +1654,7 @@ class CliWizard:
         """Write one exact separator line without Rich reflow."""
 
         prefix = "\n" if prefix_newline else ""
-        suffix = "\n\n" if suffix_newline else "\n\n"
+        suffix = "\n" if suffix_newline else "\n\n"
         self._console.file.write(
             f"{prefix}{_render_step_separator(self._console.size.width)}{suffix}"
         )

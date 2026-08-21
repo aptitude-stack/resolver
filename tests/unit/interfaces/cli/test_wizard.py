@@ -779,10 +779,12 @@ def test_candidate_menu_uses_borderless_columns_and_active_only_details() -> Non
     header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
 
     assert header == (
-        "Skill                            Version    Scores (M/S)  Installs   Stars"
+        "Skill                            Version    Maturity   Security   Installs   Stars"
     )
     assert options == [("python-lint                     ", "python-lint")]
-    assert descriptions == {"python-lint": "1.2.3      0.90 / 0.95       123      45"}
+    assert descriptions == {
+        "python-lint": "1.2.3      0.90       0.95            123      45"
+    }
 
 
 def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
@@ -790,7 +792,7 @@ def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
 
     _, _, descriptions = wizard_module._candidate_menu_columns([candidate])
 
-    assert descriptions["python-lint"] == "1.2.3      — / —               —       —"
+    assert descriptions["python-lint"] == "1.2.3      —          —                 —       —"
 
 
 def test_render_wordmark_supports_alternate_banner_style() -> None:
@@ -1174,6 +1176,44 @@ def test_cli_wizard_status_spinners_use_theme_accent() -> None:
     ]
 
 
+@pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
+def test_cli_wizard_status_spinners_have_one_blank_line_above_and_below(
+    operation: str,
+) -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        sync_responses=[_synced_result()],
+    )
+    transcript = StringIO()
+    console = Console(file=transcript, force_terminal=False, color_system=None)
+
+    @contextmanager
+    def status(*_args: object, **_kwargs: object):
+        transcript.write("spinner\n")
+        yield
+
+    console.status = status  # type: ignore[assignment]
+    wizard = CliWizard(
+        workflow_service=service,
+        console=console,
+        prompt_text=lambda *_, **__: "",
+    )
+    options = wizard_module.build_workflow_options(
+        prefer="balanced",
+        interaction_mode="auto",
+    )
+
+    if operation == "search":
+        wizard._search(query="lint", options=options)
+    elif operation == "resolve":
+        wizard._resolve(query="lint", select_slug="python-lint", options=options)
+    else:
+        wizard._print_step_separator = lambda: None  # type: ignore[method-assign]
+        wizard._run_sync_flow()
+
+    assert transcript.getvalue() == "\nspinner\n\n"
+
+
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
@@ -1319,6 +1359,29 @@ def test_fallback_select_one_uses_number_prompt_when_raw_terminal_control_is_una
     assert result == "global"
 
 
+def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(builtins, "input", lambda _: "1")
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
+
+    header = "Skill       Version"
+    result = wizard_module._fallback_select_one(
+        "Select candidate",
+        [("python-lint ", "python-lint")],
+        "Pick a skill.",
+        {"python-lint": "1.2.3"},
+        column_header=header,
+    )
+
+    output = capsys.readouterr().out
+    assert result == "python-lint"
+    assert f"{header}\n{'─' * len(header)}" in output
+    assert output.endswith("[↑↓] move  [enter] confirm  [q] cancel\n\n")
+
+
 def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_unavailable(
     monkeypatch,
 ) -> None:
@@ -1336,6 +1399,45 @@ def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_un
     )
 
     assert result == ["codex", "cursor"]
+
+
+def test_fallback_select_many_leaves_one_blank_line_after_trailing_hint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(builtins, "input", lambda _: "1")
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
+
+    result = wizard_module._fallback_select_many(
+        "Agent targets",
+        [("Codex", "codex")],
+        "Choose one or more agent formats and roots to export into.",
+    )
+
+    output = capsys.readouterr().out
+    assert result == ["codex"]
+    assert output.endswith(
+        "[↑↓] move  [space] select  [enter] confirm  [q] cancel\n\n"
+    )
+
+
+def test_step_separator_adds_no_extra_blank_after_select_hint() -> None:
+    transcript = StringIO()
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    hint = "[↑↓] move  [enter] confirm  [q] cancel"
+    transcript.write(f"{hint}\n\n")
+    wizard._print_step_separator()
+
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
+    assert transcript.getvalue().endswith(f"{hint}\n\n{separator}\n")
 
 
 def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
@@ -1828,6 +1930,9 @@ def test_default_select_one_prompt_toolkit_scrolls_a_five_row_column_viewport(
     assert result == "project"
     rendered = "".join(text for _, text in fragments)
     assert "Skill       Version" in rendered
+    divider = "─" * len("Skill       Version")
+    assert rendered.index(divider) > rendered.index("Skill       Version")
+    assert rendered.index(divider) < rendered.index("skill-1")
     assert "skill-1 v1" in rendered
     assert "skill-5" in rendered
     assert "skill-6" not in rendered
