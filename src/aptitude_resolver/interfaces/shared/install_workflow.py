@@ -9,6 +9,7 @@ from typing import Callable, Literal, Protocol
 from aptitude_resolver.application.composition import (
     build_install_use_case,
     build_resolve_use_case,
+    build_search_use_case,
     build_sync_use_case,
 )
 from aptitude_resolver.application.dto import (
@@ -16,6 +17,8 @@ from aptitude_resolver.application.dto import (
     InstallResultDto,
     ResolveQueryRequestDto,
     ResolveQueryResultDto,
+    SearchSkillsRequestDto,
+    SearchSkillsResultDto,
     SyncRequestDto,
     SyncResultDto,
 )
@@ -31,12 +34,17 @@ class InstallWorkflowUseCase(Protocol):
     def execute(self, request: InstallRequestDto) -> InstallResultDto: ...
 
 
+class SearchWorkflowUseCase(Protocol):
+    def execute(self, request: SearchSkillsRequestDto) -> SearchSkillsResultDto: ...
+
+
 class SyncWorkflowUseCase(Protocol):
     def execute(self, request: SyncRequestDto) -> SyncResultDto: ...
 
 
 ResolveBuilder = Callable[..., tuple[ResolveWorkflowUseCase, Callable[[], None]]]
 InstallBuilder = Callable[..., tuple[InstallWorkflowUseCase, Callable[[], None]]]
+SearchBuilder = Callable[..., tuple[SearchWorkflowUseCase, Callable[[], None]]]
 SyncBuilder = Callable[[], tuple[SyncWorkflowUseCase, Callable[[], None]]]
 
 
@@ -83,11 +91,27 @@ class InstallWorkflowService:
         *,
         resolve_builder: ResolveBuilder = build_resolve_use_case,
         install_builder: InstallBuilder = build_install_use_case,
+        search_builder: SearchBuilder = build_search_use_case,
         sync_builder: SyncBuilder = build_sync_use_case,
     ) -> None:
         self._resolve_builder = resolve_builder
         self._install_builder = install_builder
+        self._search_builder = search_builder
         self._sync_builder = sync_builder
+
+    def search_query(
+        self,
+        *,
+        query: str,
+        options: InstallWorkflowOptions | None = None,
+    ) -> SearchSkillsResultDto:
+        """Execute discovery-only search with shared builder cleanup."""
+
+        use_case, close = self.prepare_search(options=options)
+        try:
+            return self.execute_search(use_case, query=query)
+        finally:
+            close()
 
     def resolve_query(
         self,
@@ -177,6 +201,25 @@ class InstallWorkflowService:
         """Build one reusable resolve use case with the provided overrides."""
 
         return self._resolve_builder(**self._build_kwargs(options))
+
+    def prepare_search(
+        self,
+        *,
+        options: InstallWorkflowOptions | None = None,
+    ) -> tuple[SearchWorkflowUseCase, Callable[[], None]]:
+        """Build one reusable search use case with the provided overrides."""
+
+        return self._search_builder(**self._build_kwargs(options))
+
+    def execute_search(
+        self,
+        use_case: SearchWorkflowUseCase,
+        *,
+        query: str,
+    ) -> SearchSkillsResultDto:
+        """Execute one prepared search use case."""
+
+        return use_case.execute(SearchSkillsRequestDto(query=query))
 
     def execute_resolve(
         self,

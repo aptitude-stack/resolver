@@ -177,3 +177,21 @@ def test_discovery_context_skips_invalid_slug_and_version_nodes(
     assert load_discovery_context(cwd=project) == [
         SkillCoordinate(slug="valid-skill", version="1.2.3")
     ]
+
+
+def test_discovery_context_accepts_pep440_versions(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    nodes = [_node("release", "1.2"), _node("candidate", "2.0rc1")]
+    project.joinpath("aptitude.lock.json").write_text(
+        serialize_lockfile(_lockfile(nodes))
+    )
+
+    assert load_discovery_context(cwd=project) == [
+        SkillCoordinate(slug="release", version="1.2"),
+        SkillCoordinate(slug="candidate", version="2.0rc1"),
+    ]

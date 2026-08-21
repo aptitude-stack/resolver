@@ -38,6 +38,7 @@ def build_workflow_service(
     *,
     resolve_builder,
     install_builder,
+    search_builder,
     sync_builder,
 ) -> InstallWorkflowService:
     """Create one workflow service from the provided builder functions."""
@@ -45,6 +46,7 @@ def build_workflow_service(
     return InstallWorkflowService(
         resolve_builder=resolve_builder,
         install_builder=install_builder,
+        search_builder=search_builder,
         sync_builder=sync_builder,
     )
 

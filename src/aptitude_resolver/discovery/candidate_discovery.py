@@ -7,8 +7,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from semver import Version
-
 from aptitude_resolver.discovery.intent import parse_search_intent
 from aptitude_resolver.discovery.query_builder import build_discovery_query
 from aptitude_resolver.domain.errors import (
@@ -25,6 +23,7 @@ from aptitude_resolver.domain.models import (
     VersionSummary,
 )
 from aptitude_resolver.domain.tracing import TraceEntry
+from aptitude_resolver.domain.versioning import parse_skill_version
 from aptitude_resolver.lockfile import load_lockfile
 from aptitude_resolver.shared.config import default_aptitude_state_dir
 
@@ -50,7 +49,7 @@ def load_discovery_context(*, cwd: Path | None = None) -> list[SkillCoordinate]:
             if SLUG_RE.fullmatch(node.slug) is None:
                 continue
             try:
-                Version.parse(node.version)
+                parse_skill_version(node.version)
             except ValueError:
                 continue
             if node.slug in seen_slugs:

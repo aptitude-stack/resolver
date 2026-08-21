@@ -183,6 +183,7 @@ def _build_workflow_service() -> InstallWorkflowService:
     return _shared_build_workflow_service(
         resolve_builder=build_resolve_use_case,
         install_builder=build_install_use_case,
+        search_builder=build_search_use_case,
         sync_builder=build_sync_use_case,
     )
 
