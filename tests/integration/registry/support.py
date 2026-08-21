@@ -50,7 +50,9 @@ def build_publish_payload(
     }
 
 
-def build_publish_files(payload: dict[str, Any]) -> dict[str, tuple[None | str, str | bytes, str]]:
+def build_publish_files(
+    payload: dict[str, Any],
+) -> dict[str, tuple[None | str, str | bytes, str]]:
     """Build the Registry's multipart metadata and tar.zst artifact parts."""
 
     metadata = dict(payload)

@@ -5,7 +5,9 @@ from aptitude_resolver.discovery.query_builder import build_discovery_query
 from aptitude_resolver.domain.models import SkillCoordinate
 
 
-def test_build_discovery_query_keeps_inferred_preferences_out_of_required_tags() -> None:
+def test_build_discovery_query_keeps_inferred_preferences_out_of_required_tags() -> (
+    None
+):
     intent = parse_search_intent("trusted python lint for ci")
 
     query = build_discovery_query(intent)
@@ -55,7 +57,9 @@ def test_build_discovery_query_does_not_require_terms_from_long_input_as_tags() 
     assert query.query == "one two three four five six seven eight nine ten"
 
 
-def test_build_discovery_query_does_not_require_natural_language_terms_as_tags() -> None:
+def test_build_discovery_query_does_not_require_natural_language_terms_as_tags() -> (
+    None
+):
     intent = parse_search_intent("Testing in python")
 
     query = build_discovery_query(intent)

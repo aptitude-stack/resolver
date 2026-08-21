@@ -145,7 +145,9 @@ def _add_independent_skill(
     registry_client.artifact_by_coordinate[(slug, version)] = artifact
 
 
-def test_exact_install_bypasses_discovery_and_materializes_requested_slug(tmp_path) -> None:
+def test_exact_install_bypasses_discovery_and_materializes_requested_slug(
+    tmp_path,
+) -> None:
     registry_client = FakeRegistryClient()
     slug = "python-lint"
     version = "1.2.3"
@@ -183,7 +185,9 @@ def test_exact_install_bypasses_discovery_and_materializes_requested_slug(tmp_pa
     assert registry_client.discovery_calls == []
 
 
-def test_exact_install_missing_requested_version_names_slug_and_version(tmp_path) -> None:
+def test_exact_install_missing_requested_version_names_slug_and_version(
+    tmp_path,
+) -> None:
     class MissingVersionRegistryClient(FakeRegistryClient):
         def fetch_skill_metadata(self, slug: str, version: str) -> SkillMetadata:
             try:

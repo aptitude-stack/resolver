@@ -732,6 +732,7 @@ def test_cli_inspect_prints_skill_metadata_and_preview(monkeypatch) -> None:
     builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
+
     def build_inspect_use_case(**kwargs):
         builder_kwargs.update(kwargs)
         return use_case, lambda: close_calls.append("closed")
@@ -1452,17 +1453,13 @@ def test_cli_install_with_query_bypasses_wizard_and_marks_exact(
         lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
     )
 
-    result = runner.invoke(
-        app_module.app, ["install", "python-lint", *version_args]
-    )
+    result = runner.invoke(app_module.app, ["install", "python-lint", *version_args])
 
     assert result.exit_code == 0
     assert calls == []
     assert close_calls == ["closed"]
     assert use_case.requests[0].query == "python-lint"
-    assert use_case.requests[0].version == (
-        version_args[1] if version_args else None
-    )
+    assert use_case.requests[0].version == (version_args[1] if version_args else None)
     assert use_case.requests[0].exact is True
 
 

@@ -100,8 +100,7 @@ def _ensure_registry_ready(config: IntegrationConfig) -> None:
         "Authorization": f"Bearer {config.read_token}",
     }
     payload = {
-        "name": "aptitude integration readiness probe",
-        "description": "Probe the live discovery endpoint before running integration tests.",
+        "query": "aptitude integration readiness probe",
         "tags": ["integration", "readiness"],
     }
 

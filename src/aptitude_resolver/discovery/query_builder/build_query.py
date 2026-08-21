@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from aptitude_resolver.domain.models import DiscoveryQuery, SearchIntent, SkillCoordinate
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SearchIntent,
+    SkillCoordinate,
+)
 
 
 def build_discovery_query(

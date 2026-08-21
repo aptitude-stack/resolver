@@ -2,9 +2,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery, load_discovery_context
-from aptitude_resolver.domain.models import DiscoveryQuery, SkillCoordinate, SkillIdentity
-from aptitude_resolver.lockfile import LockRoot, Lockfile, LockedSkill, serialize_lockfile
+from aptitude_resolver.discovery import (
+    DiscoverSkillCandidatesQuery,
+    load_discovery_context,
+)
+from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
+    SkillCoordinate,
+    SkillIdentity,
+)
+from aptitude_resolver.lockfile import (
+    LockRoot,
+    Lockfile,
+    LockedSkill,
+    serialize_lockfile,
+)
 
 
 def _node(slug: str, version: str) -> LockedSkill:
