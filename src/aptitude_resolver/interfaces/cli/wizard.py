@@ -1373,7 +1373,6 @@ class CliWizard:
             if chosen_slug == RETURN_OPTION_VALUE:
                 return None
 
-            self._print_step_separator()
             try:
                 resolve_result = self._resolve(
                     query=query,
@@ -1569,27 +1568,21 @@ class CliWizard:
     ) -> ResolveQueryResultDto:
         """Resolve the explicitly selected candidate."""
 
-        self._console.print()
-        try:
-            with self._console.status(
-                f"[{THEME.text_primary}]Resolving query...",
-                spinner="dots",
-                spinner_style=THEME.accent,
-            ):
-                with capture_cli_telemetry():
-                    result = self._workflow_service.resolve_query(
-                        query=query,
-                        version=None,
-                        select_slug=select_slug,
-                        interaction_mode="never",
-                        prompt_capable=False,
-                        selection_source="interactive",
-                        options=options,
-                    )
-        except Exception:
-            self._console.print()
-            raise
-        self._console.print()
+        with self._console.status(
+            f"[{THEME.text_primary}]Resolving query...",
+            spinner="dots",
+            spinner_style=THEME.accent,
+        ):
+            with capture_cli_telemetry():
+                result = self._workflow_service.resolve_query(
+                    query=query,
+                    version=None,
+                    select_slug=select_slug,
+                    interaction_mode="never",
+                    prompt_capable=False,
+                    selection_source="interactive",
+                    options=options,
+                )
 
         return result
 
@@ -1666,7 +1659,7 @@ class CliWizard:
     def _print_step_separator(self) -> None:
         """Print one blank-line-separated divider between wizard steps."""
 
-        self._write_separator(prefix_newline=False, suffix_newline=True)
+        self._write_separator()
 
     def _write_separator(
         self,

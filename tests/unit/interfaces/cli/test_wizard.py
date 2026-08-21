@@ -997,9 +997,9 @@ def test_cli_wizard_direct_install_flow_selects_candidate_before_destination() -
 
     wizard.run(initial_flow="install", initial_query="postman primary skill")
 
-    assert events.index("select:Select candidate") < events.index(
-        "select:Install scope"
-    )
+    candidate_index = events.index("select:Select candidate")
+    scope_index = events.index("select:Install scope")
+    assert events[candidate_index + 1 : scope_index] == ["separator"]
 
 
 def test_cli_wizard_separates_install_scope_from_agent_targets() -> None:
@@ -1248,7 +1248,7 @@ def test_cli_wizard_status_spinners_use_theme_accent() -> None:
 
 
 @pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
-def test_cli_wizard_status_spinners_have_one_blank_line_above_and_below(
+def test_cli_wizard_status_spinner_spacing_matches_visible_output(
     operation: str,
 ) -> None:
     service = FakeWorkflowService(
@@ -1282,11 +1282,12 @@ def test_cli_wizard_status_spinners_have_one_blank_line_above_and_below(
         wizard._print_step_separator = lambda: None  # type: ignore[method-assign]
         wizard._run_sync_flow()
 
-    assert transcript.getvalue() == "\nspinner\n\n"
+    expected = "spinner\n" if operation == "resolve" else "\nspinner\n\n"
+    assert transcript.getvalue() == expected
 
 
 @pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
-def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
+def test_cli_wizard_exception_status_spacing_matches_visible_telemetry(
     operation: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1342,9 +1343,12 @@ def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
             wizard._run_sync_flow()
 
     output = transcript.getvalue()
-    assert "\nspinner\n\n" in output
-    assert "spinner\n\n\n" not in output
-    assert ("telemetry" in output) is (operation != "resolve")
+    if operation == "resolve":
+        assert output == "spinner\n"
+    else:
+        assert "\nspinner\n\n" in output
+        assert "spinner\n\n\n" not in output
+        assert "telemetry" in output
 
 
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:
@@ -1596,7 +1600,7 @@ def test_fallback_select_many_leaves_one_blank_line_after_trailing_hint(
     )
 
 
-def test_step_separator_adds_no_extra_blank_after_select_hint() -> None:
+def test_step_separator_has_one_empty_line_before_and_after() -> None:
     transcript = StringIO()
     wizard = CliWizard(
         workflow_service=FakeWorkflowService(),
@@ -1611,7 +1615,7 @@ def test_step_separator_adds_no_extra_blank_after_select_hint() -> None:
     wizard._print_step_separator()
 
     separator = wizard_module._render_step_separator(wizard._console.size.width)
-    assert transcript.getvalue().endswith(f"{hint}\n\n{separator}\n")
+    assert transcript.getvalue().endswith(f"{hint}\n\n{separator}\n\n")
 
 
 def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
