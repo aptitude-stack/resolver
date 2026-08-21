@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from aptitude_resolver.application import composition
@@ -637,6 +638,7 @@ def test_cli_search_prints_ranked_candidates(monkeypatch) -> None:
         "allowed_lifecycle_statuses_override": None,
         "max_token_estimate_override": None,
         "max_content_size_bytes_override": None,
+        "cwd": Path.cwd(),
     }
     assert len(use_case.requests) == 1
     assert use_case.requests[0].query == "python lint"
@@ -663,7 +665,7 @@ def test_cli_search_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Ranked Candidates" in result.stdout
     assert "Next Steps" in result.stdout
     assert "python-lint" in result.stdout
-    assert 'aptitude install "python lint" --select-slug SLUG' in result.stdout
+    assert "aptitude install SLUG" in result.stdout
 
 
 def test_cli_search_json_outputs_structured_result(monkeypatch) -> None:
@@ -720,19 +722,22 @@ def test_cli_search_passes_policy_flag_overrides_to_builder(monkeypatch) -> None
         "allowed_lifecycle_statuses_override": ["published"],
         "max_token_estimate_override": 500,
         "max_content_size_bytes_override": 2048,
+        "cwd": Path.cwd(),
     }
 
 
 def test_cli_inspect_prints_skill_metadata_and_preview(monkeypatch) -> None:
     use_case = QueueUseCase(responses=[_inspect_result()])
     close_calls: list[str] = []
+    builder_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(app_module, "_can_prompt_user", lambda: False)
-    monkeypatch.setattr(
-        app_module,
-        "build_inspect_use_case",
-        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
-    )
+
+    def build_inspect_use_case(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    monkeypatch.setattr(app_module, "build_inspect_use_case", build_inspect_use_case)
 
     result = runner.invoke(app_module.app, ["inspect", "python lint"])
 
@@ -741,6 +746,7 @@ def test_cli_inspect_prints_skill_metadata_and_preview(monkeypatch) -> None:
     assert use_case.requests[0].query == "python lint"
     assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].preview_char_limit == 4000
+    assert builder_kwargs["cwd"] == Path.cwd()
     assert close_calls == ["closed"]
     assert "Skill Inspection" in result.stdout
     assert "Selected: python-lint@1.2.3" in result.stdout
@@ -869,6 +875,7 @@ def test_cli_inspect_passes_selection_flag_overrides_to_builder(monkeypatch) -> 
         "allowed_lifecycle_statuses_override": ["published"],
         "max_token_estimate_override": 250,
         "max_content_size_bytes_override": 512,
+        "cwd": Path.cwd(),
     }
     assert use_case.requests[0].version == "1.2.3"
     assert use_case.requests[0].select_slug == "python-lint"
@@ -892,7 +899,7 @@ def test_cli_resolve_non_interactive_prints_stable_json(monkeypatch) -> None:
     result = runner.invoke(app_module.app, ["resolve", "python lint"])
 
     assert result.exit_code == 0
-    assert builder_kwargs == {}
+    assert builder_kwargs == {"cwd": Path.cwd()}
     assert len(use_case.requests) == 1
     assert use_case.requests[0].interaction_mode is None
     assert use_case.requests[0].prompt_capable is False
@@ -924,7 +931,7 @@ def test_cli_resolve_interactive_prompts_and_replays_with_selected_slug(
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
-        lambda: (use_case, lambda: close_calls.append("closed")),
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
     )
 
     result = runner.invoke(app_module.app, ["resolve", "lint"], input="2\n")
@@ -961,7 +968,7 @@ def test_cli_resolve_select_slug_bypasses_prompt(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
-        lambda: (use_case, lambda: close_calls.append("closed")),
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
     )
 
     result = runner.invoke(
@@ -1199,6 +1206,7 @@ def test_cli_resolve_passes_policy_flag_overrides_to_builder(monkeypatch) -> Non
         "allowed_lifecycle_statuses_override": ["published"],
         "max_token_estimate_override": 250,
         "max_content_size_bytes_override": 512,
+        "cwd": Path.cwd(),
     }
     assert close_calls == ["closed"]
 
@@ -1424,29 +1432,35 @@ def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> 
     assert calls == [{"initial_flow": "install"}]
 
 
-def test_cli_install_with_only_query_launches_wizard_at_plan_step_when_prompting_is_available(
-    monkeypatch,
+@pytest.mark.parametrize("version_args", [[], ["--version", "1.2.3"]])
+def test_cli_install_with_query_bypasses_wizard_and_marks_exact(
+    monkeypatch, tmp_path, version_args
 ) -> None:
+    target = tmp_path / "aptitude_state"
+    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    close_calls: list[str] = []
     calls: list[dict[str, object]] = []
     monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
-    monkeypatch.setattr(app_module, "_can_prompt_user", lambda: True)
     monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
-
     monkeypatch.setattr(
         app_module,
         "run_cli_wizard",
         lambda **kwargs: calls.append(kwargs),
     )
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_kwargs: (use_case, lambda: close_calls.append("closed")),
+    )
 
-    result = runner.invoke(app_module.app, ["install", "python lint"])
+    result = runner.invoke(app_module.app, ["install", "python-lint", *version_args])
 
     assert result.exit_code == 0
-    assert calls == [
-        {
-            "initial_flow": "install",
-            "initial_query": "python lint",
-        }
-    ]
+    assert calls == []
+    assert close_calls == ["closed"]
+    assert use_case.requests[0].query == "python-lint"
+    assert use_case.requests[0].version == (version_args[1] if version_args else None)
+    assert use_case.requests[0].exact is True
 
 
 def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailable(
@@ -1658,7 +1672,7 @@ def test_cli_resolve_prints_structured_error(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module,
         "build_resolve_use_case",
-        lambda: (
+        lambda **_kwargs: (
             QueueUseCase(
                 error=SelectionSlugNotFoundError(
                     "lint", "missing-skill", ["python-lint"]
@@ -1724,6 +1738,7 @@ def test_cli_manifest_interactive_uses_rich_panels(monkeypatch) -> None:
     assert "Global Flags" in result.stdout
     assert "policy" in result.stdout
     assert "show" in result.stdout
+    assert "select_slug" not in app_module._manifest_option_keys("install")
     assert "--install-completion" not in result.stdout
     assert "--show-completion" not in result.stdout
 

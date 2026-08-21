@@ -83,6 +83,40 @@ def test_load_integration_config_prefers_publish_token_over_read_fallback(
     assert config.publish_token == "publisher-token"
 
 
+def test_registry_readiness_probe_uses_current_discovery_request(monkeypatch) -> None:
+    registry_conftest = _load_registry_conftest()
+    captured_payload: dict[str, object] = {}
+
+    class FakeClient:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            pass
+
+        def post(self, _path, *, headers, json):
+            captured_payload.update(json)
+            return httpx.Response(200, json={"candidates": []})
+
+    monkeypatch.setattr(registry_conftest.httpx, "Client", FakeClient)
+    config = registry_conftest.IntegrationConfig(
+        base_url="http://registry.test",
+        read_token="reader-token",
+        publish_token=None,
+        timeout_seconds=5.0,
+    )
+
+    registry_conftest._ensure_registry_ready(config)
+
+    assert captured_payload == {
+        "query": "aptitude integration readiness probe",
+        "tags": ["integration", "readiness"],
+    }
+
+
 def test_ensure_publish_ready_skips_when_write_endpoint_is_unavailable() -> None:
     response = httpx.Response(404, text='{"detail":"Not Found"}')
 

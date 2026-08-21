@@ -578,6 +578,7 @@ def build_resolve_use_case(
                 interaction_mode_override=interaction_mode_override,
                 cwd=cwd,
             ),
+            cwd=cwd,
         ),
         close,
     )
@@ -613,6 +614,7 @@ def build_install_use_case(
                 interaction_mode_override=interaction_mode_override,
                 cwd=cwd,
             ),
+            cwd=cwd,
         ),
         close,
     )
@@ -646,6 +648,7 @@ def build_search_use_case(
                 interaction_mode_override=interaction_mode_override,
                 cwd=cwd,
             ),
+            cwd=cwd,
         ),
         close,
     )
@@ -679,6 +682,7 @@ def build_inspect_use_case(
                 interaction_mode_override=interaction_mode_override,
                 cwd=cwd,
             ),
+            cwd=cwd,
         ),
         close,
     )

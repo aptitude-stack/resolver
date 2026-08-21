@@ -5,11 +5,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from aptitude_resolver.application.dto import (
     ConfigLayerDto,
     DiscoveryCandidateDto,
     EffectivePolicyReportDto,
     ExecutionPlanDto,
+    InspectSkillResultDto,
     InstallResultDto,
     InstalledSkillDto,
     LockRootDto,
@@ -24,6 +27,7 @@ from aptitude_resolver.application.dto import (
 )
 from aptitude_resolver.domain.errors import InvalidLockfileError
 from aptitude_resolver.interfaces.mcp.models import (
+    InspectSkillInput,
     InstallSkillInput,
     PreviewInstallDestinationsInput,
     ResponseFormat,
@@ -35,6 +39,7 @@ from aptitude_resolver.interfaces.mcp.models import (
 from aptitude_resolver.interfaces.mcp.server import (
     AptitudeMcpAdapter,
     TOOL_ANNOTATIONS,
+    _workflow_kwargs,
     create_server,
 )
 
@@ -66,6 +71,39 @@ class RecordingBuilder:
 
     def close(self) -> None:
         self.closed = True
+
+
+@pytest.mark.parametrize(
+    ("raw_cwd", "expected_suffix"),
+    [(Path("workspace"), Path("workspace")), (Path("~"), Path("home"))],
+)
+def test_workflow_kwargs_normalizes_cwd_for_all_workflow_inputs(
+    tmp_path: Path,
+    monkeypatch,
+    raw_cwd: Path,
+    expected_suffix: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    expected = (tmp_path / expected_suffix).resolve()
+    inputs = (
+        SearchSkillsInput(query="postman", cwd=raw_cwd),
+        InspectSkillInput(query="postman", cwd=raw_cwd),
+        ResolveSkillInput(query="postman", cwd=raw_cwd),
+        InstallSkillInput(
+            query="postman",
+            agents=["codex"],
+            scope="project",
+            cwd=raw_cwd,
+        ),
+    )
+
+    assert [_workflow_kwargs(params)["cwd"] for params in inputs] == [
+        expected,
+        expected,
+        expected,
+        expected,
+    ]
 
 
 def _candidate(slug: str, position: int = 1) -> DiscoveryCandidateDto:
@@ -123,6 +161,7 @@ def test_search_skills_paginates_and_closes_builder() -> None:
         SearchSkillsInput(
             query="postman",
             limit=1,
+            cwd=Path.cwd(),
             response_format=ResponseFormat.JSON,
         )
     )
@@ -132,8 +171,35 @@ def test_search_skills_paginates_and_closes_builder() -> None:
     assert payload["has_more"] is True
     assert payload["candidates"][0]["slug"] == "one"
     assert builder.closed is True
-    assert builder.kwargs == {"interaction_mode_override": "never"}
+    assert builder.kwargs == {
+        "interaction_mode_override": "never",
+        "cwd": Path.cwd(),
+    }
     assert use_case.requests[0].query == "postman"
+
+
+def test_inspect_skill_forwards_cwd_to_builder_and_request(tmp_path: Path) -> None:
+    use_case = RecordingUseCase(
+        InspectSkillResultDto(
+            requested_query="postman",
+            status="selection_required",
+        )
+    )
+    builder = RecordingBuilder(use_case)
+    adapter = AptitudeMcpAdapter(inspect_builder=builder)
+
+    adapter.inspect_skill(
+        InspectSkillInput(
+            query="postman",
+            cwd=tmp_path,
+            response_format=ResponseFormat.JSON,
+        )
+    )
+
+    assert builder.kwargs == {
+        "interaction_mode_override": "never",
+        "cwd": tmp_path,
+    }
 
 
 def test_resolve_skill_uses_non_interactive_mcp_selection_source() -> None:
@@ -151,13 +217,21 @@ def test_resolve_skill_uses_non_interactive_mcp_selection_source() -> None:
     adapter = AptitudeMcpAdapter(resolve_builder=builder)
 
     response = adapter.resolve_skill(
-        ResolveSkillInput(query="postman", response_format=ResponseFormat.JSON)
+        ResolveSkillInput(
+            query="postman",
+            cwd=Path.cwd(),
+            response_format=ResponseFormat.JSON,
+        )
     )
     payload = json.loads(response)
 
     assert payload["selected_coordinate"]["slug"] == "postman-primary"
     assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].selection_source == "mcp"
+    assert builder.kwargs == {
+        "interaction_mode_override": "never",
+        "cwd": Path.cwd(),
+    }
     assert builder.closed is True
 
 
@@ -220,6 +294,10 @@ def test_install_skill_requires_explicit_agent_scope_and_closes_builder(
     assert use_case.requests[0].scope == "project"
     assert use_case.requests[0].cwd == tmp_path.resolve()
     assert use_case.requests[0].selection_source == "mcp"
+    assert builder.kwargs == {
+        "interaction_mode_override": "never",
+        "cwd": tmp_path,
+    }
     assert builder.closed is True
 
 

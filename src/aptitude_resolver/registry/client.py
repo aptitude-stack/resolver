@@ -163,11 +163,13 @@ class RegistryClient:
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
         """Discover candidate slugs for a resolver-owned discovery query."""
 
-        body: dict[str, Any] = {"name": query.name}
-        if query.description:
-            body["description"] = query.description
+        body: dict[str, Any] = {"query": query.query}
         if query.tags:
             body["tags"] = list(query.tags)
+        body["context_skills"] = [
+            {"slug": coordinate.slug, "version": coordinate.version}
+            for coordinate in query.context_skills
+        ]
 
         payload = self._post_json_with_cache(
             discovery_key(query),
@@ -186,7 +188,7 @@ class RegistryClient:
     def discover_candidates(self, query: str) -> list[str]:
         """Backward-compatible discovery helper for the earlier exact slice."""
 
-        return self.discover_candidate_slugs(DiscoveryQuery(name=query))
+        return self.discover_candidate_slugs(DiscoveryQuery(query=query))
 
     def fetch_skill_content(
         self,

@@ -4,6 +4,12 @@ from aptitude_resolver.interfaces.shared.install_workflow import (
     InteractionMode,
     InstallWorkflowOptions,
     InstallWorkflowService,
+    SearchBuilder,
 )
 
-__all__ = ["InteractionMode", "InstallWorkflowOptions", "InstallWorkflowService"]
+__all__ = [
+    "InteractionMode",
+    "InstallWorkflowOptions",
+    "InstallWorkflowService",
+    "SearchBuilder",
+]

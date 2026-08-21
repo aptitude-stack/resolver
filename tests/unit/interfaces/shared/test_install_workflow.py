@@ -5,12 +5,18 @@ from typing import Callable, Generic, TypeVar, cast
 
 import pytest
 
-from aptitude_resolver.application.dto import InstallRequestDto, ResolveQueryRequestDto
+from aptitude_resolver.application.dto import (
+    InstallRequestDto,
+    ResolveQueryRequestDto,
+    SearchSkillsRequestDto,
+    SearchSkillsResultDto,
+)
 from aptitude_resolver.interfaces.shared.install_workflow import (
     InstallBuilder,
     InstallWorkflowOptions,
     InstallWorkflowService,
     ResolveBuilder,
+    SearchBuilder,
 )
 
 RequestT = TypeVar("RequestT")
@@ -154,4 +160,41 @@ def test_install_query_applies_builder_overrides_and_forwards_install_controls()
     assert use_case.requests[0].interaction_mode == "never"
     assert use_case.requests[0].prompt_capable is False
     assert use_case.requests[0].selection_source == "cli_flag"
+    assert close_calls == ["closed"]
+
+
+def test_search_query_applies_builder_overrides_and_closes() -> None:
+    response = SearchSkillsResultDto(requested_query="lint", status="found")
+    use_case = QueueUseCase[SearchSkillsRequestDto, SearchSkillsResultDto](
+        responses=[response]
+    )
+    builder_kwargs: dict[str, object] = {}
+    close_calls: list[str] = []
+
+    def build_search_use_case(
+        **kwargs: object,
+    ) -> tuple[
+        QueueUseCase[SearchSkillsRequestDto, SearchSkillsResultDto], Callable[[], None]
+    ]:
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: close_calls.append("closed")
+
+    service = InstallWorkflowService(
+        search_builder=cast(SearchBuilder, build_search_use_case)
+    )
+
+    result = service.search_query(
+        query="python lint",
+        options=InstallWorkflowOptions(
+            selection_profile="high-trust",
+            interaction_mode="always",
+        ),
+    )
+
+    assert result is response
+    assert builder_kwargs == {
+        "selection_profile_override": "high-trust",
+        "interaction_mode_override": "always",
+    }
+    assert use_case.requests[0].query == "python lint"
     assert close_calls == ["closed"]

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+import aptitude_resolver.discovery.candidate_discovery as candidate_discovery_module
 from aptitude_resolver.discovery import DiscoverSkillCandidatesQuery
 from aptitude_resolver.domain.errors import SkillNotFoundError
 from aptitude_resolver.domain.models import (
+    DiscoveryQuery,
     SkillCoordinate,
     SkillIdentity,
     VersionSummary,
@@ -14,7 +16,7 @@ from aptitude_resolver.domain.models import (
 class FakeRegistryClient:
     def __init__(self, candidates: list[str]) -> None:
         self.candidates = candidates
-        self.discovery_calls: list[object] = []
+        self.discovery_calls: list[DiscoveryQuery] = []
 
     def discover_candidate_slugs(self, query) -> list[str]:
         self.discovery_calls.append(query)
@@ -65,17 +67,17 @@ def test_discovery_keeps_all_registry_candidates_without_client_side_cap() -> No
     }
 
 
-def test_discovery_treats_hyphenated_query_as_exact_slug() -> None:
-    registry_client = FakeRegistryClient(["fallback-skill"])
+@pytest.mark.parametrize("query", ["lint", "python-lint"])
+def test_discovery_posts_every_query_to_registry_discovery(query: str) -> None:
+    registry_client = FakeRegistryClient([query])
 
-    result = DiscoverSkillCandidatesQuery(registry_client).execute("python-lint")
+    result = DiscoverSkillCandidatesQuery(registry_client).execute(query)
 
-    assert [match.slug for match in result.matches] == ["python-lint"]
-    assert result.trace[1].action == "exact_slug_hit"
-    assert registry_client.discovery_calls == []
+    assert [match.slug for match in result.matches] == [query]
+    assert [call.query for call in registry_client.discovery_calls] == [query]
 
 
-def test_discovery_does_not_fall_back_when_hyphenated_slug_is_missing() -> None:
+def test_exact_discovery_does_not_fall_back_when_slug_is_missing() -> None:
     class MissingSlugRegistryClient(FakeRegistryClient):
         def fetch_skill_identity(self, slug: str) -> SkillIdentity:
             raise SkillNotFoundError(f"Skill not found: {slug}")
@@ -83,6 +85,23 @@ def test_discovery_does_not_fall_back_when_hyphenated_slug_is_missing() -> None:
     registry_client = MissingSlugRegistryClient(["fallback-skill"])
 
     with pytest.raises(SkillNotFoundError, match="python-missing"):
-        DiscoverSkillCandidatesQuery(registry_client).execute("python-missing")
+        DiscoverSkillCandidatesQuery(registry_client).execute(
+            "python-missing", exact=True
+        )
 
     assert registry_client.discovery_calls == []
+
+
+def test_exact_discovery_skips_advisory_lock_context_loading(monkeypatch) -> None:
+    registry_client = FakeRegistryClient(["python-lint"])
+    monkeypatch.setattr(
+        candidate_discovery_module,
+        "load_discovery_context",
+        lambda **_: pytest.fail("exact discovery should not load advisory context"),
+    )
+
+    result = DiscoverSkillCandidatesQuery(registry_client).execute(
+        "python-lint", exact=True
+    )
+
+    assert [match.slug for match in result.matches] == ["python-lint"]

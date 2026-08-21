@@ -60,6 +60,10 @@ class SearchSkillsInput(_WorkflowPolicyInput):
     query: str = Field(
         ..., min_length=1, max_length=500, description="Skill search query."
     )
+    cwd: Path | None = Field(
+        default=None,
+        description="Optional workspace directory used for project lock discovery context; defaults to the current process directory.",
+    )
     limit: int = Field(
         default=20, ge=1, le=100, description="Maximum candidates to return."
     )
@@ -75,6 +79,10 @@ class InspectSkillInput(_WorkflowPolicyInput):
 
     query: str = Field(
         ..., min_length=1, max_length=500, description="Skill query or slug."
+    )
+    cwd: Path | None = Field(
+        default=None,
+        description="Optional workspace directory used for project lock discovery context; defaults to the current process directory.",
     )
     version: str | None = Field(default=None, description="Optional exact version.")
     select_slug: str | None = Field(
@@ -94,6 +102,10 @@ class ResolveSkillInput(_WorkflowPolicyInput):
     """Input for deterministic fresh planning without materialization."""
 
     query: str = Field(..., min_length=1, max_length=500, description="Skill query.")
+    cwd: Path | None = Field(
+        default=None,
+        description="Optional workspace directory used for project lock discovery context; defaults to the current process directory.",
+    )
     version: str | None = Field(default=None, description="Optional requested version.")
     select_slug: str | None = Field(
         default=None, description="Optional explicit selected slug."

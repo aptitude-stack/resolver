@@ -10,6 +10,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Mapping, Sequence, TypedDict, cast
 
+import pytest
 from rich.console import Console
 
 from aptitude_resolver.application.dto import (
@@ -542,14 +543,30 @@ def test_cli_wizard_header_uses_filled_aptitude_wordmark() -> None:
     wizard.run()
 
     output = transcript.getvalue()
-    assert (
-        "Aptitude - Review-first CLI for discovering and installing skills." in output
-    )
+    assert "Aptitude Resolver" in output
     assert "   ______          __" in output
     assert "wizard launcher" not in output
     assert "[enter] confirm  [↑↓] move  [q] quit" not in output
     assert "Choose a flow" not in output
     assert "Capability Map" not in output
+
+
+def test_cli_wizard_header_includes_resolver_package_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transcript = StringIO()
+    monkeypatch.setattr(wizard_module, "resolve_cli_version", lambda: "0.2.8")
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    wizard.run()
+
+    assert "Aptitude Resolver 0.2.8 - " in transcript.getvalue()
 
 
 def test_cli_wizard_passes_flow_descriptions_to_selector() -> None:

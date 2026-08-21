@@ -430,6 +430,8 @@ def _workflow_kwargs(params: Any) -> dict[str, Any]:
     }
     for source, target in field_map.items():
         value = getattr(params, source, None)
+        if source == "cwd":
+            value = _resolve_optional_path(value)
         if value is not None:
             kwargs[target] = value
     return kwargs

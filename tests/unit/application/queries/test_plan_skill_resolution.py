@@ -39,7 +39,7 @@ class FakeRegistryClient:
 
     def discover_candidate_slugs(self, query: DiscoveryQuery) -> list[str]:
         self.discovery_calls.append(query)
-        return list(self.discovery_by_query.get(query.name, []))
+        return list(self.discovery_by_query.get(query.query, []))
 
     def fetch_skill_identity(self, slug: str) -> SkillIdentity:
         self.identity_calls.append(slug)
@@ -363,7 +363,7 @@ def test_execute_raises_policy_violation_for_resolved_dependency_graph() -> None
     with pytest.raises(
         PolicyViolationError, match="Trust tier 'internal' is not allowed."
     ):
-        query.execute(ResolveQueryRequestDto(query="verified-root"))
+        query.execute(ResolveQueryRequestDto(query="verified-root", exact=True))
 
     assert registry_client.metadata_calls == [
         ("verified-root", "1.2.3"),
@@ -419,4 +419,4 @@ def test_execute_validates_graph_before_lock_generation(
     with pytest.raises(
         ValueError, match="Resolution graph edge source was not present in nodes."
     ):
-        query.execute(ResolveQueryRequestDto(query="python-lint"))
+        query.execute(ResolveQueryRequestDto(query="python-lint", exact=True))

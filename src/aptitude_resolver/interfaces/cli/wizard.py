@@ -30,6 +30,7 @@ from aptitude_resolver.application.dto import (
 from aptitude_resolver.application.composition import (
     build_install_use_case,
     build_resolve_use_case,
+    build_search_use_case,
     build_sync_use_case,
 )
 from aptitude_resolver.domain.errors import (
@@ -49,6 +50,7 @@ from aptitude_resolver.interfaces.cli.support import (
     format_cli_telemetry_block,
     format_unexpected_cli_error,
     render_cli_error_panel,
+    resolve_cli_version,
 )
 from aptitude_resolver.interfaces.shared import (
     InstallWorkflowOptions,
@@ -215,6 +217,7 @@ def _build_workflow_service() -> InstallWorkflowService:
     return _shared_build_workflow_service(
         resolve_builder=build_resolve_use_case,
         install_builder=build_install_use_case,
+        search_builder=build_search_use_case,
         sync_builder=build_sync_use_case,
     )
 
@@ -1508,7 +1511,7 @@ class CliWizard:
         )
         self._console.print(
             Text.assemble(
-                ("Aptitude", THEME.text_primary),
+                (f"Aptitude Resolver {resolve_cli_version()}", THEME.text_primary),
                 (
                     " - Review-first CLI for discovering and installing skills.",
                     THEME.text_muted,

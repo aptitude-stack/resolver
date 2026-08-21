@@ -41,6 +41,7 @@ from aptitude_resolver.domain.errors import (
 from aptitude_resolver.interfaces.cli.catalog import (
     COMMANDS,
     HORIZONTAL_SEPARATOR,
+    INSTALL_OPTION_KEYS,
     OPTIONS,
     THEME,
     build_command_help,
@@ -182,6 +183,7 @@ def _build_workflow_service() -> InstallWorkflowService:
     return _shared_build_workflow_service(
         resolve_builder=build_resolve_use_case,
         install_builder=build_install_use_case,
+        search_builder=build_search_use_case,
         sync_builder=build_sync_use_case,
     )
 
@@ -339,7 +341,7 @@ def _format_search_result(result: SearchSkillsResultDto) -> str:
             "",
             "Next steps:",
             f'  aptitude inspect "{result.requested_query}" --select-slug SLUG',
-            f'  aptitude install "{result.requested_query}" --select-slug SLUG',
+            "  aptitude install SLUG",
         ]
     )
     return "\n".join(lines)
@@ -416,7 +418,7 @@ def _render_search_result_panel(result: SearchSkillsResultDto) -> Group:
                     "\n".join(
                         [
                             f'aptitude inspect "{result.requested_query}" --select-slug SLUG',
-                            f'aptitude install "{result.requested_query}" --select-slug SLUG',
+                            "aptitude install SLUG",
                         ]
                     ),
                     style=THEME.text_body,
@@ -1309,15 +1311,7 @@ def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
             "inspect_json",
         )
     if command_name == "install":
-        return (
-            "version_select",
-            "select_slug",
-            "prefer",
-            "interaction_mode",
-            "allow_trust",
-            "allow_lifecycle",
-            "max_tokens",
-            "max_content_size",
+        return INSTALL_OPTION_KEYS + (
             "install_agent",
             "install_scope",
             "install_global",
@@ -1478,6 +1472,7 @@ def _install_result(
     version: str | None,
     select_slug: str | None,
     target: Path | None,
+    exact: bool = False,
     agents: list[str],
     scope: str,
     export_root: Path | None,
@@ -1495,6 +1490,7 @@ def _install_result(
             version=version,
             select_slug=select_slug,
             target=target,
+            exact=exact,
             agents=agents,
             scope=_install_scope(scope),
             export_root=export_root,
@@ -1513,6 +1509,7 @@ def _install_result(
             version=version,
             select_slug=chosen_slug,
             target=target,
+            exact=exact,
             agents=agents,
             scope=_install_scope(scope),
             export_root=export_root,
@@ -1585,7 +1582,6 @@ def _can_launch_install_flow(
     *,
     query: str | None,
     version: str | None,
-    select_slug: str | None,
     prefer: str | None,
     interaction_mode: str | None,
     allow_trust: str | None,
@@ -1601,8 +1597,8 @@ def _can_launch_install_flow(
     """Return whether a bare install invocation should open the guided flow."""
 
     return (
-        version is None
-        and select_slug is None
+        query is None
+        and version is None
         and prefer is None
         and interaction_mode is None
         and allow_trust is None
@@ -1641,6 +1637,7 @@ def _search_result(
         allowed_lifecycle_statuses_override=options.allowed_lifecycle_statuses,
         max_token_estimate_override=options.max_token_estimate,
         max_content_size_bytes_override=options.max_content_size_bytes,
+        cwd=Path.cwd(),
     )
     try:
         return use_case.execute(SearchSkillsRequestDto(query=query))
@@ -1666,6 +1663,7 @@ def _inspect_result(
         allowed_lifecycle_statuses_override=options.allowed_lifecycle_statuses,
         max_token_estimate_override=options.max_token_estimate,
         max_content_size_bytes_override=options.max_content_size_bytes,
+        cwd=Path.cwd(),
     )
     try:
         result = use_case.execute(
@@ -1918,6 +1916,7 @@ def resolve(
         allow_lifecycle=allow_lifecycle,
         max_tokens=max_tokens,
         max_content_size=max_content_size,
+        cwd=Path.cwd(),
     )
 
     try:
@@ -1946,11 +1945,6 @@ def install(
         None,
         "--version",
         help=OPTIONS["version_select"].help_text,
-    ),
-    select_slug: str | None = typer.Option(
-        None,
-        "--select-slug",
-        help=OPTIONS["select_slug"].help_text,
     ),
     prefer: str | None = typer.Option(
         None,
@@ -2010,12 +2004,11 @@ def install(
         help=OPTIONS["install_json"].help_text,
     ),
 ) -> None:
-    """Install a skill query into one or more agent skill roots."""
+    """Install an exact skill slug into one or more agent skill roots."""
 
     if _can_launch_install_flow(
         query=query,
         version=version,
-        select_slug=select_slug,
         prefer=prefer,
         interaction_mode=interaction_mode,
         allow_trust=allow_trust,
@@ -2067,8 +2060,9 @@ def install(
                     workflow_service,
                     query=install_query,
                     version=version,
-                    select_slug=select_slug,
+                    select_slug=None,
                     target=None,
+                    exact=True,
                     agents=install_agents,
                     scope=install_scope,
                     export_root=export_root,

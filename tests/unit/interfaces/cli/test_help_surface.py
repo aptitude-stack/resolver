@@ -32,10 +32,10 @@ def test_cli_help_exposes_install_and_sync_as_primary_commands() -> None:
     assert re.search(r"(?m)^\\s*resolve\\s{2,}", result.stdout) is None
     assert "APTITUDE_SERVER_BASE_URL" in result.stdout
     assert "APTITUDE_READ_TOKEN" in result.stdout
-    assert "fresh planning from a query and agent skill export" in result.stdout
+    assert "fresh exact-slug planning and agent skill export" in result.stdout
     assert "inspect effective client policy and config sources" in result.stdout
     assert "replay and materialize from an existing lockfile" in result.stdout
-    assert 'aptitude install "Postman Primary Skill"' in result.stdout
+    assert "aptitude install postman-primary" in result.stdout
     assert "aptitude policy show" in result.stdout
     assert "aptitude sync --lock aptitude.lock.json" in result.stdout
 
@@ -53,10 +53,10 @@ def test_cli_install_help_exposes_selection_preference_flags() -> None:
     assert (
         "discovery -> resolver -> governance -> lockfile -> execution" in result.stdout
     )
-    assert "--select-slug" in result.stdout
+    assert "--select-slug" not in result.stdout
     assert "--json" in result.stdout
     assert "Common examples" in result.stdout
-    assert 'aptitude install "Postman" --interaction-mode always' in result.stdout
+    assert "aptitude install postman-primary --version 1.2.3" in result.stdout
     assert "human-friendly install summary" in result.stdout
 
 
@@ -108,7 +108,7 @@ def test_cli_manifest_lists_public_advanced_and_global_capabilities() -> None:
     assert "Public Commands" in result.stdout
     assert "Advanced/Internal Commands" in result.stdout
     assert "Global Flags" in result.stdout
-    assert 'aptitude install "query"' in result.stdout
+    assert "aptitude install SLUG" in result.stdout
     assert "aptitude policy show" in result.stdout
     assert "aptitude sync --lock aptitude.lock.json" in result.stdout
     assert "aptitude manifest" in result.stdout
@@ -139,7 +139,7 @@ def test_cli_root_help_can_render_uvx_alias_examples() -> None:
     result = _invoke(["--help"], prog_name="aptitude-resolver")
 
     assert result.exit_code == 0
-    assert 'aptitude-resolver install "Postman Primary Skill"' in result.stdout
+    assert "aptitude-resolver install postman-primary" in result.stdout
     assert "aptitude-resolver sync --lock aptitude.lock.json" in result.stdout
 
 

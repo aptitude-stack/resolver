@@ -14,6 +14,7 @@ class ResolveQueryRequestDto(BaseModel):
 
     query: str
     version: str | None = None
+    exact: bool = False
     select_slug: str | None = None
     interaction_mode: Literal["auto", "always", "never"] | None = None
     prompt_capable: bool = False
