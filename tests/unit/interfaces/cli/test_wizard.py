@@ -11,7 +11,8 @@ from types import ModuleType, SimpleNamespace
 from typing import Mapping, Sequence, TypedDict, cast
 
 import pytest
-from rich.console import Console
+from rich.console import Console, Group
+from rich.text import Text
 
 from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
@@ -436,6 +437,35 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     assert str(Path("aptitude_state") / "skills" / "js-lint" / "2.1.0") not in output
 
 
+def test_installation_summary_uses_light_subsections() -> None:
+    panel = wizard_module._render_materialization_panel(
+        _installed_result(),
+        title="Installation Summary",
+        footer="Install telemetry | Discovery 95.7ms | Materialization 18.2ms",
+    )
+
+    assert isinstance(panel.renderable, Group)
+    sections = cast(Group, panel.renderable).renderables
+    headings = [
+        renderable
+        for renderable in sections
+        if isinstance(renderable, Text)
+        and renderable.plain in {"Installed Skills", "Lockfile", "Telemetry"}
+    ]
+    assert [heading.plain for heading in headings] == [
+        "Installed Skills",
+        "Lockfile",
+        "Telemetry",
+    ]
+    assert all(heading.style == wizard_module.THEME.text_detail for heading in headings)
+
+    transcript = StringIO()
+    Console(file=transcript, force_terminal=False, color_system=None).print(panel)
+    output = transcript.getvalue()
+    assert "Install telemetry |" not in output
+    assert "Discovery 95.7ms | Materialization 18.2ms" in output
+
+
 def test_cli_wizard_lists_candidates_before_destination_prompts() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result(slug="js-lint", version="2.1.0")],
@@ -564,10 +594,9 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
         wizard_module.capture_cli_telemetry = original_capture
 
     assert "Installation Summary" in transcript.getvalue()
-    assert (
-        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms"
-        in transcript.getvalue()
-    )
+    assert "Resolve query telemetry" not in transcript.getvalue()
+    assert "Telemetry" in transcript.getvalue()
+    assert "Discovery 95.7ms | Materialization 18.2ms" in transcript.getvalue()
 
 
 def test_cli_wizard_prints_telemetry_with_trailing_blank_line() -> None:
@@ -787,6 +816,19 @@ def test_candidate_menu_uses_borderless_columns_and_active_only_details() -> Non
     }
 
 
+def test_candidate_menu_caps_results_at_ten_with_five_visible_rows() -> None:
+    candidate = _selection_required_result().candidates[0]
+    candidates = [
+        candidate.model_copy(update={"slug": f"skill-{index}"}) for index in range(12)
+    ]
+
+    _, options, descriptions = wizard_module._candidate_menu_columns(candidates)
+
+    assert wizard_module.CANDIDATE_VIEWPORT_SIZE == 5
+    assert [value for _, value in options] == [f"skill-{index}" for index in range(10)]
+    assert list(descriptions) == [f"skill-{index}" for index in range(10)]
+
+
 def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
     candidate = _selection_required_result().candidates[0]
 
@@ -958,6 +1000,32 @@ def test_cli_wizard_direct_install_flow_selects_candidate_before_destination() -
     assert events.index("select:Select candidate") < events.index(
         "select:Install scope"
     )
+
+
+def test_cli_wizard_separates_install_scope_from_agent_targets() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    events: list[str] = []
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=StringIO(), force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=_select_direct_install_event(events),
+        select_many=_select_direct_install_agent_event(events),
+        confirm=lambda *_, **__: True,
+    )
+    original_print_step_separator = wizard._print_step_separator
+    wizard._print_step_separator = _record_separator(  # type: ignore[method-assign]
+        events, original_print_step_separator
+    )
+
+    wizard.run(initial_flow="install", initial_query="postman primary skill")
+
+    scope_index = events.index("select:Install scope")
+    agents_index = events.index("select-many:Agent targets")
+    assert events[scope_index + 1 : agents_index] == ["separator"]
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
@@ -1276,7 +1344,7 @@ def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
     output = transcript.getvalue()
     assert "\nspinner\n\n" in output
     assert "spinner\n\n\n" not in output
-    assert "telemetry" in output
+    assert ("telemetry" in output) is (operation != "resolve")
 
 
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:

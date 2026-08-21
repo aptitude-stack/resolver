@@ -109,6 +109,7 @@ BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
 CANDIDATE_VIEWPORT_SIZE = 5
+CANDIDATE_RESULT_LIMIT = 10
 CANDIDATE_SKILL_WIDTH = 32
 PLAN_SUMMARY_LABEL_WIDTH = len("github-copilot")
 
@@ -327,7 +328,7 @@ def _candidate_menu_columns(
     header = "Skill                            Version    Maturity   Security   Installs   Stars"
     options: list[tuple[str, str]] = []
     descriptions: dict[str, str] = {}
-    for candidate in candidates:
+    for candidate in candidates[:CANDIDATE_RESULT_LIMIT]:
         maturity = (
             "—"
             if candidate.maturity_score is None
@@ -398,7 +399,7 @@ def _render_plan_panel(
             for agent, root in export_roots.items()
         ],
         Text(""),
-        Text("Execution Steps", style=THEME.text_primary),
+        Text("Execution Steps", style=THEME.text_detail),
         *[
             Text(
                 f"{index}. {step.skill}@{step.version} → {step.action}",
@@ -424,11 +425,44 @@ def _render_materialization_panel(
 ) -> Panel:
     """Render one compact materialization result box."""
 
-    installed = _format_materialization_summary(result)
-    if footer:
-        installed = f"{installed}\n\n{footer}"
+    if isinstance(result, InstallResultDto) and result.exported_skills:
+        sections: list[Text] = [
+            Text("Installed Skills", style=THEME.text_detail),
+            *[
+                Text(
+                    f"✓ {skill.slug}@{skill.version}\n  → {skill.destination_path}",
+                    style=THEME.text_muted,
+                )
+                for skill in result.exported_skills
+            ],
+        ]
+        if result.lock_path:
+            sections.extend(
+                [
+                    Text(""),
+                    Text("Lockfile", style=THEME.text_detail),
+                    Text(f"  → {result.lock_path}", style=THEME.text_muted),
+                ]
+            )
+        if footer:
+            sections.extend(
+                [
+                    Text(""),
+                    Text("Telemetry", style=THEME.text_detail),
+                    Text(
+                        footer.removeprefix("Install telemetry | "),
+                        style=THEME.text_subtle,
+                    ),
+                ]
+            )
+        body: Text | Group = Group(*sections)
+    else:
+        installed = _format_materialization_summary(result)
+        if footer:
+            installed = f"{installed}\n\n{footer}"
+        body = Text(installed, style=THEME.text_body)
     return Panel(
-        Text(installed, style=THEME.text_body),
+        body,
         title=title,
         border_style=THEME.border_secondary,
         box=box.ROUNDED,
@@ -437,15 +471,6 @@ def _render_materialization_panel(
 
 
 def _format_materialization_summary(result: InstallResultDto | SyncResultDto) -> str:
-    if isinstance(result, InstallResultDto) and result.exported_skills:
-        lines = [
-            f"✓ {skill.slug}@{skill.version}\n  → {skill.destination_path}"
-            for skill in result.exported_skills
-        ]
-        if result.lock_path:
-            lines.extend(["", "Lockfile", f"  → {result.lock_path}"])
-        return "\n".join(lines)
-
     return (
         "\n".join(
             f"✓ {skill.slug}@{skill.version}\n  → {skill.install_path}"
@@ -1417,6 +1442,7 @@ class CliWizard:
             "Choose where the selected agent should see this skill.",
         )
 
+        self._print_step_separator()
         selected_agents = self._select_multi(
             "Agent targets",
             AGENT_OPTIONS,
@@ -1543,7 +1569,6 @@ class CliWizard:
     ) -> ResolveQueryResultDto:
         """Resolve the explicitly selected candidate."""
 
-        telemetry = []
         self._console.print()
         try:
             with self._console.status(
@@ -1551,7 +1576,7 @@ class CliWizard:
                 spinner="dots",
                 spinner_style=THEME.accent,
             ):
-                with capture_cli_telemetry() as telemetry:
+                with capture_cli_telemetry():
                     result = self._workflow_service.resolve_query(
                         query=query,
                         version=None,
@@ -1563,10 +1588,8 @@ class CliWizard:
                     )
         except Exception:
             self._console.print()
-            self._print_operation_telemetry("Resolve query", telemetry)
             raise
         self._console.print()
-        self._print_operation_telemetry("Resolve query", telemetry)
 
         return result
 
