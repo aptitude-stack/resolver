@@ -324,9 +324,7 @@ def _candidate_menu_columns(
 ) -> tuple[str, list[tuple[str, str]], dict[str, str]]:
     """Build aligned candidate labels and focused-row details."""
 
-    header = (
-        "Skill                            Version    Maturity   Security   Installs   Stars"
-    )
+    header = "Skill                            Version    Maturity   Security   Installs   Stars"
     options: list[tuple[str, str]] = []
     descriptions: dict[str, str] = {}
     for candidate in candidates:
@@ -646,10 +644,7 @@ def _fallback_select_one(
             print(f"{header_prefix}{'─' * len(column_header)}")
         for index, (label, _) in enumerate(options, start=1):
             detail = descriptions.get(options[index - 1][1]) if descriptions else None
-            print(
-                f"  {index:>{index_width}}. {label}"
-                f"{f' {detail}' if detail else ''}"
-            )
+            print(f"  {index:>{index_width}}. {label}{f' {detail}' if detail else ''}")
         print("[↑↓] move  [enter] confirm  [q] cancel")
         print()
         while True:
@@ -925,9 +920,7 @@ def _default_select_one(
         fragments.append(("class:hint", "\n"))
         if column_header:
             fragments.append(("class:column-header", f"  {column_header}\n"))
-            fragments.append(
-                ("class:column-header", f"  {'─' * len(column_header)}\n")
-            )
+            fragments.append(("class:column-header", f"  {'─' * len(column_header)}\n"))
         active_description = _active_menu_description(
             options,
             index=state["index"],

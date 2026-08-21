@@ -792,7 +792,10 @@ def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
 
     _, _, descriptions = wizard_module._candidate_menu_columns([candidate])
 
-    assert descriptions["python-lint"] == "1.2.3      —          —                 —       —"
+    assert (
+        descriptions["python-lint"]
+        == "1.2.3      —          —                 —       —"
+    )
 
 
 def test_render_wordmark_supports_alternate_banner_style() -> None:
@@ -1245,6 +1248,7 @@ def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
     )
 
     if operation == "search":
+
         def fail_search(**_kwargs: object) -> SearchSkillsResultDto:
             raise RuntimeError("search failed")
 
@@ -1252,6 +1256,7 @@ def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
         with pytest.raises(RuntimeError, match="search failed"):
             wizard._search(query="lint", options=options)
     elif operation == "resolve":
+
         def fail_resolve(**_kwargs: object) -> ResolveQueryResultDto:
             raise RuntimeError("resolve failed")
 
@@ -1259,6 +1264,7 @@ def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
         with pytest.raises(RuntimeError, match="resolve failed"):
             wizard._resolve(query="lint", select_slug="python-lint", options=options)
     else:
+
         def fail_sync(**_kwargs: object) -> SyncResultDto:
             raise RuntimeError("sync failed")
 
@@ -1453,7 +1459,9 @@ def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
 
     wizard = CliWizard(
         workflow_service=FakeWorkflowService(),
-        console=Console(file=wizard_module.sys.stdout, force_terminal=False, color_system=None),
+        console=Console(
+            file=wizard_module.sys.stdout, force_terminal=False, color_system=None
+        ),
     )
     wizard._print_step_separator()
     output = capsys.readouterr().out
@@ -1467,7 +1475,10 @@ def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
     assert header_line.index("Maturity") == row_line.index("0.90")
     assert header_line.index("Security") == row_line.index("0.95")
     assert divider_line.index("─") == header_line.index("Skill")
-    assert "[↑↓] move  [enter] confirm  [q] cancel\n\nSelect option by number: \n" in output
+    assert (
+        "[↑↓] move  [enter] confirm  [q] cancel\n\nSelect option by number: \n"
+        in output
+    )
     separator = wizard_module._render_step_separator(wizard._console.size.width)
     assert f"Select option by number: \n{separator}\n" in output
 
