@@ -1214,6 +1214,65 @@ def test_cli_wizard_status_spinners_have_one_blank_line_above_and_below(
     assert transcript.getvalue() == "\nspinner\n\n"
 
 
+@pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
+def test_cli_wizard_exception_status_spinners_leave_space_before_telemetry(
+    operation: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = FakeWorkflowService()
+    transcript = StringIO()
+    console = Console(file=transcript, force_terminal=False, color_system=None)
+
+    @contextmanager
+    def status(*_args: object, **_kwargs: object):
+        transcript.write("spinner\n")
+        yield
+
+    @contextmanager
+    def capture_telemetry():
+        yield [StageTiming(stage="discovery", duration_ms=12.3)]
+
+    console.status = status  # type: ignore[assignment]
+    monkeypatch.setattr(wizard_module, "capture_cli_telemetry", capture_telemetry)
+    wizard = CliWizard(
+        workflow_service=service,
+        console=console,
+        prompt_text=lambda *_, **__: "",
+    )
+    options = wizard_module.build_workflow_options(
+        prefer="balanced",
+        interaction_mode="auto",
+    )
+
+    if operation == "search":
+        def fail_search(**_kwargs: object) -> SearchSkillsResultDto:
+            raise RuntimeError("search failed")
+
+        service.search_query = fail_search  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="search failed"):
+            wizard._search(query="lint", options=options)
+    elif operation == "resolve":
+        def fail_resolve(**_kwargs: object) -> ResolveQueryResultDto:
+            raise RuntimeError("resolve failed")
+
+        service.resolve_query = fail_resolve  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="resolve failed"):
+            wizard._resolve(query="lint", select_slug="python-lint", options=options)
+    else:
+        def fail_sync(**_kwargs: object) -> SyncResultDto:
+            raise RuntimeError("sync failed")
+
+        service.sync_lock = fail_sync  # type: ignore[method-assign]
+        wizard._print_step_separator = lambda: None  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="sync failed"):
+            wizard._run_sync_flow()
+
+    output = transcript.getvalue()
+    assert "\nspinner\n\n" in output
+    assert "spinner\n\n\n" not in output
+    assert "telemetry" in output
+
+
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
@@ -1363,23 +1422,54 @@ def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr(builtins, "input", lambda _: "1")
+    def read_choice(prompt: str) -> str:
+        print(prompt, end="")
+        return "1"
+
+    monkeypatch.setattr(builtins, "input", read_choice)
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
 
-    header = "Skill       Version"
+    candidate = (
+        _selection_required_result()
+        .candidates[0]
+        .model_copy(
+            update={
+                "maturity_score": 0.9,
+                "security_score": 0.95,
+                "install_count": 123,
+                "star_count": 45,
+            }
+        )
+    )
+    header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
     result = wizard_module._fallback_select_one(
         "Select candidate",
-        [("python-lint ", "python-lint")],
+        options,
         "Pick a skill.",
-        {"python-lint": "1.2.3"},
+        descriptions,
         column_header=header,
     )
 
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=wizard_module.sys.stdout, force_terminal=False, color_system=None),
+    )
+    wizard._print_step_separator()
     output = capsys.readouterr().out
     assert result == "python-lint"
-    assert f"{header}\n{'─' * len(header)}" in output
-    assert output.endswith("[↑↓] move  [enter] confirm  [q] cancel\n\n")
+    lines = output.splitlines()
+    header_line = next(line for line in lines if header in line)
+    divider_line = next(line for line in lines if "─" in line)
+    row_line = next(line for line in lines if "python-lint" in line)
+    assert header_line.index("Skill") == row_line.index("python-lint")
+    assert header_line.index("Version") == row_line.index("1.2.3")
+    assert header_line.index("Maturity") == row_line.index("0.90")
+    assert header_line.index("Security") == row_line.index("0.95")
+    assert divider_line.index("─") == header_line.index("Skill")
+    assert "[↑↓] move  [enter] confirm  [q] cancel\n\nSelect option by number: \n" in output
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
+    assert f"Select option by number: \n{separator}\n" in output
 
 
 def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_unavailable(
@@ -1405,7 +1495,11 @@ def test_fallback_select_many_leaves_one_blank_line_after_trailing_hint(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr(builtins, "input", lambda _: "1")
+    def read_choice(prompt: str) -> str:
+        print(prompt, end="")
+        return "1"
+
+    monkeypatch.setattr(builtins, "input", read_choice)
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
     monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
 
@@ -1419,6 +1513,7 @@ def test_fallback_select_many_leaves_one_blank_line_after_trailing_hint(
     assert result == ["codex"]
     assert output.endswith(
         "[↑↓] move  [space] select  [enter] confirm  [q] cancel\n\n"
+        "Select one or more options by number, comma-separated: \n"
     )
 
 

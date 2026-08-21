@@ -639,12 +639,17 @@ def _fallback_select_one(
         print(title)
         if help_text:
             print(help_text)
+        index_width = len(str(len(options)))
         if column_header:
-            print(column_header)
-            print("─" * len(column_header))
+            header_prefix = " " * (index_width + 4)
+            print(f"{header_prefix}{column_header}")
+            print(f"{header_prefix}{'─' * len(column_header)}")
         for index, (label, _) in enumerate(options, start=1):
             detail = descriptions.get(options[index - 1][1]) if descriptions else None
-            print(f"  {index}. {label}{f' {detail}' if detail else ''}")
+            print(
+                f"  {index:>{index_width}}. {label}"
+                f"{f' {detail}' if detail else ''}"
+            )
         print("[↑↓] move  [enter] confirm  [q] cancel")
         print()
         while True:
@@ -657,6 +662,7 @@ def _fallback_select_one(
                 print("Enter a valid number.")
                 continue
             if 1 <= index <= len(options):
+                print()
                 return options[index - 1][1]
             print("Selection out of range.")
 
@@ -779,6 +785,7 @@ def _fallback_select_many(
             if invalid:
                 print("Enter valid option numbers.")
                 continue
+            print()
             return [options[index - 1][1] for index in prompt_selected_indices]
 
     state_index = 0
@@ -1498,10 +1505,10 @@ class CliWizard:
                         target=target,
                     )
         except Exception:
+            self._console.print()
             self._print_operation_telemetry("Sync", telemetry)
             raise
-        finally:
-            self._console.print()
+        self._console.print()
         self._print_operation_telemetry("Sync", telemetry)
         return result
 
@@ -1527,10 +1534,10 @@ class CliWizard:
                         options=options,
                     )
         except Exception:
+            self._console.print()
             self._print_operation_telemetry("Search query", telemetry)
             raise
-        finally:
-            self._console.print()
+        self._console.print()
         self._print_operation_telemetry("Search query", telemetry)
         return result
 
@@ -1562,10 +1569,10 @@ class CliWizard:
                         options=options,
                     )
         except Exception:
+            self._console.print()
             self._print_operation_telemetry("Resolve query", telemetry)
             raise
-        finally:
-            self._console.print()
+        self._console.print()
         self._print_operation_telemetry("Resolve query", telemetry)
 
         return result
