@@ -49,6 +49,8 @@ class MetadataResponse(BaseModel):
 
     slug: str
     version: str
+    install_count: int | None = None
+    star_count: int | None = None
     content: TransportContent
     metadata: TransportMetadata
     lifecycle_status: str

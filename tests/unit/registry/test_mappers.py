@@ -32,6 +32,8 @@ def _metadata_response(
     return MetadataResponse(
         slug="python-lint",
         version="1.2.3",
+        install_count=123,
+        star_count=45,
         content=TransportContent(
             checksum=TransportChecksum(algorithm="sha256", digest="digest-123"),
             size_bytes=79,
@@ -101,6 +103,22 @@ def test_map_metadata_response_drops_none_headers_and_coerces_other_values() -> 
         "max_retries": "3",
         "debug": "True",
     }
+
+
+def test_map_metadata_response_preserves_catalog_metrics() -> None:
+    payload = _metadata_response(
+        rendered_summary="Rendered summary",
+        description="Metadata description",
+        name="Python Lint",
+    )
+
+    metadata = map_metadata_response(payload)
+    version_summary = map_version_summary(payload)
+
+    assert metadata.install_count == 123
+    assert metadata.star_count == 45
+    assert version_summary.install_count == 123
+    assert version_summary.star_count == 45
 
 
 def test_map_skill_version_list_response_applies_server_defaults() -> None:

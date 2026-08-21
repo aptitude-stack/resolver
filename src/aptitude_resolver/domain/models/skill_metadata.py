@@ -29,3 +29,5 @@ class SkillMetadata:
     lifecycle_status: str
     trust_tier: str
     published_at: str
+    install_count: int | None = None
+    star_count: int | None = None

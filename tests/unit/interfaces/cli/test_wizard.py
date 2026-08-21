@@ -11,7 +11,8 @@ from types import ModuleType, SimpleNamespace
 from typing import Mapping, Sequence, TypedDict, cast
 
 import pytest
-from rich.console import Console
+from rich.console import Console, Group
+from rich.text import Text
 
 from aptitude_resolver.application.dto import (
     DiscoveryCandidateDto,
@@ -29,6 +30,7 @@ from aptitude_resolver.application.dto import (
     ResolveCoordinateDto,
     ResolveQueryResultDto,
     ResolveSkillSummaryDto,
+    SearchSkillsResultDto,
     SyncResultDto,
     TraceEntryDto,
 )
@@ -48,16 +50,29 @@ class FakeWorkflowService:
     def __init__(
         self,
         *,
+        search_responses: list[SearchSkillsResultDto] | None = None,
         resolve_responses: list[ResolveQueryResultDto] | None = None,
         install_responses: list[InstallResultDto] | None = None,
         sync_responses: list[SyncResultDto] | None = None,
     ) -> None:
+        self.search_responses = list(search_responses or [])
         self.resolve_responses = list(resolve_responses or [])
         self.install_responses = list(install_responses or [])
         self.sync_responses = list(sync_responses or [])
+        self.search_calls: list[dict[str, object]] = []
         self.resolve_calls: list[dict[str, object]] = []
         self.install_calls: list[dict[str, object]] = []
         self.sync_calls: list[dict[str, object]] = []
+
+    def search_query(self, **kwargs: object) -> SearchSkillsResultDto:
+        self.search_calls.append(kwargs)
+        if self.search_responses:
+            return self.search_responses.pop(0)
+        return SearchSkillsResultDto(
+            requested_query=str(kwargs["query"]),
+            status="found",
+            candidates=_selection_required_result().candidates[:1],
+        )
 
     def resolve_query(self, **kwargs: object) -> ResolveQueryResultDto:
         self.resolve_calls.append(kwargs)
@@ -78,6 +93,8 @@ class FakeWorkflowService:
 def _select_direct_install_option(select_calls: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         select_calls.append(title)
+        if title == "Select candidate":
+            return "python-lint"
         if title == "Install scope":
             return "project"
         return "auto"
@@ -101,6 +118,8 @@ def _select_direct_install_agent_targets(
 def _select_direct_install_event(events: list[str]) -> Callable[..., str]:
     def select_one(title: str, *_args: object, **_kwargs: object) -> str:
         events.append(f"select:{title}")
+        if title == "Select candidate":
+            return "python-lint"
         if title == "Install scope":
             return "project"
         return "auto"
@@ -381,7 +400,6 @@ def _synced_result(
 def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     service = FakeWorkflowService(
         resolve_responses=[
-            _selection_required_result(),
             _resolved_result(
                 slug="js-lint", version="2.1.0", selection_mode="interactive_choice"
             ),
@@ -390,7 +408,7 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     )
     transcript = StringIO()
     answers = iter(["lint"])
-    selections = iter(["install", "project", "js-lint"])
+    selections = iter(["install", "js-lint", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -404,12 +422,12 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
 
     wizard.run()
 
-    assert len(service.resolve_calls) == 2
-    assert service.resolve_calls[0]["prompt_capable"] is True
-    assert service.resolve_calls[1]["select_slug"] == "js-lint"
-    assert service.resolve_calls[1]["selection_source"] == "interactive"
+    assert len(service.resolve_calls) == 1
+    assert service.resolve_calls[0]["select_slug"] == "js-lint"
+    assert service.resolve_calls[0]["selection_source"] == "interactive"
     assert service.install_calls[0]["query"] == "lint"
     assert service.install_calls[0]["select_slug"] == "js-lint"
+    assert service.install_calls[0]["selection_source"] == "interactive"
     assert service.install_calls[0]["agents"] == ["codex"]
     assert service.install_calls[0]["scope"] == "project"
     output = transcript.getvalue()
@@ -419,13 +437,85 @@ def test_cli_wizard_resolves_candidate_and_installs_selected_skill() -> None:
     assert str(Path("aptitude_state") / "skills" / "js-lint" / "2.1.0") not in output
 
 
+def test_installation_summary_uses_light_subsections() -> None:
+    panel = wizard_module._render_materialization_panel(
+        _installed_result(),
+        title="Installation Summary",
+        footer="Install telemetry | Discovery 95.7ms | Materialization 18.2ms",
+    )
+
+    assert isinstance(panel.renderable, Group)
+    sections = cast(Group, panel.renderable).renderables
+    headings = [
+        renderable
+        for renderable in sections
+        if isinstance(renderable, Text)
+        and renderable.plain in {"Installed Skills", "Lockfile", "Telemetry"}
+    ]
+    assert [heading.plain for heading in headings] == [
+        "Installed Skills",
+        "Lockfile",
+        "Telemetry",
+    ]
+    assert all(heading.style == wizard_module.THEME.text_detail for heading in headings)
+
+    transcript = StringIO()
+    Console(file=transcript, force_terminal=False, color_system=None).print(panel)
+    output = transcript.getvalue()
+    assert "Install telemetry |" not in output
+    assert "Discovery 95.7ms | Materialization 18.2ms" in output
+
+
+def test_cli_wizard_lists_candidates_before_destination_prompts() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result(slug="js-lint", version="2.1.0")],
+        install_responses=[_installed_result()],
+    )
+    events: list[str] = []
+
+    def search_query(**kwargs: object) -> SearchSkillsResultDto:
+        return SearchSkillsResultDto(
+            requested_query=str(kwargs["query"]),
+            status="found",
+            candidates=_selection_required_result().candidates,
+        )
+
+    service.search_query = search_query  # type: ignore[method-assign]
+
+    def select_one(title: str, *_args: object, **_kwargs: object) -> str:
+        events.append(title)
+        if title == "Choose a flow":
+            return "install"
+        if title == "Select candidate":
+            return "js-lint"
+        return "project"
+
+    def select_many(*_args: object, **_kwargs: object) -> list[str]:
+        events.append("Agent targets")
+        return ["codex"]
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=StringIO(), force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "lint",
+        select_one=select_one,
+        select_many=select_many,
+        confirm=lambda *_, **__: True,
+    )
+
+    wizard.run()
+
+    assert events.index("Select candidate") < events.index("Install scope")
+    assert events.index("Select candidate") < events.index("Agent targets")
+
+
 def test_cli_wizard_installs_to_multiple_selected_agent_targets() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -448,7 +538,7 @@ def test_cli_wizard_multi_agent_selection_expands_detected_targets(monkeypatch) 
         install_responses=[_installed_result()],
     )
     transcript = StringIO()
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
     monkeypatch.setattr(
         wizard_module,
@@ -477,7 +567,7 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
     )
     transcript = StringIO()
     answers = iter(["python lint"])
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
 
     @contextmanager
@@ -504,10 +594,9 @@ def test_cli_wizard_prints_pipe_separated_install_telemetry() -> None:
         wizard_module.capture_cli_telemetry = original_capture
 
     assert "Installation Summary" in transcript.getvalue()
-    assert (
-        "Install telemetry | Discovery 95.7ms | Materialization 18.2ms"
-        in transcript.getvalue()
-    )
+    assert "Resolve query telemetry" not in transcript.getvalue()
+    assert "Telemetry" in transcript.getvalue()
+    assert "Discovery 95.7ms | Materialization 18.2ms" in transcript.getvalue()
 
 
 def test_cli_wizard_prints_telemetry_with_trailing_blank_line() -> None:
@@ -569,6 +658,29 @@ def test_cli_wizard_header_includes_resolver_package_version(
     assert "Aptitude Resolver 0.2.8 - " in transcript.getvalue()
 
 
+def test_cli_wizard_header_styles_the_complete_version_consistently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    transcript = StringIO()
+    monkeypatch.setattr(wizard_module, "resolve_cli_version", lambda: "0.2.8")
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(
+            file=transcript,
+            force_terminal=True,
+            color_system="truecolor",
+        ),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    wizard.run()
+
+    assert "\x1b[1;36m0.2.8\x1b[0m" in transcript.getvalue()
+
+
 def test_cli_wizard_passes_flow_descriptions_to_selector() -> None:
     transcript = StringIO()
     select_calls: list[dict[str, object]] = []
@@ -578,6 +690,7 @@ def test_cli_wizard_passes_flow_descriptions_to_selector() -> None:
         options: Sequence[tuple[str, object]],
         help_text: str | None = None,
         descriptions: Mapping[object, str] | None = None,
+        **_kwargs: object,
     ) -> str:
         select_calls.append(
             {
@@ -678,6 +791,55 @@ def test_render_choice_line_appends_active_description_inline() -> None:
     )
 
 
+def test_candidate_menu_uses_borderless_columns_and_active_only_details() -> None:
+    candidate = (
+        _selection_required_result()
+        .candidates[0]
+        .model_copy(
+            update={
+                "maturity_score": 0.9,
+                "security_score": 0.95,
+                "install_count": 123,
+                "star_count": 45,
+            }
+        )
+    )
+
+    header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
+
+    assert header == (
+        "Skill                            Version    Maturity   Security   Installs   Stars"
+    )
+    assert options == [("python-lint                     ", "python-lint")]
+    assert descriptions == {
+        "python-lint": "1.2.3      0.90       0.95            123      45"
+    }
+
+
+def test_candidate_menu_caps_results_at_ten_with_five_visible_rows() -> None:
+    candidate = _selection_required_result().candidates[0]
+    candidates = [
+        candidate.model_copy(update={"slug": f"skill-{index}"}) for index in range(12)
+    ]
+
+    _, options, descriptions = wizard_module._candidate_menu_columns(candidates)
+
+    assert wizard_module.CANDIDATE_VIEWPORT_SIZE == 5
+    assert [value for _, value in options] == [f"skill-{index}" for index in range(10)]
+    assert list(descriptions) == [f"skill-{index}" for index in range(10)]
+
+
+def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
+    candidate = _selection_required_result().candidates[0]
+
+    _, _, descriptions = wizard_module._candidate_menu_columns([candidate])
+
+    assert (
+        descriptions["python-lint"]
+        == "1.2.3      —          —                 —       —"
+    )
+
+
 def test_render_wordmark_supports_alternate_banner_style() -> None:
     rendered = wizard_module._render_wordmark(style="block")
 
@@ -698,6 +860,22 @@ def test_format_plan_summary_row_aligns_one_label_value_pair() -> None:
         )
         == "Scope          : project"
     )
+
+
+def test_render_plan_omits_runtime_and_trust() -> None:
+    output = StringIO()
+    Console(file=output, width=120, force_terminal=False).print(
+        wizard_module._render_plan_panel(
+            _resolved_result(),
+            scope="project",
+            export_roots={"codex": Path(".codex/skills")},
+        )
+    )
+    rendered = output.getvalue()
+
+    assert "Lifecycle" in rendered
+    assert "Runtime" not in rendered
+    assert "Trust" not in rendered
 
 
 def test_cli_wizard_help_shows_capability_map_only_on_demand() -> None:
@@ -734,7 +912,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["project"])
+    selections = iter(["python-lint", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -754,7 +932,7 @@ def test_cli_wizard_can_start_directly_in_install_flow_without_launcher() -> Non
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_starts_at_install_scope_with_initial_query() -> None:
+def test_cli_wizard_starts_at_candidate_selection_with_initial_query() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
@@ -787,7 +965,7 @@ def test_cli_wizard_starts_at_install_scope_with_initial_query() -> None:
     output = transcript.getvalue()
     assert "Choose a flow" not in output
     assert prompt_calls == []
-    assert select_calls[:2] == ["Install scope", "Agent targets"]
+    assert select_calls[:3] == ["Select candidate", "Install scope", "Agent targets"]
     assert service.resolve_calls[0]["query"] == "postman primary skill"
     options = cast(InstallWorkflowOptions, service.resolve_calls[0]["options"])
     assert options.selection_profile == "balanced"
@@ -795,9 +973,7 @@ def test_cli_wizard_starts_at_install_scope_with_initial_query() -> None:
     assert service.install_calls[0]["query"] == "postman primary skill"
 
 
-def test_cli_wizard_direct_install_flow_starts_at_install_scope_without_separator() -> (
-    None
-):
+def test_cli_wizard_direct_install_flow_selects_candidate_before_destination() -> None:
     service = FakeWorkflowService(
         resolve_responses=[_resolved_result()],
         install_responses=[_installed_result()],
@@ -821,7 +997,35 @@ def test_cli_wizard_direct_install_flow_starts_at_install_scope_without_separato
 
     wizard.run(initial_flow="install", initial_query="postman primary skill")
 
-    assert events[0] == "select:Install scope"
+    candidate_index = events.index("select:Select candidate")
+    scope_index = events.index("select:Install scope")
+    assert events[candidate_index + 1 : scope_index] == ["separator"]
+
+
+def test_cli_wizard_separates_install_scope_from_agent_targets() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    events: list[str] = []
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=StringIO(), force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=_select_direct_install_event(events),
+        select_many=_select_direct_install_agent_event(events),
+        confirm=lambda *_, **__: True,
+    )
+    original_print_step_separator = wizard._print_step_separator
+    wizard._print_step_separator = _record_separator(  # type: ignore[method-assign]
+        events, original_print_step_separator
+    )
+
+    wizard.run(initial_flow="install", initial_query="postman primary skill")
+
+    scope_index = events.index("select:Install scope")
+    agents_index = events.index("select-many:Agent targets")
+    assert events[scope_index + 1 : agents_index] == ["separator"]
 
 
 def test_cli_wizard_sync_flow_runs_after_selecting_sync() -> None:
@@ -879,7 +1083,7 @@ def test_cli_wizard_uses_large_text_prompt_only_for_install_query() -> None:
     transcript = StringIO()
     prompt_calls: list[tuple[str, str | None, bool]] = []
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
 
     def prompt_text(
@@ -912,7 +1116,7 @@ def test_cli_wizard_install_destination_excludes_return_options() -> None:
     )
     transcript = StringIO()
     answers = iter(["Postman Primary Skill"])
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
     install_scope_options: list[str] = []
     agent_target_options: list[str] = []
@@ -960,7 +1164,7 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
     )
     transcript = StringIO()
     answers = iter(["postman primary skill"])
-    selections = iter(["install", "project"])
+    selections = iter(["install", "python-lint", "project"])
     confirmations = iter([True])
 
     wizard = CliWizard(
@@ -980,25 +1184,198 @@ def test_cli_wizard_prints_step_separators_between_install_steps() -> None:
     assert transcript.getvalue().count(expected_separator) >= 5
 
 
+def test_cli_wizard_prints_one_separator_between_query_and_candidate_menu() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
+    events: list[str] = []
+    answers = iter(["python lint"])
+
+    wizard = CliWizard(
+        workflow_service=service,
+        console=Console(file=StringIO(), force_terminal=False, color_system=None),
+        prompt_text=_record_prompt(events, answers),
+        select_one=_select_direct_install_event(events),
+        select_many=_select_direct_install_agent_event(events),
+        confirm=lambda *_, **__: True,
+    )
+    original_print_step_separator = wizard._print_step_separator
+    wizard._print_step_separator = _record_separator(  # type: ignore[method-assign]
+        events, original_print_step_separator
+    )
+
+    wizard.run()
+
+    query_index = events.index("prompt:Install query")
+    candidate_index = events.index("select:Select candidate")
+    assert events[query_index + 1 : candidate_index].count("separator") == 1
+
+
+def test_cli_wizard_status_spinners_use_theme_accent() -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        sync_responses=[_synced_result()],
+    )
+    console = Console(file=StringIO(), force_terminal=False, color_system=None)
+    spinner_styles: list[str | None] = []
+
+    @contextmanager
+    def status(*_args: object, **kwargs: object):
+        spinner_styles.append(cast(str | None, kwargs.get("spinner_style")))
+        yield
+
+    console.status = status  # type: ignore[assignment]
+    wizard = CliWizard(
+        workflow_service=service,
+        console=console,
+        prompt_text=lambda *_, **__: "",
+    )
+    options = wizard_module.build_workflow_options(
+        prefer="balanced",
+        interaction_mode="auto",
+    )
+
+    wizard._search(query="lint", options=options)
+    wizard._resolve(query="lint", select_slug="python-lint", options=options)
+    wizard._run_sync_flow()
+
+    assert spinner_styles == [
+        wizard_module.THEME.accent,
+        wizard_module.THEME.accent,
+        wizard_module.THEME.accent,
+    ]
+
+
+@pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
+def test_cli_wizard_status_spinner_spacing_matches_visible_output(
+    operation: str,
+) -> None:
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        sync_responses=[_synced_result()],
+    )
+    transcript = StringIO()
+    console = Console(file=transcript, force_terminal=False, color_system=None)
+
+    @contextmanager
+    def status(*_args: object, **_kwargs: object):
+        transcript.write("spinner\n")
+        yield
+
+    console.status = status  # type: ignore[assignment]
+    wizard = CliWizard(
+        workflow_service=service,
+        console=console,
+        prompt_text=lambda *_, **__: "",
+    )
+    options = wizard_module.build_workflow_options(
+        prefer="balanced",
+        interaction_mode="auto",
+    )
+
+    if operation == "search":
+        wizard._search(query="lint", options=options)
+    elif operation == "resolve":
+        wizard._resolve(query="lint", select_slug="python-lint", options=options)
+    else:
+        wizard._print_step_separator = lambda: None  # type: ignore[method-assign]
+        wizard._run_sync_flow()
+
+    expected = "spinner\n" if operation == "resolve" else "\nspinner\n\n"
+    assert transcript.getvalue() == expected
+
+
+@pytest.mark.parametrize("operation", ["search", "resolve", "sync"])
+def test_cli_wizard_exception_status_spacing_matches_visible_telemetry(
+    operation: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = FakeWorkflowService()
+    transcript = StringIO()
+    console = Console(file=transcript, force_terminal=False, color_system=None)
+
+    @contextmanager
+    def status(*_args: object, **_kwargs: object):
+        transcript.write("spinner\n")
+        yield
+
+    @contextmanager
+    def capture_telemetry():
+        yield [StageTiming(stage="discovery", duration_ms=12.3)]
+
+    console.status = status  # type: ignore[assignment]
+    monkeypatch.setattr(wizard_module, "capture_cli_telemetry", capture_telemetry)
+    wizard = CliWizard(
+        workflow_service=service,
+        console=console,
+        prompt_text=lambda *_, **__: "",
+    )
+    options = wizard_module.build_workflow_options(
+        prefer="balanced",
+        interaction_mode="auto",
+    )
+
+    if operation == "search":
+
+        def fail_search(**_kwargs: object) -> SearchSkillsResultDto:
+            raise RuntimeError("search failed")
+
+        service.search_query = fail_search  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="search failed"):
+            wizard._search(query="lint", options=options)
+    elif operation == "resolve":
+
+        def fail_resolve(**_kwargs: object) -> ResolveQueryResultDto:
+            raise RuntimeError("resolve failed")
+
+        service.resolve_query = fail_resolve  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="resolve failed"):
+            wizard._resolve(query="lint", select_slug="python-lint", options=options)
+    else:
+
+        def fail_sync(**_kwargs: object) -> SyncResultDto:
+            raise RuntimeError("sync failed")
+
+        service.sync_lock = fail_sync  # type: ignore[method-assign]
+        wizard._print_step_separator = lambda: None  # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="sync failed"):
+            wizard._run_sync_flow()
+
+    output = transcript.getvalue()
+    if operation == "resolve":
+        assert output == "spinner\n"
+    else:
+        assert "\nspinner\n\n" in output
+        assert "spinner\n\n\n" not in output
+        assert "telemetry" in output
+
+
 def test_cli_wizard_retries_install_query_after_no_matches() -> None:
-    service = FakeWorkflowService(install_responses=[_installed_result()])
+    service = FakeWorkflowService(
+        resolve_responses=[_resolved_result()],
+        install_responses=[_installed_result()],
+    )
     transcript = StringIO()
     answers = iter(["dsas", "postman primary skill"])
     selections = iter(
         [
             "install",
-            "project",
+            "python-lint",
             "project",
         ]
     )
     confirmations = iter([True])
 
-    def resolve_query(**kwargs: object) -> ResolveQueryResultDto:
-        service.resolve_calls.append(kwargs)
+    def search_query(**kwargs: object) -> SearchSkillsResultDto:
         query = kwargs["query"]
         if query == "dsas":
             raise DiscoveryNoCandidatesError("dsas")
-        return _resolved_result()
+        return SearchSkillsResultDto(
+            requested_query=str(query),
+            status="found",
+            candidates=_selection_required_result().candidates[:1],
+        )
 
     wizard = CliWizard(
         workflow_service=service,
@@ -1008,7 +1385,7 @@ def test_cli_wizard_retries_install_query_after_no_matches() -> None:
         select_many=lambda *_, **__: ["codex"],
         confirm=lambda *_, **__: next(confirmations),
     )
-    service.resolve_query = resolve_query  # type: ignore[method-assign]
+    service.search_query = search_query  # type: ignore[method-assign]
 
     wizard.run()
 
@@ -1119,6 +1496,65 @@ def test_fallback_select_one_uses_number_prompt_when_raw_terminal_control_is_una
     assert result == "global"
 
 
+def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def read_choice(prompt: str) -> str:
+        print(prompt, end="")
+        return "1"
+
+    monkeypatch.setattr(builtins, "input", read_choice)
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
+
+    candidate = (
+        _selection_required_result()
+        .candidates[0]
+        .model_copy(
+            update={
+                "maturity_score": 0.9,
+                "security_score": 0.95,
+                "install_count": 123,
+                "star_count": 45,
+            }
+        )
+    )
+    header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
+    result = wizard_module._fallback_select_one(
+        "Select candidate",
+        options,
+        "Pick a skill.",
+        descriptions,
+        column_header=header,
+    )
+
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(
+            file=wizard_module.sys.stdout, force_terminal=False, color_system=None
+        ),
+    )
+    wizard._print_step_separator()
+    output = capsys.readouterr().out
+    assert result == "python-lint"
+    lines = output.splitlines()
+    header_line = next(line for line in lines if header in line)
+    divider_line = next(line for line in lines if "─" in line)
+    row_line = next(line for line in lines if "python-lint" in line)
+    assert header_line.index("Skill") == row_line.index("python-lint")
+    assert header_line.index("Version") == row_line.index("1.2.3")
+    assert header_line.index("Maturity") == row_line.index("0.90")
+    assert header_line.index("Security") == row_line.index("0.95")
+    assert divider_line.index("─") == header_line.index("Skill")
+    assert (
+        "[↑↓] move  [enter] confirm  [q] cancel\n\nSelect option by number: \n"
+        in output
+    )
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
+    assert f"Select option by number: \n{separator}\n" in output
+
+
 def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_unavailable(
     monkeypatch,
 ) -> None:
@@ -1136,6 +1572,50 @@ def test_fallback_select_many_uses_number_prompt_when_raw_terminal_control_is_un
     )
 
     assert result == ["codex", "cursor"]
+
+
+def test_fallback_select_many_leaves_one_blank_line_after_trailing_hint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def read_choice(prompt: str) -> str:
+        print(prompt, end="")
+        return "1"
+
+    monkeypatch.setattr(builtins, "input", read_choice)
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(wizard_module.sys.stdout, "isatty", lambda: False)
+
+    result = wizard_module._fallback_select_many(
+        "Agent targets",
+        [("Codex", "codex")],
+        "Choose one or more agent formats and roots to export into.",
+    )
+
+    output = capsys.readouterr().out
+    assert result == ["codex"]
+    assert output.endswith(
+        "[↑↓] move  [space] select  [enter] confirm  [q] cancel\n\n"
+        "Select one or more options by number, comma-separated: \n"
+    )
+
+
+def test_step_separator_has_one_empty_line_before_and_after() -> None:
+    transcript = StringIO()
+    wizard = CliWizard(
+        workflow_service=FakeWorkflowService(),
+        console=Console(file=transcript, force_terminal=False, color_system=None),
+        prompt_text=lambda *_, **__: "",
+        select_one=lambda *_, **__: "exit",
+        confirm=lambda *_, **__: False,
+    )
+
+    hint = "[↑↓] move  [enter] confirm  [q] cancel"
+    transcript.write(f"{hint}\n\n")
+    wizard._print_step_separator()
+
+    separator = wizard_module._render_step_separator(wizard._console.size.width)
+    assert transcript.getvalue().endswith(f"{hint}\n\n{separator}\n\n")
 
 
 def test_default_select_one_allows_quit_when_not_a_tty(monkeypatch) -> None:
@@ -1535,7 +2015,7 @@ def test_default_prompt_text_uses_shift_enter_hint_on_macos(monkeypatch) -> None
     assert "[Shift+Enter] submit  [Ctrl+C] cancel" in footer_fragments[0][1]
 
 
-def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
+def test_default_select_one_prompt_toolkit_scrolls_a_five_row_column_viewport(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True)
@@ -1554,10 +2034,12 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
     setattr(prompt_toolkit_application, "Application", FakeApplication)
 
     prompt_toolkit_key_binding = ModuleType("prompt_toolkit.key_binding")
+    binding_handlers: dict[tuple[str, ...], Callable[[object], None]] = {}
 
     class FakeKeyBindings:
-        def add(self, *_keys):
+        def add(self, *keys):
             def decorator(func):
+                binding_handlers[keys] = func
                 return func
 
             return decorator
@@ -1610,18 +2092,52 @@ def test_default_select_one_prompt_toolkit_leaves_blank_line_after_key_hint(
     monkeypatch.setitem(sys.modules, "prompt_toolkit.styles", prompt_toolkit_styles)
 
     result = wizard_module._default_select_one(
-        "Install scope",
-        [("Project", "project"), ("Global", "global")],
-        "Choose where the selected agent should see this skill.",
+        "Select candidate",
+        [
+            *((f"skill-{index}", f"skill-{index}") for index in range(1, 7)),
+            ("Return", "__return__"),
+        ],
+        "Pick a skill.",
+        {f"skill-{index}": f"v{index}" for index in range(1, 7)},
+        column_header="Skill       Version",
+        viewport_size=5,
     )
 
     render_menu = cast(Callable[[], list[tuple[str, str]]], captured["control"])
     fragments = render_menu()
     assert result == "project"
-    assert fragments[-1] == (
-        "class:hint",
-        "\n[↑↓] move  [enter] confirm  [q] cancel\n\n",
+    rendered = "".join(text for _, text in fragments)
+    assert "Skill       Version" in rendered
+    divider = "─" * len("Skill       Version")
+    assert rendered.index(divider) > rendered.index("Skill       Version")
+    assert rendered.index(divider) < rendered.index("skill-1")
+    assert "skill-1 v1" in rendered
+    assert "skill-5" in rendered
+    assert "skill-6" not in rendered
+    assert "v2" not in rendered
+    assert ("class:column-detail", " v1") in fragments
+    assert "↓ 2 more" in rendered
+    application_kwargs = cast(dict[str, object], captured["application_kwargs"])
+    styles = cast(dict[str, str], application_kwargs["style"])
+    assert styles["column-detail"] == "#7a7a7a"
+
+    event = SimpleNamespace(app=SimpleNamespace(invalidate=lambda: None))
+    for _ in range(5):
+        binding_handlers[("down",)](event)
+
+    rendered = "".join(text for _, text in render_menu())
+    assert "skill-1" not in rendered
+    assert "skill-6 v6" in rendered
+    assert "↑ 1 earlier" in rendered
+
+    binding_handlers[("down",)](event)
+    selected: list[str] = []
+    binding_handlers[("enter",)](
+        SimpleNamespace(
+            app=SimpleNamespace(exit=lambda *, result: selected.append(result))
+        )
     )
+    assert selected == ["__return__"]
 
 
 def test_default_select_many_prompt_toolkit_shows_toggle_key_hint(monkeypatch) -> None:

@@ -45,6 +45,8 @@ def map_metadata_response(payload: MetadataResponse) -> SkillMetadata:
         lifecycle_status=payload.lifecycle_status,
         trust_tier=payload.trust_tier,
         published_at=payload.published_at,
+        install_count=payload.install_count,
+        star_count=payload.star_count,
     )
 
 
@@ -68,6 +70,8 @@ def map_version_summary(payload: MetadataResponse) -> VersionSummary:
         token_estimate=metadata.token_estimate,
         maturity_score=metadata.maturity_score,
         security_score=metadata.security_score,
+        install_count=metadata.install_count,
+        star_count=metadata.star_count,
     )
 
 

@@ -56,6 +56,8 @@ def _version_summary(
         token_estimate=120,
         maturity_score=0.9,
         security_score=0.95,
+        install_count=123,
+        star_count=45,
     )
 
 
@@ -283,6 +285,10 @@ def test_resolution_mapping_helpers_preserve_runtime_trace_and_root_selection() 
 
     assert candidate_dto.runtime == "python"
     assert candidate_dto.token_estimate == 120
+    assert candidate_dto.maturity_score == 0.9
+    assert candidate_dto.security_score == 0.95
+    assert candidate_dto.install_count == 123
+    assert candidate_dto.star_count == 45
     assert candidate_dto.selection_reason == "Closer exact name match than dep-core."
     assert graph_dto.root.slug == "python-lint"
     assert graph_dto.edges[0].markers == ["linux"]
