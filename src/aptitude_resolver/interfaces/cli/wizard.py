@@ -23,8 +23,10 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
 from aptitude_resolver.application.dto import (
+    DiscoveryCandidateDto,
     InstallResultDto,
     ResolveQueryResultDto,
+    SearchSkillsResultDto,
     SyncResultDto,
 )
 from aptitude_resolver.application.composition import (
@@ -106,6 +108,8 @@ T = TypeVar("T")
 BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
+CANDIDATE_VIEWPORT_SIZE = 5
+CANDIDATE_SKILL_WIDTH = 32
 PLAN_SUMMARY_LABEL_WIDTH = len("github-copilot")
 
 WORDMARKS: dict[BannerStyle, str] = {
@@ -160,6 +164,9 @@ class SelectPrompt(Protocol, Generic[T]):
         options: Sequence[tuple[str, T]],
         help_text: str | None = None,
         descriptions: Mapping[T, str] | None = None,
+        *,
+        column_header: str | None = None,
+        viewport_size: int | None = None,
     ) -> T: ...
 
 
@@ -174,6 +181,13 @@ class MultiSelectPrompt(Protocol, Generic[T]):
 
 
 class WorkflowServicePort(Protocol):
+    def search_query(
+        self,
+        *,
+        query: str,
+        options: InstallWorkflowOptions | None = None,
+    ) -> SearchSkillsResultDto: ...
+
     def resolve_query(
         self,
         *,
@@ -305,6 +319,39 @@ def _active_menu_description(
     return descriptions.get(options[index][1])
 
 
+def _candidate_menu_columns(
+    candidates: Sequence[DiscoveryCandidateDto],
+) -> tuple[str, list[tuple[str, str]], dict[str, str]]:
+    """Build aligned candidate labels and focused-row details."""
+
+    header = (
+        "Skill                            Version    Scores (M/S)  Installs   Stars"
+    )
+    options: list[tuple[str, str]] = []
+    descriptions: dict[str, str] = {}
+    for candidate in candidates:
+        maturity = (
+            "—"
+            if candidate.maturity_score is None
+            else f"{candidate.maturity_score:.2f}"
+        )
+        security = (
+            "—"
+            if candidate.security_score is None
+            else f"{candidate.security_score:.2f}"
+        )
+        installs = (
+            "—" if candidate.install_count is None else str(candidate.install_count)
+        )
+        stars = "—" if candidate.star_count is None else str(candidate.star_count)
+        options.append((f"{candidate.slug:<{CANDIDATE_SKILL_WIDTH}}", candidate.slug))
+        descriptions[candidate.slug] = (
+            f"{candidate.version:<11}{f'{maturity} / {security}':<18}"
+            f"{installs:>3}{stars:>8}"
+        )
+    return header, options, descriptions
+
+
 def _format_plan_summary_row(*items: tuple[str, object]) -> str:
     """Render one aligned plan summary row."""
 
@@ -332,18 +379,6 @@ def _render_plan_panel(
                 ("Selected", f"{selected.slug}@{selected.version}"),
             ),
             style=THEME.text_primary,
-        ),
-        Text(
-            _format_plan_summary_row(
-                ("Runtime", skill.runtime if skill and skill.runtime else "unknown"),
-            ),
-            style=THEME.text_detail,
-        ),
-        Text(
-            _format_plan_summary_row(
-                ("Trust", skill.trust_tier if skill else "unknown"),
-            ),
-            style=THEME.text_detail,
         ),
         Text(
             _format_plan_summary_row(
@@ -586,6 +621,9 @@ def _fallback_select_one(
     options: Sequence[tuple[str, T]],
     help_text: str | None = None,
     descriptions: Mapping[T, str] | None = None,
+    *,
+    column_header: str | None = None,
+    viewport_size: int | None = None,
 ) -> T:
     """Select one option without prompt_toolkit."""
 
@@ -601,8 +639,11 @@ def _fallback_select_one(
         print(title)
         if help_text:
             print(help_text)
+        if column_header:
+            print(column_header)
         for index, (label, _) in enumerate(options, start=1):
-            print(f"  {index}. {label}")
+            detail = descriptions.get(options[index - 1][1]) if descriptions else None
+            print(f"  {index}. {label}{f' {detail}' if detail else ''}")
         while True:
             raw_choice = input("Select option by number: ").strip()
             if raw_choice.lower() == "q":
@@ -828,10 +869,20 @@ def _default_select_one(
     options: Sequence[tuple[str, T]],
     help_text: str | None = None,
     descriptions: Mapping[T, str] | None = None,
+    *,
+    column_header: str | None = None,
+    viewport_size: int | None = None,
 ) -> T:
     """Select one option with an inline keyboard-driven menu."""
     if not sys.stdin.isatty() or not sys.stdout.isatty():
-        return _fallback_select_one(title, options, help_text, descriptions)
+        return _fallback_select_one(
+            title,
+            options,
+            help_text,
+            descriptions,
+            column_header=column_header,
+            viewport_size=viewport_size,
+        )
 
     try:
         from prompt_toolkit.application import Application
@@ -841,7 +892,14 @@ def _default_select_one(
         from prompt_toolkit.layout.controls import FormattedTextControl
         from prompt_toolkit.styles import Style
     except ModuleNotFoundError:
-        return _fallback_select_one(title, options, help_text, descriptions)
+        return _fallback_select_one(
+            title,
+            options,
+            help_text,
+            descriptions,
+            column_header=column_header,
+            viewport_size=viewport_size,
+        )
 
     if not options:
         raise ValueError("Expected at least one option.")
@@ -853,12 +911,21 @@ def _default_select_one(
         if help_text:
             fragments.append(("class:hint", f"{help_text}\n"))
         fragments.append(("class:hint", "\n"))
+        if column_header:
+            fragments.append(("class:column-header", f"  {column_header}\n"))
         active_description = _active_menu_description(
             options,
             index=state["index"],
             descriptions=descriptions,
         )
-        for index, (label, _) in enumerate(options):
+        visible_size = viewport_size or len(options)
+        start = min(
+            max(0, state["index"] - visible_size + 1),
+            max(0, len(options) - visible_size),
+        )
+        end = min(len(options), start + visible_size)
+        for index in range(start, end):
+            label, _ = options[index]
             is_active = index == state["index"]
             marker = "●" if is_active else "○"
             marker_style = "class:marker-active" if is_active else "class:item"
@@ -866,8 +933,19 @@ def _default_select_one(
             fragments.append((marker_style, f"{marker} "))
             fragments.append((label_style, label))
             if is_active and active_description:
-                fragments.append(("class:detail", f" - {active_description}"))
+                detail_style = (
+                    "class:column-detail" if column_header else "class:detail"
+                )
+                separator = " " if column_header else " - "
+                fragments.append((detail_style, f"{separator}{active_description}"))
             fragments.append(("", "\n"))
+        hidden: list[str] = []
+        if start:
+            hidden.append(f"↑ {start} earlier")
+        if end < len(options):
+            hidden.append(f"↓ {len(options) - end} more")
+        if hidden:
+            fragments.append(("class:hint", f"{'  '.join(hidden)}\n"))
         fragments.append(("class:hint", "\n[↑↓] move  [enter] confirm  [q] cancel\n\n"))
         return fragments
 
@@ -906,6 +984,8 @@ def _default_select_one(
                 "marker-active": f"bold {THEME.accent}",
                 "hint": "#7a7a7a",
                 "detail": "#d8d8d8",
+                "column-header": "#7a7a7a",
+                "column-detail": "#7a7a7a",
             }
         ),
     )
@@ -1086,6 +1166,9 @@ class CliWizard:
         options: Sequence[tuple[str, T]],
         help_text: str | None = None,
         descriptions: Mapping[T, str] | None = None,
+        *,
+        column_header: str | None = None,
+        viewport_size: int | None = None,
     ) -> T:
         """Return one typed selection from the generic menu helper."""
 
@@ -1094,13 +1177,21 @@ class CliWizard:
             if descriptions is not None
             else None
         )
+        select_options = cast(Sequence[tuple[str, object]], options)
+        if column_header is None and viewport_size is None:
+            return cast(
+                T,
+                self._select_one(title, select_options, help_text, object_descriptions),
+            )
         return cast(
             T,
             self._select_one(
                 title,
-                cast(Sequence[tuple[str, object]], options),
+                select_options,
                 help_text,
                 object_descriptions,
+                column_header=column_header,
+                viewport_size=viewport_size,
             ),
         )
 
@@ -1166,7 +1257,6 @@ class CliWizard:
 
                 install_outcome = self._run_install_flow(
                     initial_query=initial_query,
-                    direct_install_entry=initial_flow == "install",
                 )
                 if install_outcome is None:
                     return
@@ -1194,12 +1284,10 @@ class CliWizard:
         self,
         *,
         initial_query: str | None = None,
-        direct_install_entry: bool = False,
     ) -> tuple[InstallResultDto, str | None] | None:
         """Run the guided install flow after the user selects it."""
 
         query = initial_query.strip() if initial_query is not None else None
-        skip_initial_separator = direct_install_entry and query is not None
         if query is None:
             self._print_step_separator()
             query = self._prompt_install_query()
@@ -1215,69 +1303,87 @@ class CliWizard:
         )
 
         while True:
-            if skip_initial_separator:
-                skip_initial_separator = False
-            else:
+            try:
+                search_result = self._search(query=query, options=options)
+            except DiscoveryNoCandidatesError as exc:
                 self._print_step_separator()
-
-            destination = self._prompt_install_destination()
-            if destination is None:
+                self._print_error(exc)
                 self._print_step_separator()
                 query = self._prompt_install_query()
                 if not query:
                     self._console.print("No query entered. Exiting.", style="yellow")
                     return None
                 continue
-            agents, scope, export_root, export_roots = destination
 
-            retry_query = False
-            while True:
+            if not search_result.candidates:
                 self._print_step_separator()
-                try:
-                    resolve_result = self._resolve(query=query, options=options)
-                except DiscoveryNoCandidatesError as exc:
-                    self._print_step_separator()
-                    self._print_error(exc)
-                    self._print_step_separator()
-                    query = self._prompt_install_query()
-                    if not query:
-                        self._console.print(
-                            "No query entered. Exiting.",
-                            style="yellow",
-                        )
-                        return None
-                    retry_query = True
-                    break
-
-                if resolve_result is None:
-                    break
-
+                self._print_error(DiscoveryNoCandidatesError(query))
                 self._print_step_separator()
-                self._console.print(
-                    _render_plan_panel(
-                        resolve_result,
-                        scope=scope,
-                        export_roots=export_roots,
-                    )
-                )
-                self._print_step_separator()
-                if not self._confirm("Proceed with installation?", True):
-                    self._console.print("Installation cancelled.", style="yellow")
+                query = self._prompt_install_query()
+                if not query:
+                    self._console.print("No query entered. Exiting.", style="yellow")
                     return None
+                continue
 
-                return self._install(
+            column_header, candidate_options, candidate_descriptions = (
+                _candidate_menu_columns(search_result.candidates)
+            )
+            self._print_step_separator()
+            chosen_slug = self._select(
+                "Select candidate",
+                _with_return_option(candidate_options),
+                "Pick the ranked skill to resolve and install.",
+                candidate_descriptions,
+                column_header=column_header,
+                viewport_size=CANDIDATE_VIEWPORT_SIZE,
+            )
+            if chosen_slug == RETURN_OPTION_VALUE:
+                return None
+
+            self._print_step_separator()
+            try:
+                resolve_result = self._resolve(
                     query=query,
-                    select_slug=resolve_result.selected_coordinate.slug
-                    if resolve_result.selected_coordinate is not None
-                    else None,
-                    agents=agents,
-                    scope=scope,
-                    export_root=export_root,
+                    select_slug=str(chosen_slug),
                     options=options,
                 )
-
-            if retry_query:
+            except DiscoveryNoCandidatesError as exc:
+                self._print_step_separator()
+                self._print_error(exc)
+                self._print_step_separator()
+                query = self._prompt_install_query()
+                if not query:
+                    self._console.print("No query entered. Exiting.", style="yellow")
+                    return None
                 continue
+
+            self._print_step_separator()
+            destination = self._prompt_install_destination()
+            if destination is None:
+                return None
+            agents, scope, export_root, export_roots = destination
+
+            self._print_step_separator()
+            self._console.print(
+                _render_plan_panel(
+                    resolve_result,
+                    scope=scope,
+                    export_roots=export_roots,
+                )
+            )
+            self._print_step_separator()
+            if not self._confirm("Proceed with installation?", True):
+                self._console.print("Installation cancelled.", style="yellow")
+                return None
+
+            return self._install(
+                query=query,
+                select_slug=str(chosen_slug),
+                agents=agents,
+                scope=scope,
+                export_root=export_root,
+                options=options,
+            )
 
     def _prompt_install_query(self) -> str:
         """Prompt for one install query using the larger free-text surface."""
@@ -1373,7 +1479,9 @@ class CliWizard:
         telemetry = []
         try:
             with self._console.status(
-                f"[{THEME.text_primary}]Syncing lockfile...", spinner="dots"
+                f"[{THEME.text_primary}]Syncing lockfile...",
+                spinner="dots",
+                spinner_style=THEME.accent,
             ):
                 with capture_cli_telemetry() as telemetry:
                     result = self._workflow_service.sync_lock(
@@ -1386,27 +1494,56 @@ class CliWizard:
         self._print_operation_telemetry("Sync", telemetry)
         return result
 
-    def _resolve(
+    def _search(
         self,
         *,
         query: str,
         options: InstallWorkflowOptions,
-    ) -> ResolveQueryResultDto | None:
-        """Resolve one query and select a candidate when needed."""
+    ) -> SearchSkillsResultDto:
+        """Search candidates before prompting for installation details."""
 
         telemetry = []
         try:
             with self._console.status(
-                f"[{THEME.text_primary}]Resolving query...", spinner="dots"
+                f"[{THEME.text_primary}]Searching resolver skills...",
+                spinner="dots",
+                spinner_style=THEME.accent,
+            ):
+                with capture_cli_telemetry() as telemetry:
+                    result = self._workflow_service.search_query(
+                        query=query,
+                        options=options,
+                    )
+        except Exception:
+            self._print_operation_telemetry("Search query", telemetry)
+            raise
+        self._print_operation_telemetry("Search query", telemetry)
+        return result
+
+    def _resolve(
+        self,
+        *,
+        query: str,
+        select_slug: str,
+        options: InstallWorkflowOptions,
+    ) -> ResolveQueryResultDto:
+        """Resolve the explicitly selected candidate."""
+
+        telemetry = []
+        try:
+            with self._console.status(
+                f"[{THEME.text_primary}]Resolving query...",
+                spinner="dots",
+                spinner_style=THEME.accent,
             ):
                 with capture_cli_telemetry() as telemetry:
                     result = self._workflow_service.resolve_query(
                         query=query,
                         version=None,
-                        select_slug=None,
-                        interaction_mode=None,
-                        prompt_capable=True,
-                        selection_source="wizard",
+                        select_slug=select_slug,
+                        interaction_mode="never",
+                        prompt_capable=False,
+                        selection_source="interactive",
                         options=options,
                     )
         except Exception:
@@ -1414,45 +1551,6 @@ class CliWizard:
             raise
         self._print_operation_telemetry("Resolve query", telemetry)
 
-        if result.status != "selection_required":
-            return result
-
-        candidate_options = _with_return_option(
-            [
-                (
-                    f"{candidate.slug}@{candidate.version}  {candidate.runtime or 'unknown'}  "
-                    f"{candidate.trust_tier}  {candidate.lifecycle_status}",
-                    candidate.slug,
-                )
-                for candidate in result.candidates
-            ]
-        )
-        chosen_slug = self._select(
-            "Select candidate",
-            candidate_options,
-            "Multiple matches found. Pick one candidate.",
-        )
-        if chosen_slug == RETURN_OPTION_VALUE:
-            return None
-        telemetry = []
-        try:
-            with self._console.status(
-                f"[{THEME.text_primary}]Applying candidate...", spinner="dots"
-            ):
-                with capture_cli_telemetry() as telemetry:
-                    result = self._workflow_service.resolve_query(
-                        query=query,
-                        version=None,
-                        select_slug=str(chosen_slug),
-                        interaction_mode="never",
-                        prompt_capable=False,
-                        selection_source="interactive",
-                        options=options,
-                    )
-        except Exception:
-            self._print_operation_telemetry("Apply candidate", telemetry)
-            raise
-        self._print_operation_telemetry("Apply candidate", telemetry)
         return result
 
     def _install(
@@ -1494,7 +1592,7 @@ class CliWizard:
                         cwd=Path.cwd(),
                         interaction_mode=None,
                         prompt_capable=False,
-                        selection_source="wizard",
+                        selection_source="interactive",
                         options=options,
                     )
                 progress.advance(task, 80)
@@ -1511,7 +1609,8 @@ class CliWizard:
         )
         self._console.print(
             Text.assemble(
-                (f"Aptitude Resolver {resolve_cli_version()}", THEME.text_primary),
+                ("Aptitude Resolver ", THEME.text_primary),
+                (resolve_cli_version(), "repr.number"),
                 (
                     " - Review-first CLI for discovering and installing skills.",
                     THEME.text_muted,

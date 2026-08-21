@@ -61,6 +61,10 @@ def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
         ranking_position=candidate.ranking_position or 0,
         selection_details=list(candidate.selection_details),
         selection_reason=candidate.selection_reason,
+        maturity_score=version.maturity_score,
+        security_score=version.security_score,
+        install_count=version.install_count,
+        star_count=version.star_count,
     )
 
 

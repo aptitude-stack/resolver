@@ -180,6 +180,8 @@ def _version_summary_from_metadata(metadata: SkillMetadata) -> VersionSummary:
         token_estimate=metadata.token_estimate,
         maturity_score=metadata.maturity_score,
         security_score=metadata.security_score,
+        install_count=metadata.install_count,
+        star_count=metadata.star_count,
     )
 
 
@@ -202,6 +204,8 @@ def _merge_enriched_version(
         token_estimate=metadata.token_estimate,
         maturity_score=metadata.maturity_score,
         security_score=metadata.security_score,
+        install_count=metadata.install_count,
+        star_count=metadata.star_count,
         is_current_default=version.is_current_default,
     )
 

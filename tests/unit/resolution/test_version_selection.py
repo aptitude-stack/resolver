@@ -98,6 +98,8 @@ def _metadata(
         lifecycle_status="published",
         trust_tier="internal",
         published_at="2026-03-18T00:00:00Z",
+        install_count=123,
+        star_count=45,
     )
 
 
@@ -209,6 +211,8 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
     assert [candidate.slug for candidate in candidates] == ["python-lint"]
     assert candidates[0].selected_coordinate.version == "1.2.3"
     assert candidates[0].selected_version.name == "Python Lint"
+    assert candidates[0].selected_version.install_count == 123
+    assert candidates[0].selected_version.star_count == 45
     assert registry_client.metadata_calls == [("python-lint", "1.2.3")]
     assert [item.action for item in trace] == [
         "select_candidate_version",
