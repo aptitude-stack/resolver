@@ -28,6 +28,7 @@ class SearchSkillsResultDto(BaseModel):
 
     requested_query: str
     status: Literal["found"]
+    candidate_limit: int = Field(default=5, ge=1)
     candidates: list[DiscoveryCandidateDto] = Field(default_factory=list)
     trace: list[TraceEntryDto] = Field(default_factory=list)
 

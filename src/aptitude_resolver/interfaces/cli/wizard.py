@@ -109,7 +109,6 @@ BannerStyle = Literal["classic", "block"]
 RETURN_OPTION_VALUE: ReturnOption = "__return__"
 LARGE_TEXT_PROMPT_HEIGHT = 6
 CANDIDATE_VIEWPORT_SIZE = 5
-CANDIDATE_RESULT_LIMIT = 10
 CANDIDATE_SKILL_WIDTH = 32
 PLAN_SUMMARY_LABEL_WIDTH = len("github-copilot")
 
@@ -322,13 +321,15 @@ def _active_menu_description(
 
 def _candidate_menu_columns(
     candidates: Sequence[DiscoveryCandidateDto],
+    *,
+    candidate_limit: int,
 ) -> tuple[str, list[tuple[str, str]], dict[str, str]]:
     """Build aligned candidate labels and focused-row details."""
 
     header = "Skill                            Version    Maturity   Security   Installs   Stars"
     options: list[tuple[str, str]] = []
     descriptions: dict[str, str] = {}
-    for candidate in candidates[:CANDIDATE_RESULT_LIMIT]:
+    for candidate in candidates[:candidate_limit]:
         maturity = (
             "—"
             if candidate.maturity_score is None
@@ -1359,7 +1360,10 @@ class CliWizard:
                 continue
 
             column_header, candidate_options, candidate_descriptions = (
-                _candidate_menu_columns(search_result.candidates)
+                _candidate_menu_columns(
+                    search_result.candidates,
+                    candidate_limit=search_result.candidate_limit,
+                )
             )
             self._print_step_separator()
             chosen_slug = self._select(
@@ -1538,7 +1542,6 @@ class CliWizard:
     ) -> SearchSkillsResultDto:
         """Search candidates before prompting for installation details."""
 
-        telemetry = []
         self._console.print()
         try:
             with self._console.status(
@@ -1546,17 +1549,15 @@ class CliWizard:
                 spinner="dots",
                 spinner_style=THEME.accent,
             ):
-                with capture_cli_telemetry() as telemetry:
+                with capture_cli_telemetry():
                     result = self._workflow_service.search_query(
                         query=query,
                         options=options,
                     )
         except Exception:
             self._console.print()
-            self._print_operation_telemetry("Search query", telemetry)
             raise
         self._console.print()
-        self._print_operation_telemetry("Search query", telemetry)
         return result
 
     def _resolve(

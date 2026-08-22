@@ -805,7 +805,10 @@ def test_candidate_menu_uses_borderless_columns_and_active_only_details() -> Non
         )
     )
 
-    header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
+    header, options, descriptions = wizard_module._candidate_menu_columns(
+        [candidate],
+        candidate_limit=5,
+    )
 
     assert header == (
         "Skill                            Version    Maturity   Security   Installs   Stars"
@@ -816,23 +819,29 @@ def test_candidate_menu_uses_borderless_columns_and_active_only_details() -> Non
     }
 
 
-def test_candidate_menu_caps_results_at_ten_with_five_visible_rows() -> None:
+def test_candidate_menu_uses_configured_limit_with_five_visible_rows() -> None:
     candidate = _selection_required_result().candidates[0]
     candidates = [
         candidate.model_copy(update={"slug": f"skill-{index}"}) for index in range(12)
     ]
 
-    _, options, descriptions = wizard_module._candidate_menu_columns(candidates)
+    _, options, descriptions = wizard_module._candidate_menu_columns(
+        candidates,
+        candidate_limit=7,
+    )
 
     assert wizard_module.CANDIDATE_VIEWPORT_SIZE == 5
-    assert [value for _, value in options] == [f"skill-{index}" for index in range(10)]
-    assert list(descriptions) == [f"skill-{index}" for index in range(10)]
+    assert [value for _, value in options] == [f"skill-{index}" for index in range(7)]
+    assert list(descriptions) == [f"skill-{index}" for index in range(7)]
 
 
 def test_candidate_menu_renders_missing_metrics_as_em_dash() -> None:
     candidate = _selection_required_result().candidates[0]
 
-    _, _, descriptions = wizard_module._candidate_menu_columns([candidate])
+    _, _, descriptions = wizard_module._candidate_menu_columns(
+        [candidate],
+        candidate_limit=5,
+    )
 
     assert (
         descriptions["python-lint"]
@@ -1345,6 +1354,9 @@ def test_cli_wizard_exception_status_spacing_matches_visible_telemetry(
     output = transcript.getvalue()
     if operation == "resolve":
         assert output == "spinner\n"
+    elif operation == "search":
+        assert output == "\nspinner\n\n"
+        assert "telemetry" not in output
     else:
         assert "\nspinner\n\n" in output
         assert "spinner\n\n\n" not in output
@@ -1520,7 +1532,10 @@ def test_fallback_select_one_renders_candidate_divider_and_trailing_hint(
             }
         )
     )
-    header, options, descriptions = wizard_module._candidate_menu_columns([candidate])
+    header, options, descriptions = wizard_module._candidate_menu_columns(
+        [candidate],
+        candidate_limit=5,
+    )
     result = wizard_module._fallback_select_one(
         "Select candidate",
         options,
