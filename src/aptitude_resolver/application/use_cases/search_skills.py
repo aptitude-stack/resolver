@@ -52,6 +52,7 @@ class SearchSkillsUseCase:
         return SearchSkillsResultDto(
             requested_query=ranked.requested_query,
             status="found",
+            candidate_limit=ranked.candidate_limit,
             candidates=[candidate_to_dto(item) for item in ranked.candidates],
             trace=[trace_to_dto(item) for item in ranked.trace],
         )

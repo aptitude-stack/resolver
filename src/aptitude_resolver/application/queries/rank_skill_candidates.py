@@ -43,6 +43,7 @@ class RankedCandidatesArtifact:
     requested_query: str
     requested_version: str | None
     intent: SearchIntent
+    candidate_limit: int
     candidates: list[DiscoveryCandidate] = field(default_factory=list)
     trace: list[TraceEntry] = field(default_factory=list)
     policy_evaluations: list[PolicyEvaluation] = field(default_factory=list)
@@ -145,6 +146,7 @@ class RankSkillCandidatesQuery:
                 requested_query=query,
                 requested_version=version,
                 intent=discovery_result.intent,
+                candidate_limit=self._selection_preferences.candidate_limit,
                 candidates=candidates,
                 trace=trace,
                 policy_evaluations=[],

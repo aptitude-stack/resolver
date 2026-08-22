@@ -165,10 +165,14 @@ def test_search_use_case_returns_ranked_candidates_without_materialization() -> 
 
     result = SearchSkillsUseCase(
         registry_client,
-        selection_preferences=SelectionPreferences(profile="low-cost"),
+        selection_preferences=SelectionPreferences(
+            profile="low-cost",
+            candidate_limit=7,
+        ),
     ).execute(SearchSkillsRequestDto(query="pdf"))
 
     assert result.status == "found"
+    assert result.candidate_limit == 7
     assert [item.slug for item in result.candidates] == ["pdf-reader", "pdf-forms"]
     assert result.candidates[0].token_estimate == 80
     assert registry_client.identity_calls == []
