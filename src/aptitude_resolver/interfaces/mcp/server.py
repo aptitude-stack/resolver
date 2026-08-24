@@ -400,8 +400,8 @@ def create_server(adapter: AptitudeMcpAdapter | None = None) -> FastMCP:
 
         return (
             f"Search `{query}` with `aptitude_search_skills`, inspect promising "
-            "candidates with `aptitude_inspect_skill`, and compare lifecycle, trust, "
-            "runtime, labels, token estimate, and selection details."
+            "candidates with `aptitude_inspect_skill`, and compare lifecycle, "
+            "runtime, scores, labels, token estimate, and selection details."
         )
 
     @mcp.prompt("aptitude_sync_from_lock")

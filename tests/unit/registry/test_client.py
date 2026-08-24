@@ -205,7 +205,7 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
                 },
                 "metadata": {
                     "name": "Postman Primary Skill",
-                    "description": "Primary sanity skill for collection coverage",
+                    "description": None,
                     "tags": ["postman", "sanity", "primary"],
                     "headers": {"runtime": "python"},
                     "inputs_schema": {"type": "object"},
@@ -229,7 +229,8 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
     assert metadata.coordinate.slug == "postman-primary-1774130709214-55706"
     assert metadata.coordinate.version == "1.0.0"
     assert metadata.name == "Postman Primary Skill"
-    assert metadata.rendered_summary == "Primary sanity skill for collection coverage"
+    assert metadata.description == ""
+    assert metadata.rendered_summary == "Postman Primary Skill"
 
 
 def test_fetch_skill_artifact_uses_live_content_path_for_binary_payload() -> None:

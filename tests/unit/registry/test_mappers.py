@@ -25,9 +25,10 @@ from aptitude_resolver.registry.transport_models import (
 def _metadata_response(
     *,
     rendered_summary: str | None,
-    description: str,
+    description: str | None,
     name: str,
     headers: dict[str, object] | None = None,
+    overall_score: float | None = None,
 ) -> MetadataResponse:
     return MetadataResponse(
         slug="python-lint",
@@ -49,6 +50,7 @@ def _metadata_response(
             token_estimate=200,
             maturity_score=0.9,
             security_score=0.95,
+            overall_score=overall_score,
         ),
         lifecycle_status="published",
         trust_tier="internal",
@@ -81,6 +83,8 @@ def test_map_metadata_response_uses_summary_fallback_precedence(
 
     assert metadata.rendered_summary == expected
     assert version_summary.rendered_summary == expected
+    assert metadata.overall_score is None
+    assert version_summary.overall_score is None
 
 
 def test_map_metadata_response_drops_none_headers_and_coerces_other_values() -> None:
@@ -119,6 +123,34 @@ def test_map_metadata_response_preserves_catalog_metrics() -> None:
     assert metadata.star_count == 45
     assert version_summary.install_count == 123
     assert version_summary.star_count == 45
+
+
+def test_map_metadata_response_preserves_nullable_overall_score() -> None:
+    payload = _metadata_response(
+        rendered_summary="Rendered summary",
+        description="Metadata description",
+        name="Python Lint",
+        overall_score=0.87,
+    )
+
+    metadata = map_metadata_response(payload)
+    version_summary = map_version_summary(payload)
+
+    assert metadata.overall_score == 0.87
+    assert version_summary.overall_score == 0.87
+
+
+def test_map_metadata_response_accepts_null_description_for_exact_metadata() -> None:
+    payload = _metadata_response(
+        rendered_summary=None,
+        description=None,
+        name="Python Lint",
+    )
+
+    metadata = map_metadata_response(payload)
+
+    assert metadata.description == ""
+    assert metadata.rendered_summary == "Python Lint"
 
 
 def test_map_skill_version_list_response_applies_server_defaults() -> None:

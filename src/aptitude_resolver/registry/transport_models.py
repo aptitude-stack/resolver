@@ -32,7 +32,7 @@ class TransportMetadata(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str
-    description: str
+    description: str | None
     tags: list[str]
     headers: dict[str, Any] = Field(default_factory=dict)
     inputs_schema: dict[str, Any] | None = None
@@ -40,6 +40,7 @@ class TransportMetadata(BaseModel):
     token_estimate: int | None = None
     maturity_score: float | None = None
     security_score: float | None = None
+    overall_score: float | None = None
 
 
 class MetadataResponse(BaseModel):

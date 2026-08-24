@@ -60,6 +60,9 @@ class InspectVersionDto(BaseModel):
     token_estimate: int | None = None
     content_size_bytes: int | None = None
     rendered_summary: str | None = None
+    maturity_score: float | None = None
+    security_score: float | None = None
+    overall_score: float | None = None
 
 
 class InspectSkillSummaryDto(BaseModel):
@@ -79,6 +82,7 @@ class InspectSkillSummaryDto(BaseModel):
     content_size_bytes: int | None = None
     maturity_score: float | None = None
     security_score: float | None = None
+    overall_score: float | None = None
     content_checksum_algorithm: str | None = None
     content_checksum_digest: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)

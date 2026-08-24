@@ -19,6 +19,28 @@ from aptitude_resolver.application.dto import (
 from aptitude_resolver.interfaces.mcp.models import ResponseFormat
 
 
+_SCORE_SCALE = {
+    "normalized_min": 0.0,
+    "normalized_max": 1.0,
+    "display_min": 0.0,
+    "display_max": 10.0,
+}
+_PRIVATE_RESPONSE_KEYS = {
+    "allowed_trust_tiers",
+    "current_trust_tier",
+    "trust",
+    "trust_preference",
+    "trust_tier",
+    "trusttier",
+}
+_STRUCTURAL_SIGNAL_KEYS = {
+    "decisive_signals",
+    "match_reasons",
+    "selection_details",
+    "signals",
+}
+
+
 def dto_to_data(value: Any) -> Any:
     """Convert DTOs and nested values into JSON-safe Python data."""
 
@@ -34,12 +56,26 @@ def dto_to_data(value: Any) -> Any:
 def format_response(value: Any, response_format: ResponseFormat) -> str:
     """Format one response for an MCP tool."""
 
-    data = dto_to_data(value)
+    if not isinstance(response_format, ResponseFormat):
+        response_format = ResponseFormat(response_format)
+    data = _public_data(value)
     if response_format == ResponseFormat.JSON:
         return json.dumps(data, indent=2, sort_keys=True)
     if response_format == ResponseFormat.TOON:
         return toons.dumps(data)
     return _format_markdown(value, data)
+
+
+def _public_data(value: Any) -> Any:
+    """Build public skill output while preserving the policy contract."""
+
+    data = dto_to_data(value)
+    if isinstance(value, EffectivePolicyReportDto):
+        return data
+    data = _scrub(data)
+    if isinstance(data, dict):
+        data["score_scale"] = dict(_SCORE_SCALE)
+    return data
 
 
 def paginate_items(
@@ -86,10 +122,8 @@ def _format_markdown(value: Any, data: Any) -> str:
 def _format_candidate(candidate: Any) -> str:
     labels = ", ".join(candidate.matched_labels or candidate.labels[:4])
     suffix = f" [{labels}]" if labels else ""
-    return (
-        f"- `{candidate.slug}@{candidate.version}` - {candidate.name}"
-        f" ({candidate.lifecycle_status}, {candidate.trust_tier}){suffix}"
-    )
+    score_suffix = _format_candidate_scores(candidate)
+    return f"- `{candidate.slug}@{candidate.version}` - {candidate.name} ({candidate.lifecycle_status}){score_suffix}{suffix}"
 
 
 def _format_search_result(result: SearchSkillsResultDto) -> str:
@@ -112,12 +146,31 @@ def _format_paginated_candidates(data: dict[str, Any]) -> str:
         "",
     ]
     for candidate in data["candidates"]:
+        score_suffix = _format_candidate_scores(candidate)
         lines.append(
             f"- `{candidate['slug']}@{candidate['version']}` - {candidate['name']}"
+            f"{score_suffix}"
         )
     if data["has_more"]:
         lines.extend(["", f"Next offset: `{data['next_offset']}`"])
     return "\n".join(lines)
+
+
+def _format_candidate_scores(candidate: Any) -> str:
+    scores = []
+    for label, key in (
+        ("Maturity", "maturity_score"),
+        ("Security", "security_score"),
+        ("Overall", "overall_score"),
+    ):
+        score = (
+            candidate.get(key)
+            if isinstance(candidate, dict)
+            else getattr(candidate, key, None)
+        )
+        if score is not None:
+            scores.append(f"{label}: {_display_score(score)}/10")
+    return f" ({', '.join(scores)})" if scores else ""
 
 
 def _format_inspect_result(result: InspectSkillResultDto) -> str:
@@ -136,13 +189,23 @@ def _format_inspect_result(result: InspectSkillResultDto) -> str:
                 "",
                 f"Name: {result.skill.name}",
                 f"Status: {result.skill.lifecycle_status}",
-                f"Trust: {result.skill.trust_tier}",
             ]
         )
+        scores = []
+        for label, key in (
+            ("Maturity", "maturity_score"),
+            ("Security", "security_score"),
+            ("Overall", "overall_score"),
+        ):
+            score = getattr(result.skill, key)
+            if score is not None:
+                scores.append(f"- {label}: {_display_score(score)}/10")
+        if scores:
+            lines.extend(["", "## Scores", *scores])
     if result.available_versions:
         lines.extend(["", "## Versions"])
         lines.extend(
-            f"- `{item.version}` ({item.lifecycle_status}, {item.trust_tier})"
+            f"- `{item.version}` ({item.lifecycle_status})"
             for item in result.available_versions
         )
     if result.content_preview:
@@ -251,3 +314,53 @@ def _format_sync_result(result: SyncResultDto) -> str:
             for item in result.installed_skills
         )
     return "\n".join(lines)
+
+
+def _normalized_score(value: Any) -> float | None:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    return round(max(0.0, min(1.0, float(value))), 4)
+
+
+def _display_score(value: Any) -> str:
+    normalized = _normalized_score(value)
+    return "n/a" if normalized is None else f"{normalized * 10:.1f}"
+
+
+def _scrub(value: Any, *, structural: bool = False) -> Any:
+    if isinstance(value, dict):
+        scrubbed: dict[Any, Any] = {}
+        for key, item in value.items():
+            normalized_key = str(key).casefold()
+            if normalized_key in _PRIVATE_RESPONSE_KEYS:
+                continue
+            if _is_private_trust_policy_entry(item):
+                continue
+            if structural and _is_private_structural_signal(item):
+                continue
+            scrubbed[key] = _scrub(
+                item,
+                structural=structural or normalized_key in _STRUCTURAL_SIGNAL_KEYS,
+            )
+        return scrubbed
+    if isinstance(value, list):
+        return [
+            _scrub(item, structural=structural)
+            for item in value
+            if not _is_private_trust_policy_entry(item)
+            and not (structural and _is_private_structural_signal(item))
+        ]
+    return value
+
+
+def _is_private_trust_policy_entry(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and str(value.get("rule", "")).casefold() == "allowed_trust_tiers"
+        and "passed" in value
+        and "message" in value
+    )
+
+
+def _is_private_structural_signal(value: Any) -> bool:
+    return value == "higher_trust_tier"

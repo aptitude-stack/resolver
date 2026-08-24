@@ -83,7 +83,14 @@ def _artifact(content: str) -> bytes:
     return make_tar_zst({"content.md": content})
 
 
-def _metadata(slug: str, version: str, *, name: str, artifact: bytes) -> SkillMetadata:
+def _metadata(
+    slug: str,
+    version: str,
+    *,
+    name: str,
+    artifact: bytes,
+    overall_score: float | None = None,
+) -> SkillMetadata:
     return SkillMetadata(
         coordinate=SkillCoordinate(slug=slug, version=version),
         name=name,
@@ -95,6 +102,7 @@ def _metadata(slug: str, version: str, *, name: str, artifact: bytes) -> SkillMe
         token_estimate=120,
         maturity_score=0.9,
         security_score=0.95,
+        overall_score=overall_score,
         rendered_summary=f"{name} summary",
         content_checksum_algorithm="sha256",
         content_checksum_digest=hashlib.sha256(artifact).hexdigest(),
@@ -118,6 +126,7 @@ def _version_summary(
     content_size_bytes: int | None = None,
     published_at: str = "2026-03-28T00:00:00Z",
     is_current_default: bool = False,
+    overall_score: float | None = None,
 ) -> VersionSummary:
     return VersionSummary(
         coordinate=SkillCoordinate(slug=slug, version=version),
@@ -135,6 +144,7 @@ def _version_summary(
         token_estimate=token_estimate,
         maturity_score=0.9,
         security_score=0.95,
+        overall_score=overall_score,
         is_current_default=is_current_default,
     )
 
@@ -278,6 +288,7 @@ def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> No
         "1.4.0",
         name="PDF Reader",
         artifact=_artifact(content),
+        overall_score=0.87,
     )
     registry_client.artifact_by_coordinate[("pdf-reader", "1.4.0")] = _artifact(content)
 
@@ -291,11 +302,42 @@ def test_inspect_use_case_returns_full_metadata_version_list_and_preview() -> No
     assert registry_client.identity_calls == []
     assert result.skill is not None
     assert result.skill.token_estimate == 120
+    assert result.skill.overall_score == 0.87
     assert result.content_preview == content
     assert result.content_preview_truncated is False
     assert [item.version for item in result.available_versions] == ["1.4.0", "1.3.0"]
     assert registry_client.metadata_calls == [("pdf-reader", "1.4.0")]
     assert registry_client.artifact_calls == [("pdf-reader", "1.4.0")]
+
+
+def test_overall_score_does_not_change_candidate_ordering() -> None:
+    registry_client = FakeRegistryClient()
+    registry_client.discovery_by_query["pdf"] = ["low-score", "high-score"]
+    artifact = _artifact("# Skill\n")
+    registry_client.versions_by_slug["low-score"] = [
+        _version_summary(
+            "low-score",
+            "1.0.0",
+            name="Low Score",
+            artifact=artifact,
+            overall_score=0.1,
+        )
+    ]
+    registry_client.versions_by_slug["high-score"] = [
+        _version_summary(
+            "high-score",
+            "1.0.0",
+            name="High Score",
+            artifact=artifact,
+            overall_score=0.99,
+        )
+    ]
+
+    result = SearchSkillsUseCase(registry_client).execute(
+        SearchSkillsRequestDto(query="pdf")
+    )
+
+    assert [item.slug for item in result.candidates] == ["low-score", "high-score"]
 
 
 def test_inspect_use_case_returns_selection_required_when_prompting_is_expected() -> (
