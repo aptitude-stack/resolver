@@ -194,6 +194,7 @@ class DiscoveryCandidateDto(BaseModel):
     selection_reason: str | None = None
     maturity_score: float | None = None
     security_score: float | None = None
+    overall_score: float | None = None
     install_count: int | None = None
     star_count: int | None = None
 

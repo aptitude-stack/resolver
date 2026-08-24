@@ -79,6 +79,7 @@ def _metadata(
     description: str | None = None,
     tags: list[str] | None = None,
     runtime: str = "python",
+    overall_score: float | None = None,
 ) -> SkillMetadata:
     return SkillMetadata(
         coordinate=SkillCoordinate(slug=slug, version=version),
@@ -91,6 +92,7 @@ def _metadata(
         token_estimate=100,
         maturity_score=0.9,
         security_score=0.95,
+        overall_score=overall_score,
         rendered_summary=f"{name} summary",
         content_checksum_algorithm="sha256",
         content_checksum_digest=f"digest-{slug}-{version}",
@@ -173,6 +175,7 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
         "python-lint",
         "1.2.3",
         name="Python Lint",
+        overall_score=0.87,
     )
 
     candidates, trace = resolve_candidate_versions(
@@ -213,6 +216,7 @@ def test_resolve_candidate_versions_selects_preferred_version_and_enriches_metad
     assert candidates[0].selected_version.name == "Python Lint"
     assert candidates[0].selected_version.install_count == 123
     assert candidates[0].selected_version.star_count == 45
+    assert candidates[0].selected_version.overall_score == 0.87
     assert registry_client.metadata_calls == [("python-lint", "1.2.3")]
     assert [item.action for item in trace] == [
         "select_candidate_version",
@@ -228,6 +232,7 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
         "python-lint",
         "2.0.0",
         name="Python Lint",
+        overall_score=0.87,
     )
 
     candidates, trace = resolve_candidate_versions(
@@ -248,6 +253,7 @@ def test_resolve_candidate_versions_uses_requested_version_and_skips_missing_can
 
     assert [candidate.slug for candidate in candidates] == ["python-lint"]
     assert candidates[0].selected_coordinate.version == "2.0.0"
+    assert candidates[0].selected_version.overall_score == 0.87
     assert [item.action for item in trace] == [
         "select_candidate_version",
         "candidate_version_miss",

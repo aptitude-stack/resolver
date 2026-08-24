@@ -19,10 +19,11 @@ from aptitude_resolver.registry.transport_models import (
 def map_metadata_response(payload: MetadataResponse) -> SkillMetadata:
     """Map exact metadata transport payloads into domain models."""
 
+    description = payload.metadata.description or ""
     return SkillMetadata(
         coordinate=SkillCoordinate(slug=payload.slug, version=payload.version),
         name=payload.metadata.name,
-        description=payload.metadata.description,
+        description=description,
         tags=list(payload.metadata.tags),
         headers={
             str(key): str(value)
@@ -34,10 +35,9 @@ def map_metadata_response(payload: MetadataResponse) -> SkillMetadata:
         token_estimate=payload.metadata.token_estimate,
         maturity_score=payload.metadata.maturity_score,
         security_score=payload.metadata.security_score,
+        overall_score=payload.metadata.overall_score,
         rendered_summary=(
-            payload.content.rendered_summary
-            or payload.metadata.description
-            or payload.metadata.name
+            payload.content.rendered_summary or description or payload.metadata.name
         ),
         content_checksum_algorithm=payload.content.checksum.algorithm,
         content_checksum_digest=payload.content.checksum.digest,
@@ -70,6 +70,7 @@ def map_version_summary(payload: MetadataResponse) -> VersionSummary:
         token_estimate=metadata.token_estimate,
         maturity_score=metadata.maturity_score,
         security_score=metadata.security_score,
+        overall_score=metadata.overall_score,
         install_count=metadata.install_count,
         star_count=metadata.star_count,
     )

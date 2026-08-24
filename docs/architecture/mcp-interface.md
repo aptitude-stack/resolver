@@ -51,6 +51,15 @@ Mutating tools:
 
 Mutating tools must require explicit write intent. `aptitude_install_skill` requires explicit `agents` and `scope`; callers can use `aptitude_preview_install_destinations` before writing. Mutating tools must not accept shell commands, execute arbitrary commands, or infer hidden write targets.
 
+### Output formats
+
+Skill-facing tools default to Markdown. Human-readable maturity, security, and
+overall scores are rendered on a ten-point scale (`/10`). JSON and TOON retain
+the canonical normalized `[0, 1]` values and include a `score_scale` object with
+both normalized and display bounds. Skill-facing outputs omit trust-tier fields;
+`aptitude_show_policy` keeps `allowed_trust_tiers` because it is an effective
+policy setting.
+
 The discovery-backed tools `aptitude_search_skills`, `aptitude_inspect_skill`, `aptitude_resolve_skill`, and `aptitude_install_skill` accept an optional `cwd` workspace directory. It supplies project lockfile context and defaults to the current process directory when omitted; install also uses it for project-scope export destinations.
 
 ## Resources And Prompts

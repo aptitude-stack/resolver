@@ -63,6 +63,7 @@ def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
         selection_reason=candidate.selection_reason,
         maturity_score=version.maturity_score,
         security_score=version.security_score,
+        overall_score=version.overall_score,
         install_count=version.install_count,
         star_count=version.star_count,
     )
@@ -84,6 +85,7 @@ def metadata_to_dto(metadata: SkillMetadata) -> InspectSkillSummaryDto:
         content_size_bytes=metadata.content_size_bytes,
         maturity_score=metadata.maturity_score,
         security_score=metadata.security_score,
+        overall_score=metadata.overall_score,
         content_checksum_algorithm=metadata.content_checksum_algorithm,
         content_checksum_digest=metadata.content_checksum_digest,
         headers=dict(metadata.headers),
@@ -102,6 +104,9 @@ def version_to_inspect_dto(version: VersionSummary) -> InspectVersionDto:
         token_estimate=version.token_estimate,
         content_size_bytes=version.content_size_bytes,
         rendered_summary=version.rendered_summary or None,
+        maturity_score=version.maturity_score,
+        security_score=version.security_score,
+        overall_score=version.overall_score,
     )
 
 
