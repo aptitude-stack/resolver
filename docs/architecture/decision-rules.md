@@ -27,6 +27,11 @@ Do not:
 
 Execution must operate from lock data only.
 
+When direct CLI installation requests plan review, the application must call the
+interface's review callback before materialization, agent export, or lockfile
+writes. Cancellation must stop execution. Approval must execute the same planned
+lock, without resolving again. Prompt rendering remains in the CLI layer.
+
 Parallel materialization is allowed only after a lockfile has defined the
 install order. Workers may fetch compressed locked artifacts and extract verified
 archives inside a staging directory, but final result ordering and trace ordering

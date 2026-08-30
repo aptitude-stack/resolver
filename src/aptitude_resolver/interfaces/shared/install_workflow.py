@@ -31,7 +31,12 @@ class ResolveWorkflowUseCase(Protocol):
 
 
 class InstallWorkflowUseCase(Protocol):
-    def execute(self, request: InstallRequestDto) -> InstallResultDto: ...
+    def execute(
+        self,
+        request: InstallRequestDto,
+        *,
+        review_plan: Callable[[ResolveQueryResultDto], None] | None = None,
+    ) -> InstallResultDto: ...
 
 
 class SearchWorkflowUseCase(Protocol):
@@ -270,25 +275,27 @@ class InstallWorkflowService:
         interaction_mode: InteractionMode | None = None,
         prompt_capable: bool = False,
         selection_source: str | None = None,
+        review_plan: Callable[[ResolveQueryResultDto], None] | None = None,
     ) -> InstallResultDto:
         """Execute one prepared install use case."""
 
-        return use_case.execute(
-            InstallRequestDto(
-                query=query,
-                version=version,
-                exact=exact,
-                select_slug=select_slug,
-                target=target,
-                agents=agents or ["codex"],
-                scope=scope,
-                export_root=export_root,
-                cwd=cwd,
-                interaction_mode=interaction_mode,
-                prompt_capable=prompt_capable,
-                selection_source=selection_source,
-            )
+        request = InstallRequestDto(
+            query=query,
+            version=version,
+            exact=exact,
+            select_slug=select_slug,
+            target=target,
+            agents=agents or ["codex"],
+            scope=scope,
+            export_root=export_root,
+            cwd=cwd,
+            interaction_mode=interaction_mode,
+            prompt_capable=prompt_capable,
+            selection_source=selection_source,
         )
+        if review_plan is not None:
+            return use_case.execute(request, review_plan=review_plan)
+        return use_case.execute(request)
 
     @staticmethod
     def _build_kwargs(options: InstallWorkflowOptions | None) -> dict[str, object]:

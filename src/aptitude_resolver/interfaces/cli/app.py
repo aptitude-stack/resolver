@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import os
 from pathlib import Path
 import sys
 from typing import Literal, TypeVar
@@ -49,6 +50,8 @@ from aptitude_resolver.interfaces.cli.catalog import (
     build_root_help,
 )
 from aptitude_resolver.interfaces.cli.wizard import (
+    CliWizard,
+    WizardCancelled,
     can_launch_cli_wizard,
     run_cli_wizard,
 )
@@ -810,12 +813,6 @@ def _format_install_success(
             + " ".join(f"{slug}-{version}" for slug, version in resolved_coordinates)
         )
 
-    if result.exported_skills:
-        lines.append(separator)
-        lines.append("Exported agent skills:")
-        for item in result.exported_skills:
-            lines.append(f"  {item.agent}: {item.destination_path}")
-
     if result.lock_path:
         lines.append(separator)
         lines.append(f"Lockfile: {result.lock_path}")
@@ -871,24 +868,6 @@ def _render_install_success_panel(
     for skill in result.installed_skills:
         installed.add_row(skill.slug, skill.version, skill.install_path)
 
-    exported = Table(
-        expand=True,
-        show_header=True,
-        header_style=THEME.text_muted,
-        box=_panel_box_for_stream(sys.stdout),
-        border_style=THEME.border_primary,
-        pad_edge=False,
-    )
-    exported.add_column("Agent", style=THEME.text_primary, min_width=14)
-    exported.add_column("Skill", style=THEME.text_primary, min_width=18)
-    exported.add_column("Path", style=THEME.text_body, ratio=3)
-    for exported_skill in result.exported_skills:
-        exported.add_row(
-            exported_skill.agent,
-            exported_skill.slug,
-            exported_skill.destination_path,
-        )
-
     panels: list[Panel] = [
         Panel(
             summary,
@@ -903,16 +882,6 @@ def _render_install_success_panel(
             Panel(
                 installed,
                 title="Installed Skills",
-                border_style=THEME.border_secondary,
-                box=_panel_box_for_stream(sys.stdout),
-                padding=(1, 1),
-            )
-        )
-    if result.exported_skills:
-        panels.append(
-            Panel(
-                exported,
-                title="Agent Exports",
                 border_style=THEME.border_secondary,
                 box=_panel_box_for_stream(sys.stdout),
                 padding=(1, 1),
@@ -1478,6 +1447,7 @@ def _install_result(
     export_root: Path | None,
     cwd: Path | None,
     options: InstallWorkflowOptions,
+    review_plan: Callable[[ResolveQueryResultDto], None] | None = None,
 ) -> InstallResultDto:
     """Execute install and, if needed, complete interactive candidate selection."""
 
@@ -1498,6 +1468,7 @@ def _install_result(
             interaction_mode=None,
             prompt_capable=prompt_capable,
             selection_source=None,
+            review_plan=review_plan,
         )
         if result.status != "selection_required":
             return result
@@ -1517,6 +1488,7 @@ def _install_result(
             interaction_mode="never",
             prompt_capable=False,
             selection_source="interactive",
+            review_plan=review_plan,
         )
     finally:
         close()
@@ -1998,6 +1970,12 @@ def install(
         "--export-root",
         help=OPTIONS["install_export_root"].help_text,
     ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help=OPTIONS["install_yes"].help_text,
+    ),
     json_output: bool = typer.Option(
         False,
         "--json",
@@ -2006,7 +1984,7 @@ def install(
 ) -> None:
     """Install an exact skill slug into one or more agent skill roots."""
 
-    if _can_launch_install_flow(
+    if not yes and _can_launch_install_flow(
         query=query,
         version=version,
         prefer=prefer,
@@ -2051,26 +2029,93 @@ def install(
         export_root=export_root,
     )
 
+    install_approved = False
     try:
         workflow_service = _build_workflow_service()
-        with capture_cli_telemetry() as telemetry:
-            result = _run_with_activity(
-                "Planning and installing resolver skills",
-                lambda: _install_result(
-                    workflow_service,
-                    query=install_query,
-                    version=version,
-                    select_slug=None,
-                    target=None,
-                    exact=True,
-                    agents=install_agents,
-                    scope=install_scope,
-                    export_root=export_root,
-                    cwd=Path.cwd(),
-                    options=options,
-                ),
-                show_bar=not json_output,
+        wizard = None
+        console = _stdout_console()
+        if (
+            not yes
+            and not json_output
+            and not os.environ.get("CI")
+            and can_launch_cli_wizard()
+        ):
+            wizard = CliWizard(workflow_service=workflow_service, console=console)
+            wizard.render_header(initial_flow="install")
+            prompt_scope = scope is None and not global_install and export_root is None
+            prompted_destination = (
+                prompt_scope
+                or agent is None
+                or (install_scope == "custom" and export_root is None)
             )
+            destination = wizard.prompt_install_destination(
+                agents=install_agents if agent is not None else None,
+                scope=None if prompt_scope else install_scope,
+                export_root=export_root,
+            )
+            if destination is None:
+                return
+            install_agents, install_scope, export_root, export_roots = destination
+
+        review_plan: Callable[[ResolveQueryResultDto], None] | None = None
+
+        def perform_install() -> InstallResultDto:
+            return _install_result(
+                workflow_service,
+                query=install_query,
+                version=version,
+                select_slug=None,
+                target=None,
+                exact=True,
+                agents=install_agents,
+                scope=install_scope,
+                export_root=export_root,
+                cwd=Path.cwd(),
+                options=options,
+                review_plan=review_plan,
+            )
+
+        with capture_cli_telemetry() as telemetry:
+            if wizard is not None:
+                with console.status(
+                    "Planning installation...", spinner_style=THEME.accent
+                ) as activity:
+
+                    def confirm_plan(plan: ResolveQueryResultDto) -> None:
+                        nonlocal install_approved
+                        activity.stop()
+                        if not wizard.confirm_install_plan(
+                            plan,
+                            scope=install_scope,
+                            export_roots=export_roots,
+                            separate=prompted_destination,
+                        ):
+                            raise WizardCancelled()
+                        install_approved = True
+                        activity.update("Installing skill graph...")
+                        activity.start()
+
+                    review_plan = confirm_plan
+                    result = perform_install()
+            else:
+                install_approved = True
+                result = _run_with_activity(
+                    "Planning and installing resolver skills",
+                    perform_install,
+                    show_bar=not json_output,
+                )
+    except (KeyboardInterrupt, EOFError, WizardCancelled) as exc:
+        if install_approved:
+            typer.echo(
+                "Installation interrupted. Files may have been partially written; "
+                "inspect the selected destinations before retrying.",
+                err=True,
+            )
+            raise typer.Exit(
+                code=130 if isinstance(exc, KeyboardInterrupt) else 1
+            ) from exc
+        typer.echo("Installation cancelled.")
+        return
     except AptitudeResolverError as exc:
         _emit_error(exc)
         raise typer.Exit(code=1) from exc
@@ -2080,6 +2125,12 @@ def install(
 
     if json_output or result.status != "installed":
         typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+        return
+
+    if wizard is not None:
+        wizard.render_install_summary(
+            result, format_cli_install_telemetry_line(telemetry)
+        )
         return
 
     if _has_interactive_output():

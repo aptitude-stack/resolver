@@ -1261,7 +1261,7 @@ class CliWizard:
     ) -> None:
         """Run the inline wizard launcher."""
         try:
-            self._render_header(initial_flow=initial_flow)
+            self.render_header(initial_flow=initial_flow)
             flow: WizardLauncherAction | None = initial_flow
             launcher_menu_rendered = False
             while True:
@@ -1295,14 +1295,7 @@ class CliWizard:
                 if install_outcome is None:
                     return
                 install_result, telemetry_summary = install_outcome
-                self._print_step_separator()
-                self._console.print(
-                    _render_materialization_panel(
-                        install_result,
-                        title="Installation Summary",
-                        footer=telemetry_summary,
-                    )
-                )
+                self.render_install_summary(install_result, telemetry_summary)
                 return
         except (AptitudeResolverError,) as exc:
             self._print_error(exc)
@@ -1394,21 +1387,14 @@ class CliWizard:
                 continue
 
             self._print_step_separator()
-            destination = self._prompt_install_destination()
+            destination = self.prompt_install_destination()
             if destination is None:
                 return None
             agents, scope, export_root, export_roots = destination
 
-            self._print_step_separator()
-            self._console.print(
-                _render_plan_panel(
-                    resolve_result,
-                    scope=scope,
-                    export_roots=export_roots,
-                )
-            )
-            self._print_step_separator()
-            if not self._confirm("Proceed with installation?", True):
+            if not self.confirm_install_plan(
+                resolve_result, scope=scope, export_roots=export_roots
+            ):
                 self._console.print("Installation cancelled.", style="yellow")
                 return None
 
@@ -1426,8 +1412,42 @@ class CliWizard:
 
         return self._prompt_text("Install query", None, large=True).strip()
 
-    def _prompt_install_destination(
+    def confirm_install_plan(
         self,
+        result: ResolveQueryResultDto,
+        *,
+        scope: str,
+        export_roots: Mapping[str, Path],
+        separate: bool = True,
+    ) -> bool:
+        """Show the shared plan preview and ask for final approval."""
+
+        if separate:
+            self._print_step_separator()
+        self._console.print(
+            _render_plan_panel(result, scope=scope, export_roots=export_roots)
+        )
+        self._print_step_separator()
+        return self._confirm("Proceed with installation?", True)
+
+    def render_install_summary(
+        self, result: InstallResultDto, telemetry_summary: str | None = None
+    ) -> None:
+        """Show the shared compact installation result."""
+
+        self._print_step_separator()
+        self._console.print(
+            _render_materialization_panel(
+                result, title="Installation Summary", footer=telemetry_summary
+            )
+        )
+
+    def prompt_install_destination(
+        self,
+        *,
+        agents: list[str] | None = None,
+        scope: Literal["project", "global", "custom"] | None = None,
+        export_root: Path | None = None,
     ) -> (
         tuple[
             list[str],
@@ -1439,25 +1459,30 @@ class CliWizard:
     ):
         """Prompt for agent export destination using the same selector style."""
 
-        scope = self._select(
-            "Install scope",
-            INSTALL_SCOPE_OPTIONS,
-            "Choose where the selected agent should see this skill.",
-        )
+        prompt_scope = scope is None
+        if scope is None:
+            selected_scope: Literal["project", "global", "custom"] = self._select(
+                "Install scope",
+                INSTALL_SCOPE_OPTIONS,
+                "Choose where the selected agent should see this skill.",
+            )
+            scope = selected_scope
 
-        self._print_step_separator()
-        selected_agents = self._select_multi(
-            "Agent targets",
-            AGENT_OPTIONS,
-            "Choose one or more agent formats and roots to export into.",
-        )
+        if agents is None:
+            if prompt_scope:
+                self._print_step_separator()
+            selected_agents = self._select_multi(
+                "Agent targets",
+                AGENT_OPTIONS,
+                "Choose one or more agent formats and roots to export into.",
+            )
 
-        agents: list[str] = []
-        for agent in selected_agents:
-            if agent == "detected":
-                agents.extend(detect_available_agent_targets())
-            else:
-                agents.append(str(agent))
+            agents = []
+            for agent in selected_agents:
+                if agent == "detected":
+                    agents.extend(detect_available_agent_targets())
+                else:
+                    agents.append(str(agent))
         agents = list(dict.fromkeys(agents))
         if not agents:
             self._console.print(
@@ -1466,8 +1491,7 @@ class CliWizard:
             )
             return None
 
-        export_root: Path | None = None
-        if scope == "custom":
+        if scope == "custom" and export_root is None:
             raw_root = self._prompt_text("Custom export root", None).strip()
             if not raw_root:
                 self._console.print("No custom export root entered.", style="yellow")
@@ -1635,7 +1659,7 @@ class CliWizard:
             raise
         return result, format_cli_install_telemetry_line(telemetry)
 
-    def _render_header(self, *, initial_flow: WizardEntryFlow | None = None) -> None:
+    def render_header(self, *, initial_flow: WizardEntryFlow | None = None) -> None:
         """Print the wizard header."""
 
         self._console.print(

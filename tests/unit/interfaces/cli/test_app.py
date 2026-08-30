@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from io import StringIO
 from pathlib import Path
+import re
 from typing import Any
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from aptitude_resolver.application import composition
@@ -49,6 +52,7 @@ from aptitude_resolver.domain.models import (
     VersionSummary,
 )
 from aptitude_resolver.interfaces.cli import app as app_module
+from aptitude_resolver.interfaces.cli import wizard as wizard_module
 from aptitude_resolver.telemetry.metrics import StageTiming
 
 
@@ -1022,7 +1026,8 @@ def test_cli_install_prints_installed_result(monkeypatch, tmp_path) -> None:
     assert "Successfully installed dep-core-0.9.0 python-lint-1.2.3" in result.stdout
     assert f"Aptitude state: {target}" in result.stdout
     assert "Lockfile: aptitude.lock.json" in result.stdout
-    assert f"codex: {export_root}" in result.stdout
+    assert "Exported agent skills:" not in result.stdout
+    assert f"codex: {export_root}" not in result.stdout
 
 
 def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
@@ -1060,6 +1065,7 @@ def test_cli_install_prints_pipe_separated_telemetry_when_interactive(
     assert result.exit_code == 0
     assert "Installed Skills" in result.stdout
     assert "Installation Summary" in result.stdout
+    assert "Agent Exports" not in result.stdout
     assert "dep-core" in result.stdout
     assert (
         "Install telemetry | Discovery 95.7ms | Materialization 18.2ms" in result.stdout
@@ -1433,20 +1439,53 @@ def test_cli_install_without_query_launches_install_wizard_flow(monkeypatch) -> 
 
 
 @pytest.mark.parametrize("version_args", [[], ["--version", "1.2.3"]])
-def test_cli_install_with_query_bypasses_wizard_and_marks_exact(
-    monkeypatch, tmp_path, version_args
+@pytest.mark.parametrize("confirmed", [True, False])
+def test_cli_exact_install_reviews_plan_before_installing(
+    monkeypatch, tmp_path, version_args, confirmed
 ) -> None:
-    target = tmp_path / "aptitude_state"
-    use_case = QueueUseCase(responses=[_installed_result(str(target))])
+    monkeypatch.delenv("CI", raising=False)
+    events: list[str] = []
+
+    class ReviewedUseCase(QueueUseCase):
+        def execute(self, request, *, review_plan=None):
+            events.append("plan")
+            assert review_plan is not None
+            review_plan(_resolved_result())
+            events.append("install")
+            return super().execute(request)
+
+    use_case = ReviewedUseCase(responses=[_installed_result(str(tmp_path))])
     close_calls: list[str] = []
-    calls: list[dict[str, object]] = []
     monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
     monkeypatch.setattr(app_module, "_has_interactive_output", lambda: False)
+
+    def select_one(title, *_args, **_kwargs):
+        events.append(title)
+        return "project"
+
+    def select_many(title, *_args, **_kwargs):
+        events.append(title)
+        return ["claude-code"]
+
+    monkeypatch.setattr(wizard_module, "_default_select_one", select_one)
+    monkeypatch.setattr(wizard_module, "_default_select_many", select_many)
+
+    def confirm(label, _default):
+        output = runner_output.getvalue()
+        assert "Review Plan" in output
+        assert "python-lint@1.2.3" in output
+        assert "claude-code" in output
+        assert "Execution Steps" in output
+        events.append(label)
+        return confirmed
+
+    runner_output = StringIO()
     monkeypatch.setattr(
         app_module,
-        "run_cli_wizard",
-        lambda **kwargs: calls.append(kwargs),
+        "_stdout_console",
+        lambda: Console(file=runner_output, width=120),
     )
+    monkeypatch.setattr(wizard_module, "_default_confirm", confirm)
     monkeypatch.setattr(
         app_module,
         "build_install_use_case",
@@ -1456,11 +1495,214 @@ def test_cli_install_with_query_bypasses_wizard_and_marks_exact(
     result = runner.invoke(app_module.app, ["install", "python-lint", *version_args])
 
     assert result.exit_code == 0
-    assert calls == []
     assert close_calls == ["closed"]
+    assert events == [
+        "Install scope",
+        "Agent targets",
+        "plan",
+        "Proceed with installation?",
+        *(["install"] if confirmed else []),
+    ]
+    if not confirmed:
+        assert use_case.requests == []
+        assert "cancelled" in result.stdout.lower()
+        return
     assert use_case.requests[0].query == "python-lint"
     assert use_case.requests[0].version == (version_args[1] if version_args else None)
     assert use_case.requests[0].exact is True
+    assert use_case.requests[0].agents == ["claude-code"]
+    assert use_case.requests[0].scope == "project"
+    assert "Installed Skills" in runner_output.getvalue()
+    assert "Installation Summary" in runner_output.getvalue()
+    assert "Agent roots" not in runner_output.getvalue()
+
+
+@pytest.mark.parametrize("args", [["--yes"], ["--json"], ["--yes", "--json"]])
+def test_cli_exact_install_unattended_flags_never_prompt(monkeypatch, tmp_path, args):
+    monkeypatch.delenv("CI", raising=False)
+    use_case = QueueUseCase(responses=[_installed_result(str(tmp_path))])
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    monkeypatch.setattr(
+        app_module, "build_install_use_case", lambda **_: (use_case, lambda: None)
+    )
+    monkeypatch.setattr(
+        wizard_module,
+        "_default_select_one",
+        lambda *_args, **_kwargs: pytest.fail("Unattended install prompted"),
+    )
+    result = runner.invoke(app_module.app, ["install", "python-lint", *args])
+    assert result.exit_code == 0
+    assert use_case.requests[0].exact is True
+    assert use_case.requests[0].agents == ["codex"]
+    assert use_case.requests[0].scope == "project"
+    if "--json" in args:
+        import json
+
+        assert json.loads(result.stdout)["status"] == "installed"
+        assert "\x1b[" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "flags, prompts, scope, agents",
+    [
+        (["--global"], ["Agent targets"], "global", ["claude-code"]),
+        (["--agent", "claude-code"], ["Install scope"], "project", ["claude-code"]),
+        (
+            ["--scope", "global", "--agent", "codex", "--agent", "claude-code"],
+            [],
+            "global",
+            ["codex", "claude-code"],
+        ),
+        (["--export-root", "exports", "--agent", "codex"], [], "custom", ["codex"]),
+    ],
+)
+def test_cli_exact_install_honors_destination_flags_and_still_confirms(
+    monkeypatch, tmp_path, flags, prompts, scope, agents
+):
+    monkeypatch.delenv("CI", raising=False)
+    events = []
+    builder_kwargs = {}
+
+    class ReviewedUseCase(QueueUseCase):
+        def execute(self, request, *, review_plan=None):
+            assert review_plan is not None
+            review_plan(_resolved_result())
+            return super().execute(request)
+
+    use_case = ReviewedUseCase(responses=[_installed_result(str(tmp_path))])
+
+    def build(**kwargs):
+        builder_kwargs.update(kwargs)
+        return use_case, lambda: None
+
+    def select_one(title, *_args, **_kwargs):
+        events.append(title)
+        print(title)
+        return "project"
+
+    def select_many(title, *_args, **_kwargs):
+        events.append(title)
+        print(title)
+        return ["claude-code"]
+
+    def confirm(title, _default):
+        events.append(title)
+        print(title)
+        return True
+
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    monkeypatch.setattr(app_module, "build_install_use_case", build)
+    monkeypatch.setattr(wizard_module, "_default_select_one", select_one)
+    monkeypatch.setattr(wizard_module, "_default_select_many", select_many)
+    monkeypatch.setattr(wizard_module, "_default_confirm", confirm)
+    result = runner.invoke(
+        app_module.app,
+        [
+            "install",
+            "python-lint",
+            "--prefer",
+            "low-cost",
+            "--max-tokens",
+            "500",
+            *flags,
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert events == [*prompts, "Proceed with installation?"]
+    assert use_case.requests[0].scope == scope
+    assert set(use_case.requests[0].agents) == set(agents)
+    assert use_case.requests[0].exact is True
+    assert builder_kwargs["selection_profile_override"] == "low-cost"
+    assert builder_kwargs["max_token_estimate_override"] == 500
+    assert "Review Plan" in result.stdout
+    assert re.search(r"─{10,}\n\s*─{10,}", result.stdout) is None
+    if scope == "custom":
+        assert use_case.requests[0].export_root == Path("exports")
+
+
+@pytest.mark.parametrize(
+    "interruption", [KeyboardInterrupt, EOFError, wizard_module.WizardCancelled]
+)
+@pytest.mark.parametrize("stage", ["destination", "confirmation"])
+def test_cli_exact_install_cancellation_closes_without_installing(
+    monkeypatch, tmp_path, interruption, stage
+):
+    monkeypatch.delenv("CI", raising=False)
+    closed = []
+
+    def cancel(*_args, **_kwargs):
+        raise interruption()
+
+    class ReviewedUseCase(QueueUseCase):
+        def execute(self, request, *, review_plan=None):
+            assert review_plan is not None
+            review_plan(_resolved_result())
+            pytest.fail("Cancelled install executed")
+
+    use_case = ReviewedUseCase()
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_: (use_case, lambda: closed.append(True)),
+    )
+    monkeypatch.setattr(wizard_module, "_default_select_one", cancel)
+    monkeypatch.setattr(wizard_module, "_default_confirm", cancel)
+    flags = (
+        ["--agent", "codex", "--scope", "project"] if stage == "confirmation" else []
+    )
+    result = runner.invoke(app_module.app, ["install", "python-lint", *flags])
+    assert result.exit_code == 0
+    assert "Installation cancelled." in result.stdout
+    assert "Traceback" not in result.output
+    assert closed == ([True] if stage == "confirmation" else [])
+
+
+def test_cli_exact_install_in_ci_never_prompts(monkeypatch, tmp_path):
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    use_case = QueueUseCase(responses=[_installed_result(str(tmp_path))])
+    monkeypatch.setattr(
+        app_module, "build_install_use_case", lambda **_: (use_case, lambda: None)
+    )
+    result = runner.invoke(app_module.app, ["install", "python-lint"])
+    assert result.exit_code == 0
+    assert len(use_case.requests) == 1
+    assert "Review Plan" not in result.stdout
+
+
+@pytest.mark.parametrize("flags", [[], ["--yes"]])
+@pytest.mark.parametrize(
+    "interruption, exit_code", [(KeyboardInterrupt, 130), (EOFError, 1)]
+)
+def test_cli_interrupted_install_after_approval_reports_failure(
+    monkeypatch, tmp_path, flags, interruption, exit_code
+):
+    monkeypatch.delenv("CI", raising=False)
+    closed = []
+
+    class InterruptedUseCase:
+        def execute(self, request, *, review_plan=None):
+            if review_plan is not None:
+                review_plan(_resolved_result())
+            (tmp_path / "partial-install").write_text("partial", encoding="utf-8")
+            raise interruption()
+
+    monkeypatch.setattr(app_module, "can_launch_cli_wizard", lambda: True)
+    monkeypatch.setattr(
+        app_module,
+        "build_install_use_case",
+        lambda **_: (InterruptedUseCase(), lambda: closed.append(True)),
+    )
+    monkeypatch.setattr(wizard_module, "_default_confirm", lambda *_: True)
+    result = runner.invoke(
+        app_module.app,
+        ["install", "python-lint", "--agent", "codex", "--scope", "project", *flags],
+    )
+    assert result.exit_code == exit_code
+    assert "partially written" in result.stderr
+    assert "Installation cancelled." not in result.stdout
+    assert closed == [True]
 
 
 def test_cli_install_with_only_query_bypasses_wizard_when_wizard_ui_is_unavailable(

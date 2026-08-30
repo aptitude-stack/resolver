@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from aptitude_resolver.application.dto import (
     ExportedSkillDto,
@@ -12,6 +12,7 @@ from aptitude_resolver.application.dto import (
     InstalledSkillDto,
     ResolveCoordinateDto,
     ResolveQueryRequestDto,
+    ResolveQueryResultDto,
 )
 from aptitude_resolver.application.queries import (
     PlanSkillResolutionQuery,
@@ -23,6 +24,7 @@ from aptitude_resolver.application.use_cases.resolution_mapping import (
     graph_to_dto,
     lockfile_to_dto,
     policy_to_dto,
+    resolution_to_dto,
     trace_to_dto,
 )
 from aptitude_resolver.domain.errors import InvalidInstallTargetError
@@ -93,7 +95,12 @@ class InstallSkillUseCase:
             cwd=cwd,
         )
 
-    def execute(self, request: InstallRequestDto) -> InstallResultDto:
+    def execute(
+        self,
+        request: InstallRequestDto,
+        *,
+        review_plan: Callable[[ResolveQueryResultDto], None] | None = None,
+    ) -> InstallResultDto:
         telemetry = TelemetryCollector()
         try:
             plan = self._planner.execute(
@@ -118,6 +125,8 @@ class InstallSkillUseCase:
 
             materialization_target = _materialization_target(request)
             export_roots = _export_roots(request)
+            if review_plan is not None:
+                review_plan(resolution_to_dto(plan))
             with telemetry.measure("materialization"):
                 materialization = materialize_lockfile(
                     target=materialization_target,

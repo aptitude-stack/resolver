@@ -79,6 +79,75 @@ def test_install_use_case_forwards_cwd_to_discovery_query(tmp_path: Path) -> Non
     assert use_case._planner._discover_candidates._cwd == tmp_path
 
 
+@pytest.mark.parametrize("cancel", [True, False])
+def test_install_reviews_the_same_plan_before_any_materialization(tmp_path, cancel):
+    registry = FakeRegistryClient()
+    _add_independent_skill(
+        registry, query="python lint", slug="python-lint", version="1.2.3"
+    )
+    target = tmp_path / "state"
+    previews = []
+
+    def review_plan(plan):
+        previews.append(plan)
+        assert registry.artifact_calls == []
+        assert list(tmp_path.iterdir()) == []
+        assert plan.selected_coordinate.slug == "python-lint"
+        assert plan.execution_plan is not None
+        if cancel:
+            raise RuntimeError("declined")
+        # A registry change after review must not trigger a second resolution.
+        registry.versions_by_slug.clear()
+
+    use_case = InstallSkillUseCase(registry)
+    request = InstallRequestDto(query="python lint", target=target, cwd=tmp_path)
+    if cancel:
+        with pytest.raises(RuntimeError, match="declined"):
+            use_case.execute(request, review_plan=review_plan)
+        assert list(tmp_path.iterdir()) == []
+        assert registry.artifact_calls == []
+    else:
+        result = use_case.execute(request, review_plan=review_plan)
+        assert result.status == "installed"
+        assert result.lockfile == previews[0].lockfile
+        assert registry.artifact_calls == [("python-lint", "1.2.3")]
+    assert len(previews) == 1
+
+
+def test_cancelled_plan_review_preserves_existing_install_and_lock(tmp_path):
+    registry = FakeRegistryClient()
+    _add_independent_skill(
+        registry, query="python lint", slug="python-lint", version="1.2.3"
+    )
+    existing_files = [
+        tmp_path / "state" / "existing.txt",
+        tmp_path / ".codex" / "skills" / "python-lint" / "SKILL.md",
+        tmp_path / "aptitude.lock.json",
+    ]
+    for path in existing_files:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("existing content", encoding="utf-8")
+    before = {path.relative_to(tmp_path): path.read_bytes() for path in existing_files}
+
+    def decline(_plan):
+        raise RuntimeError("declined")
+
+    with pytest.raises(RuntimeError, match="declined"):
+        InstallSkillUseCase(registry).execute(
+            InstallRequestDto(
+                query="python lint", target=tmp_path / "state", cwd=tmp_path
+            ),
+            review_plan=decline,
+        )
+    after = {
+        path.relative_to(tmp_path): path.read_bytes()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    }
+    assert after == before
+    assert registry.artifact_calls == []
+
+
 def _artifact(content: str) -> bytes:
     return make_tar_zst({"content.md": content})
 

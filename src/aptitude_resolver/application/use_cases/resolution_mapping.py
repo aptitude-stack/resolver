@@ -20,6 +20,7 @@ from aptitude_resolver.application.dto import (
     ResolvedGraphDto,
     ResolvedSkillNodeDto,
     ResolveCoordinateDto,
+    ResolveQueryResultDto,
     ResolveSkillSummaryDto,
     SelectionSnapshotDto,
     TraceEntryDto,
@@ -37,6 +38,28 @@ from aptitude_resolver.domain.models import (
 from aptitude_resolver.domain.policy import PolicyEvaluation
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.lockfile import Lockfile
+
+
+def resolution_to_dto(plan: ResolutionArtifact) -> ResolveQueryResultDto:
+    """Map a resolved plan for display without executing or planning again."""
+
+    return ResolveQueryResultDto(
+        requested_query=plan.requested_query,
+        requested_version=plan.requested_version,
+        status="resolved",
+        selection_mode=plan.selection_mode,
+        candidates=[candidate_to_dto(item) for item in plan.candidates],
+        selected_coordinate=ResolveCoordinateDto(
+            slug=plan.graph.root.slug,
+            version=plan.graph.root.version,
+        ),
+        selected_skill=selected_skill_to_dto(plan),
+        graph=graph_to_dto(plan.graph),
+        lockfile=lockfile_to_dto(plan.lockfile),
+        execution_plan=execution_plan_to_dto(plan.execution_plan),
+        trace=[trace_to_dto(item) for item in plan.trace],
+        policy_evaluations=[policy_to_dto(item) for item in plan.policy_evaluations],
+    )
 
 
 def candidate_to_dto(candidate: DiscoveryCandidate) -> DiscoveryCandidateDto:
