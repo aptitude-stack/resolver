@@ -71,12 +71,17 @@ Launch the install-first wizard:
 aptitude
 ```
 
-Install a skill by query:
+Install a skill by exact slug:
 
 ```bash
-aptitude install "Postman Primary Skill"
-aptitude install "Postman Primary Skill" --agent codex --scope project
+uvx aptitude-resolver install python-patterns
+aptitude install python-patterns --agent codex --scope project
 ```
+
+In a terminal, omitted scope and agent targets are selected with the wizard UI,
+followed by a plan preview and final confirmation. Explicit destination flags
+skip those questions. `--yes` (`-y`) skips all prompts; JSON (`--json`), non-TTY,
+and CI runs remain unattended. Omitted destinations then default to Codex/project.
 
 Search and inspect before installing:
 

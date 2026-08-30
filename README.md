@@ -355,17 +355,23 @@ Inspect one skill before installing:
 aptitude inspect "Documentation Writing"
 ```
 
-Install from a query:
+Install an exact skill slug:
 
 ```bash
-aptitude install "Postman Primary Skill"
-aptitude install "Postman Primary Skill" --agent claude-code --global
+aptitude install python-patterns
+aptitude install python-patterns --agent claude-code --global
 ```
+
+In a terminal, install asks for any missing scope and agent targets, previews the
+installation plan and destination paths, then asks for final confirmation using
+the wizard UI. Explicit destination flags skip their corresponding questions.
+Use `--yes` (`-y`) to skip all prompts; omitted destinations default to Codex/project.
+Non-TTY and CI runs also retain these defaults without prompting.
 
 Install as JSON for automation:
 
 ```bash
-aptitude install "Postman Primary Skill" --json
+aptitude install python-patterns --agent codex --scope project --json
 ```
 
 Inspect the complete CLI surface:

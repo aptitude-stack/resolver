@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Protocol
 
 from aptitude_resolver.application.dto import (
-    ResolveCoordinateDto,
     ResolveQueryRequestDto,
     ResolveQueryResultDto,
 )
@@ -16,11 +15,7 @@ from aptitude_resolver.application.queries import (
 )
 from aptitude_resolver.application.use_cases.resolution_mapping import (
     candidate_to_dto,
-    execution_plan_to_dto,
-    graph_to_dto,
-    lockfile_to_dto,
-    policy_to_dto,
-    selected_skill_to_dto,
+    resolution_to_dto,
     trace_to_dto,
 )
 from aptitude_resolver.domain.policy import PolicyContext, SelectionPreferences
@@ -68,22 +63,4 @@ class ResolveSkillQueryUseCase:
                 candidates=[candidate_to_dto(item) for item in plan.candidates],
                 trace=[trace_to_dto(item) for item in plan.trace],
             )
-        return ResolveQueryResultDto(
-            requested_query=plan.requested_query,
-            requested_version=plan.requested_version,
-            status="resolved",
-            selection_mode=plan.selection_mode,
-            candidates=[candidate_to_dto(item) for item in plan.candidates],
-            selected_coordinate=ResolveCoordinateDto(
-                slug=plan.graph.root.slug,
-                version=plan.graph.root.version,
-            ),
-            selected_skill=selected_skill_to_dto(plan),
-            graph=graph_to_dto(plan.graph),
-            lockfile=lockfile_to_dto(plan.lockfile),
-            execution_plan=execution_plan_to_dto(plan.execution_plan),
-            trace=[trace_to_dto(item) for item in plan.trace],
-            policy_evaluations=[
-                policy_to_dto(item) for item in plan.policy_evaluations
-            ],
-        )
+        return resolution_to_dto(plan)

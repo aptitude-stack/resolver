@@ -57,7 +57,9 @@ def test_cli_install_help_exposes_selection_preference_flags() -> None:
     assert "--json" in result.stdout
     assert "Common examples" in result.stdout
     assert "aptitude install postman-primary --version 1.2.3" in result.stdout
-    assert "human-friendly install summary" in result.stdout
+    assert "choose missing destinations, review plan, then confirm" in result.stdout
+    assert "--yes" in result.stdout
+    assert "non-TTY/CI" in result.stdout
 
 
 def test_cli_sync_help_explains_lock_replay_flow() -> None:

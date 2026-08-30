@@ -172,6 +172,15 @@ OPTIONS = {
         brief="custom base directory for agent exports",
         help_text="Custom base directory used when --scope custom is selected.",
     ),
+    "install_yes": OptionSurface(
+        key="install_yes",
+        signature="--yes, -y",
+        brief="skip prompts and use defaults for omitted destinations",
+        help_text=(
+            "Skip destination prompts and confirmation. Omitted destinations "
+            "default to Codex in project scope."
+        ),
+    ),
     "install_json": OptionSurface(
         key="install_json",
         signature="--json",
@@ -373,6 +382,7 @@ COMMANDS = {
             "{cli} install postman-primary --version 1.2.3",
             "{cli} install postman-primary --agent codex --scope project",
             "{cli} install postman-primary --agent claude-code --global",
+            "{cli} install postman-primary --yes",
             "{cli} install postman-primary --json",
         ),
         option_groups=(
@@ -400,9 +410,10 @@ COMMANDS = {
             ),
             OptionGroup(
                 title="Output behavior",
-                option_keys=("install_json",),
+                option_keys=("install_yes", "install_json"),
                 lines=(
-                    "default   human-friendly install summary",
+                    "terminal  choose missing destinations, review plan, then confirm",
+                    "non-TTY/CI  no prompts; omitted destinations use Codex/project",
                     "--json    structured machine-readable result",
                 ),
             ),
@@ -731,6 +742,7 @@ def render_wizard_manifest_panel(program_name: str | None = None) -> Panel:
         "--prefer balanced|low-cost|high-trust  --interaction-mode auto|always|never",
         "--allow-trust a,b  --allow-lifecycle a,b",
         "--max-tokens N  --max-content-size N  --agent codex  --scope project  --json",
+        "--yes / -y  skip destination prompts and confirmation",
     )
     body = Group(
         Text("Public commands", style=THEME.text_subtle),
@@ -835,6 +847,7 @@ def _manifest_option_keys(command_name: str) -> tuple[str, ...]:
             "install_scope",
             "install_global",
             "install_export_root",
+            "install_yes",
             "install_json",
         )
     if command_name == "sync":
