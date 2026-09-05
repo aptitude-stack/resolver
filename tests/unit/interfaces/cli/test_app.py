@@ -476,9 +476,6 @@ def _installed_result(
                 version="0.9.0",
                 destination_path=str(Path(export_root) / "dep-core"),
                 skill_markdown_path=str(Path(export_root) / "dep-core" / "SKILL.md"),
-                metadata_path=str(
-                    Path(export_root) / "dep-core" / ".aptitude-export.json"
-                ),
             ),
             ExportedSkillDto(
                 agent="codex",
@@ -487,9 +484,6 @@ def _installed_result(
                 version="1.2.3",
                 destination_path=str(Path(export_root) / "python-lint"),
                 skill_markdown_path=str(Path(export_root) / "python-lint" / "SKILL.md"),
-                metadata_path=str(
-                    Path(export_root) / "python-lint" / ".aptitude-export.json"
-                ),
             ),
         ],
         materialized_root=materialized_root,

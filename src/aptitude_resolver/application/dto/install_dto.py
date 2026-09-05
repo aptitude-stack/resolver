@@ -67,7 +67,6 @@ class ExportedSkillDto(BaseModel):
     version: str
     destination_path: str
     skill_markdown_path: str
-    metadata_path: str
 
 
 class InstallResultDto(BaseModel):
