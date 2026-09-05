@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import json
 from hashlib import sha256
 
-from aptitude_resolver.execution import (
-    APTITUDE_AGENT_SIDECAR,
-    export_materialized_skills_to_agent_root,
-)
+from aptitude_resolver.execution import export_materialized_skills_to_agent_root
 from aptitude_resolver.domain.models import (
     ResolutionGraph,
     ResolvedSkillNode,
@@ -51,7 +47,7 @@ def _lockfile(content: str):
     )
 
 
-def test_export_materialized_skills_to_agent_root_writes_skill_md_and_sidecar(
+def test_export_materialized_skills_to_agent_root_writes_only_agent_skill_files(
     tmp_path,
 ) -> None:
     content = "# Python Lint\n"
@@ -79,13 +75,7 @@ def test_export_materialized_skills_to_agent_root_writes_skill_md_and_sidecar(
         encoding="utf-8"
     ) == "details"
     assert not (export_dir / "metadata.json").exists()
-    sidecar = json.loads(
-        (export_dir / APTITUDE_AGENT_SIDECAR).read_text(encoding="utf-8")
-    )
-    assert sidecar["agent"] == "codex"
-    assert sidecar["scope"] == "global"
-    assert sidecar["slug"] == "python-lint"
-    assert sidecar["version"] == "1.2.3"
+    assert not (export_dir / ".aptitude-export.json").exists()
     assert result.exported_skills[0].destination_path == str(export_dir)
 
 

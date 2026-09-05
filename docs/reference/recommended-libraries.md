@@ -14,7 +14,7 @@ These are already part of the resolver:
 - `prompt-toolkit`: richer interactive CLI prompts and menus
 - `rich`: panels, progress indicators, and styled CLI output
 - `httpx`: registry transport
-- `packaging`: deterministic version comparison
+- `semver`: strict semantic version parsing and comparison
 - `diskcache`: advisory caching
 - `tenacity`: transient retry handling
 - `structlog`: structured logging

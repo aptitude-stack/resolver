@@ -366,9 +366,6 @@ def _installed_result(
                 skill_markdown_path=str(
                     Path(".codex") / "skills" / "js-lint" / "SKILL.md"
                 ),
-                metadata_path=str(
-                    Path(".codex") / "skills" / "js-lint" / ".aptitude-export.json"
-                ),
             )
         ],
         materialized_root=materialized_root,

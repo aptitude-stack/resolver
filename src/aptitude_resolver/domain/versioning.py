@@ -1,108 +1,113 @@
-"""Version ordering for registry-owned skill versions."""
+"""Strict SemVer parsing and comparison for registry-owned versions."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import total_ordering
+import re
 
-from packaging.version import InvalidVersion, Version as Pep440Version
 from semver import Version as SemverVersion
+
+
+_COMPARATOR_RE = re.compile(r"^(==|=|!=|>=|<=|>|<)[ \t]*(.+)$")
+_MAX_CONSTRAINT_LENGTH = 200
 
 
 @total_ordering
 @dataclass(frozen=True)
 class SkillVersion:
-    """Comparable skill version that accepts SemVer and PEP 440 inputs."""
+    """Comparable strict SemVer while preserving the authored string."""
 
     raw: str
-    semver: SemverVersion | None
-    pep440: Pep440Version | None
+    semver: SemverVersion
 
     @classmethod
     def parse(cls, value: str) -> SkillVersion:
-        """Parse one skill version using SemVer and PEP 440 compatibility."""
+        """Parse one strict SemVer without normalizing its authored string."""
 
-        raw = value.strip()
-        semver = _parse_semver(raw)
-        pep440 = _parse_pep440(raw)
-        if semver is None and pep440 is None:
+        if not isinstance(value, str):
+            raise ValueError("Skill version must be a string. Expected strict SemVer.")
+        try:
+            parsed = SemverVersion.parse(value)
+        except ValueError as exc:
             raise ValueError(
-                f"Invalid skill version '{value}'. Expected SemVer or PEP 440."
-            )
-        return cls(raw=raw, semver=semver, pep440=pep440)
+                f"Invalid skill version '{value}'. Expected strict SemVer."
+            ) from exc
+        if str(parsed) != value:
+            raise ValueError(f"Invalid skill version '{value}'. Expected strict SemVer.")
+        return cls(raw=value, semver=parsed)
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, SkillVersion):
             return NotImplemented
 
-        if self.semver is not None and other.semver is not None:
-            return self.semver < other.semver
-        if self.pep440 is not None and other.pep440 is not None:
-            return self.pep440 < other.pep440
-        return self._fallback_key() < other._fallback_key()
+        return self.semver < other.semver
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SkillVersion):
             return NotImplemented
 
-        if self.semver is not None and other.semver is not None:
-            return self.semver == other.semver
-        if self.pep440 is not None and other.pep440 is not None:
-            return self.pep440 == other.pep440
-        return self._fallback_key() == other._fallback_key()
+        return self.semver == other.semver
 
-    def _fallback_key(self) -> tuple[object, ...]:
-        return (
-            self._release_key(),
-            self._stage_rank(),
-            self.raw,
+    def __hash__(self) -> int:
+        return hash(self.semver)
+
+
+@dataclass(frozen=True)
+class SemVerConstraint:
+    """Comma-separated strict SemVer comparators joined with logical AND."""
+
+    comparators: tuple[tuple[str, SkillVersion], ...]
+
+    def contains(self, version: str | SkillVersion) -> bool:
+        """Return whether an exact version satisfies every comparator."""
+
+        candidate = (
+            parse_skill_version(version) if isinstance(version, str) else version
         )
-
-    def _release_key(self) -> tuple[int, ...]:
-        if self.semver is not None:
-            return _trim_trailing_zeroes(
-                (self.semver.major, self.semver.minor, self.semver.patch)
-            )
-        if self.pep440 is not None:
-            return _trim_trailing_zeroes(tuple(self.pep440.release))
-        return ()
-
-    def _stage_rank(self) -> int:
-        if self.semver is not None:
-            return 1 if self.semver.prerelease else 2
-        if self.pep440 is None:
-            return 0
-        if self.pep440.dev is not None:
-            return 0
-        if self.pep440.pre is not None:
-            return 1
-        if self.pep440.post is not None:
-            return 3
-        return 2
+        for operator, expected in self.comparators:
+            if operator in {"=", "=="} and candidate != expected:
+                return False
+            if operator == "!=" and candidate == expected:
+                return False
+            if operator == "<" and not candidate < expected:
+                return False
+            if operator == "<=" and candidate > expected:
+                return False
+            if operator == ">" and not candidate > expected:
+                return False
+            if operator == ">=" and candidate < expected:
+                return False
+        return True
 
 
 def parse_skill_version(value: str) -> SkillVersion:
-    """Return a deterministic ordering key for one skill version."""
+    """Return a strict SemVer ordering key for one skill version."""
 
     return SkillVersion.parse(value)
 
 
-def _parse_semver(value: str) -> SemverVersion | None:
-    try:
-        return SemverVersion.parse(value)
-    except ValueError:
-        return None
+def parse_semver_constraint(value: str) -> SemVerConstraint:
+    """Parse one bounded comma-separated strict SemVer constraint."""
 
+    if not isinstance(value, str) or not value or len(value) > _MAX_CONSTRAINT_LENGTH:
+        raise ValueError("Invalid SemVer constraint.")
 
-def _parse_pep440(value: str) -> Pep440Version | None:
-    try:
-        return Pep440Version(value)
-    except InvalidVersion:
-        return None
+    comparators: list[tuple[str, SkillVersion]] = []
+    for raw_part in value.split(","):
+        part = raw_part.strip(" \t")
+        match = _COMPARATOR_RE.fullmatch(part)
+        if match is None:
+            raise ValueError(f"Invalid SemVer constraint comparator: {raw_part!r}.")
+        operator, operand = match.groups()
+        try:
+            parsed_operand = parse_skill_version(operand.strip(" \t"))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid SemVer constraint operand: {operand!r}."
+            ) from exc
+        comparators.append((operator, parsed_operand))
 
-
-def _trim_trailing_zeroes(values: tuple[int, ...]) -> tuple[int, ...]:
-    trimmed = values
-    while len(trimmed) > 1 and trimmed[-1] == 0:
-        trimmed = trimmed[:-1]
-    return trimmed
+    if not comparators:
+        raise ValueError("Invalid SemVer constraint.")
+    return SemVerConstraint(tuple(comparators))

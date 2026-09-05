@@ -158,7 +158,7 @@ def test_discovery_context_ignores_invalid_utf8_lockfile(
     assert load_discovery_context(cwd=project) == []
 
 
-def test_discovery_context_skips_invalid_slug_and_version_nodes(
+def test_discovery_context_ignores_lockfiles_with_invalid_slug_or_version_nodes(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -174,12 +174,10 @@ def test_discovery_context_skips_invalid_slug_and_version_nodes(
         serialize_lockfile(_lockfile(nodes))
     )
 
-    assert load_discovery_context(cwd=project) == [
-        SkillCoordinate(slug="valid-skill", version="1.2.3")
-    ]
+    assert load_discovery_context(cwd=project) == []
 
 
-def test_discovery_context_accepts_pep440_versions(
+def test_discovery_context_ignores_non_semver_versions(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -191,7 +189,4 @@ def test_discovery_context_accepts_pep440_versions(
         serialize_lockfile(_lockfile(nodes))
     )
 
-    assert load_discovery_context(cwd=project) == [
-        SkillCoordinate(slug="release", version="1.2"),
-        SkillCoordinate(slug="candidate", version="2.0rc1"),
-    ]
+    assert load_discovery_context(cwd=project) == []

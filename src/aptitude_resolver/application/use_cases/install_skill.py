@@ -162,7 +162,6 @@ class InstallSkillUseCase:
                             version=item.version,
                             destination_path=item.destination_path,
                             skill_markdown_path=item.skill_markdown_path,
-                            metadata_path=item.metadata_path,
                         )
                         for item in export_result.exported_skills
                     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from aptitude_resolver.domain.models import DependencySpec
 from aptitude_resolver.registry.mappers import (
@@ -45,8 +46,6 @@ def _metadata_response(
             description=description,
             tags=["python", "lint"],
             headers=dict(headers or {"runtime": "python"}),
-            inputs_schema={"type": "object"},
-            outputs_schema={"type": "object"},
             token_estimate=200,
             maturity_score=0.9,
             security_score=0.95,
@@ -183,7 +182,7 @@ def test_dependency_mapping_preserves_selector_contract() -> None:
     selector = DependencySelector(
         slug="dep-core",
         version=None,
-        version_constraint=">=1.0",
+        version_constraint=">=1.0.0",
         optional=True,
         markers=["linux", "ci"],
     )
@@ -199,8 +198,44 @@ def test_dependency_mapping_preserves_selector_contract() -> None:
     assert mapped_selector == DependencySpec(
         slug="dep-core",
         version=None,
-        version_constraint=">=1.0",
+            version_constraint=">=1.0.0",
         optional=True,
         markers=["linux", "ci"],
     )
     assert mapped_dependencies == [mapped_selector]
+
+
+def test_dependency_selector_requires_exactly_one_strict_version_selector() -> None:
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="dep-core")
+    with pytest.raises(ValidationError):
+        DependencySelector(
+            slug="dep-core",
+            version="1.0.0",
+            version_constraint=">=1.0.0",
+        )
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="dep-core", version="1.0")
+
+
+def test_dependency_selector_validates_registry_slug_constraint_and_markers() -> None:
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="Dep Core", version="1.0.0")
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="dep-core", version="1.0.0", markers=["bad marker"])
+
+    selector = DependencySelector(
+        slug="dep-core",
+        version_constraint=">=1.0.0,<2.0.0",
+        markers=["linux", "linux", "ci:gpu"],
+        optional=None,
+    )
+    assert selector.optional is False
+    assert selector.markers == ["linux", "linux", "ci:gpu"]
+
+
+def test_dependency_selector_rejects_bare_or_oversized_constraints() -> None:
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="dep-core", version_constraint="1.0.0")
+    with pytest.raises(ValidationError):
+        DependencySelector(slug="dep-core", version_constraint="x" * 201)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import shutil
 import tempfile
 from dataclasses import dataclass, field
@@ -11,9 +10,6 @@ from pathlib import Path
 from aptitude_resolver.domain.errors import InvalidArtifactError
 from aptitude_resolver.domain.tracing import TraceEntry
 from aptitude_resolver.lockfile import Lockfile, replay_lockfile
-
-
-APTITUDE_AGENT_SIDECAR = ".aptitude-export.json"
 
 
 @dataclass(frozen=True)
@@ -26,7 +22,6 @@ class ExportedSkill:
     version: str
     destination_path: str
     skill_markdown_path: str
-    metadata_path: str
 
 
 @dataclass(frozen=True)
@@ -55,11 +50,8 @@ def export_materialized_skills_to_agent_root(
     replayed = replay_lockfile(lockfile)
     exported_skills: list[ExportedSkill] = []
     trace: list[TraceEntry] = []
-    nodes_by_id = {node.node_id: node for node in lockfile.nodes}
-
     for coordinate in replayed.install_order:
         node_id = f"{coordinate.slug}@{coordinate.version}"
-        node = nodes_by_id[node_id]
         source_dir = materialized_root / "skills" / coordinate.slug / coordinate.version
         export_source_dir = _resolve_export_source_dir(source_dir)
         content_path = export_source_dir / "content.md"
@@ -73,7 +65,6 @@ def export_materialized_skills_to_agent_root(
         ) as temp_dir:
             staging_dir = Path(temp_dir)
             skill_markdown_path = staging_dir / "SKILL.md"
-            metadata_path = staging_dir / APTITUDE_AGENT_SIDECAR
             _copy_agent_resources(source_dir=export_source_dir, staging_dir=staging_dir)
             if content_path.exists():
                 shutil.copy2(content_path, skill_markdown_path)
@@ -83,29 +74,6 @@ def export_materialized_skills_to_agent_root(
                     coordinate.version,
                     "Expected content.md or SKILL.md in the materialized artifact.",
                 )
-            metadata_path.write_text(
-                json.dumps(
-                    {
-                        "tool": "aptitude",
-                        "agent": agent,
-                        "scope": scope,
-                        "slug": coordinate.slug,
-                        "version": coordinate.version,
-                        "artifact_ref": node.artifact_ref,
-                        "lifecycle_status": node.lifecycle_status,
-                        "trust_tier": node.trust_tier,
-                        "content_checksum": {
-                            "algorithm": node.content_checksum_algorithm,
-                            "digest": node.content_checksum_digest,
-                            "size_bytes": node.content_size_bytes,
-                        },
-                        "workspace_materialized_root": str(materialized_root),
-                        "workspace_install_path": str(source_dir),
-                    },
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
             if export_dir.exists():
                 shutil.rmtree(export_dir)
             staging_dir.replace(export_dir)
@@ -118,7 +86,6 @@ def export_materialized_skills_to_agent_root(
                 version=coordinate.version,
                 destination_path=str(export_dir),
                 skill_markdown_path=str(export_dir / "SKILL.md"),
-                metadata_path=str(export_dir / APTITUDE_AGENT_SIDECAR),
             )
         )
         trace.append(

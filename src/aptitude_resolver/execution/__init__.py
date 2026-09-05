@@ -1,7 +1,6 @@
 """Execution package."""
 
 from aptitude_resolver.execution.agent_export import (
-    APTITUDE_AGENT_SIDECAR,
     AgentExportResult,
     ExportedSkill,
     export_materialized_skills_to_agent_root,
@@ -27,7 +26,6 @@ from aptitude_resolver.execution.plan import (
 )
 
 __all__ = [
-    "APTITUDE_AGENT_SIDECAR",
     "AgentExportResult",
     "ExecutionPlan",
     "ExecutionStep",

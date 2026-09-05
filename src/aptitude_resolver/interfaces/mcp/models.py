@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from aptitude_resolver.domain.versioning import parse_skill_version
+
 
 class ResponseFormat(str, Enum):
     """Supported MCP response formats."""
@@ -97,6 +99,13 @@ class InspectSkillInput(_WorkflowPolicyInput):
     )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
+
 
 class ResolveSkillInput(_WorkflowPolicyInput):
     """Input for deterministic fresh planning without materialization."""
@@ -111,6 +120,13 @@ class ResolveSkillInput(_WorkflowPolicyInput):
         default=None, description="Optional explicit selected slug."
     )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
 
 
 class ShowPolicyInput(_StrictInput):
@@ -170,6 +186,13 @@ class InstallSkillInput(_WorkflowPolicyInput):
         default=None, description="Optional explicit selected slug."
     )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
 
 
 class SyncLockInput(_StrictInput):

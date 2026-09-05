@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from aptitude_resolver.domain.versioning import parse_skill_version
+
 
 @dataclass(frozen=True)
 class SkillCoordinate:
@@ -11,3 +13,6 @@ class SkillCoordinate:
 
     slug: str
     version: str
+
+    def __post_init__(self) -> None:
+        parse_skill_version(self.version)

@@ -66,6 +66,15 @@ def test_parse_lockfile_rejects_missing_required_field() -> None:
         parse_lockfile(json.dumps(payload))
 
 
+@pytest.mark.parametrize("version", ["1.2", "1.2.3\n", "2.0rc1"])
+def test_parse_lockfile_rejects_non_semver_exact_versions(version: str) -> None:
+    payload = _minimal_lock_payload()
+    cast(dict[str, object], payload["root"])["requested_version"] = version
+
+    with pytest.raises(InvalidLockfileError, match="strict SemVer"):
+        parse_lockfile(json.dumps(payload))
+
+
 def test_parse_lockfile_accepts_older_payload_without_selection_or_policy_snapshot() -> (
     None
 ):
