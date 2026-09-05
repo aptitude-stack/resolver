@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from aptitude_resolver.domain.versioning import (
+    parse_semver_constraint,
+    parse_skill_version,
+)
+
+
+SLUG_PATTERN = r"^[a-z0-9](?:[a-z0-9-]{0,127})$"
+MARKER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 
 
 class TransportChecksum(BaseModel):
@@ -35,8 +45,6 @@ class TransportMetadata(BaseModel):
     description: str | None
     tags: list[str]
     headers: dict[str, Any] = Field(default_factory=dict)
-    inputs_schema: dict[str, Any] | None = None
-    outputs_schema: dict[str, Any] | None = None
     token_estimate: int | None = None
     maturity_score: float | None = None
     security_score: float | None = None
@@ -48,7 +56,7 @@ class MetadataResponse(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    slug: str
+    slug: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     version: str
     install_count: int | None = None
     star_count: int | None = None
@@ -58,16 +66,22 @@ class MetadataResponse(BaseModel):
     trust_tier: str
     published_at: str
 
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        parse_skill_version(value)
+        return value
+
 
 class DependencySelector(BaseModel):
     """Direct dependency selector from the resolution payload."""
 
     model_config = ConfigDict(extra="ignore")
 
-    slug: str
+    slug: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     version: str | None = None
-    version_constraint: str | None = None
-    optional: bool = False
+    version_constraint: str | None = Field(default=None, max_length=200)
+    optional: bool | None = False
     markers: list[str] = Field(default_factory=list)
 
     @field_validator("optional", mode="before")
@@ -77,15 +91,51 @@ class DependencySelector(BaseModel):
             return False
         return value
 
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
+
+    @field_validator("version_constraint")
+    @classmethod
+    def _validate_version_constraint(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_semver_constraint(value)
+        return value
+
+    @field_validator("markers")
+    @classmethod
+    def _validate_markers(cls, value: list[str]) -> list[str]:
+        for marker in value:
+            if MARKER_PATTERN.fullmatch(marker) is None:
+                raise ValueError("Dependency marker does not match the registry pattern.")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_selector_shape(self) -> DependencySelector:
+        if (self.version is None) == (self.version_constraint is None):
+            raise ValueError(
+                "Dependency selector must include exactly one of `version` or `version_constraint`."
+            )
+        return self
+
 
 class DirectDependenciesResponse(BaseModel):
     """Direct dependency payload."""
 
     model_config = ConfigDict(extra="ignore")
 
-    slug: str
+    slug: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     version: str
     depends_on: list[DependencySelector] = Field(default_factory=list)
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        parse_skill_version(value)
+        return value
 
 
 class DiscoveryResponse(BaseModel):
@@ -94,6 +144,15 @@ class DiscoveryResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     candidates: list[str] = Field(default_factory=list)
+
+    @field_validator("candidates")
+    @classmethod
+    def _validate_candidates(cls, value: list[str]) -> list[str]:
+        pattern = re.compile(SLUG_PATTERN)
+        for slug in value:
+            if pattern.fullmatch(slug) is None:
+                raise ValueError("Discovery candidate slug does not match the registry pattern.")
+        return value
 
 
 class SkillVersionListEntryResponse(BaseModel):
@@ -107,13 +166,19 @@ class SkillVersionListEntryResponse(BaseModel):
     published_at: str | None = None
     is_current_default: bool = False
 
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        parse_skill_version(value)
+        return value
+
 
 class SkillVersionListResponse(BaseModel):
     """Version list payload for one skill identity."""
 
     model_config = ConfigDict(extra="ignore")
 
-    slug: str
+    slug: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     versions: list[SkillVersionListEntryResponse] = Field(default_factory=list)
 
 

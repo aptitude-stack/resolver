@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 from aptitude_resolver.domain.errors import InvalidLockfileError
+from aptitude_resolver.domain.versioning import parse_skill_version
 from aptitude_resolver.lockfile.model import (
     GovernanceSnapshotEntry,
     LockRoot,
@@ -16,6 +18,9 @@ from aptitude_resolver.lockfile.model import (
     PolicySnapshot,
     SelectionSnapshot,
 )
+
+
+SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,127})$")
 
 
 def parse_lockfile(payload: str) -> Lockfile:
@@ -41,21 +46,21 @@ def parse_lockfile(payload: str) -> Lockfile:
 
     root = LockRoot(
         request=_expect_str(root_data, "request"),
-        requested_version=_expect_optional_str(root_data, "requested_version"),
-        selected_node_id=_expect_str(root_data, "selected_node_id"),
+        requested_version=_expect_optional_semver(root_data, "requested_version"),
+        selected_node_id=_expect_node_id(root_data, "selected_node_id"),
         selection_mode=_expect_str(root_data, "selection_mode"),
     )
 
     return Lockfile(
         version=_expect_int(data, "version"),
         generated_at=_expect_optional_str(data, "generated_at"),
-        client_version=_expect_optional_str(data, "client_version"),
+        client_version=_expect_optional_semver(data, "client_version"),
         root=root,
         roots=[
             LockRoot(
                 request=_expect_str(item, "request"),
-                requested_version=_expect_optional_str(item, "requested_version"),
-                selected_node_id=_expect_str(item, "selected_node_id"),
+                requested_version=_expect_optional_semver(item, "requested_version"),
+                selected_node_id=_expect_node_id(item, "selected_node_id"),
                 selection_mode=_expect_str(item, "selection_mode"),
             )
             for item in (
@@ -66,8 +71,8 @@ def parse_lockfile(payload: str) -> Lockfile:
         nodes=[
             LockedSkill(
                 node_id=_expect_str(node_data, "node_id"),
-                slug=_expect_str(node_data, "slug"),
-                version=_expect_str(node_data, "version"),
+                slug=_expect_slug(node_data, "slug"),
+                version=_expect_semver(node_data, "version"),
                 artifact_ref=_expect_str(node_data, "artifact_ref"),
                 name=_expect_str(node_data, "name"),
                 description=_expect_str(node_data, "description"),
@@ -106,7 +111,7 @@ def parse_lockfile(payload: str) -> Lockfile:
                 _expect_mapping(item, "edges item") for item in edges_data
             )
         ],
-        install_order=_expect_str_list(data, "install_order"),
+        install_order=_expect_node_id_list(data, "install_order"),
         selection=(
             SelectionSnapshot(
                 profile=_expect_str(selection_data, "profile"),
@@ -216,6 +221,71 @@ def _expect_optional_str(data: dict[str, Any], field_name: str) -> str | None:
     raise InvalidLockfileError(
         f"Lockfile field '{field_name}' must be a string or null."
     )
+
+
+def _expect_semver(data: dict[str, Any], field_name: str) -> str:
+    value = _expect_str(data, field_name)
+    try:
+        parse_skill_version(value)
+    except ValueError as exc:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must contain a strict SemVer."
+        ) from exc
+    return value
+
+
+def _expect_optional_semver(data: dict[str, Any], field_name: str) -> str | None:
+    value = data.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must be a string or null."
+        )
+    try:
+        parse_skill_version(value)
+    except ValueError as exc:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must contain a strict SemVer or null."
+        ) from exc
+    return value
+
+
+def _expect_slug(data: dict[str, Any], field_name: str) -> str:
+    value = _expect_str(data, field_name)
+    if SLUG_PATTERN.fullmatch(value) is None:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must match the registry slug pattern."
+        )
+    return value
+
+
+def _expect_node_id(data: dict[str, Any], field_name: str) -> str:
+    value = _expect_str(data, field_name)
+    try:
+        slug, version = value.rsplit("@", maxsplit=1)
+    except ValueError as exc:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must be an exact slug@SemVer coordinate."
+        ) from exc
+    if SLUG_PATTERN.fullmatch(slug) is None:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must use a registry slug."
+        )
+    try:
+        parse_skill_version(version)
+    except ValueError as exc:
+        raise InvalidLockfileError(
+            f"Lockfile field '{field_name}' must use strict SemVer."
+        ) from exc
+    return value
+
+
+def _expect_node_id_list(data: dict[str, Any], field_name: str) -> list[str]:
+    values = _expect_str_list(data, field_name)
+    for value in values:
+        _expect_node_id({field_name: value}, field_name)
+    return values
 
 
 def _expect_int(data: dict[str, Any], field_name: str) -> int:

@@ -32,8 +32,6 @@ def build_publish_payload(
             "name": name,
             "description": description,
             "tags": list(tags),
-            "inputs_schema": {"type": "object"},
-            "outputs_schema": {"type": "object"},
             "token_estimate": token_estimate,
             "maturity_score": maturity_score,
             "security_score": security_score,

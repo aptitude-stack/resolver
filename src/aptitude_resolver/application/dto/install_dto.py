@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from aptitude_resolver.application.dto.resolve_result_dto import (
     DiscoveryCandidateDto,
@@ -16,6 +16,7 @@ from aptitude_resolver.application.dto.resolve_result_dto import (
     ResolveCoordinateDto,
     TraceEntryDto,
 )
+from aptitude_resolver.domain.versioning import parse_skill_version
 
 
 class InstallRequestDto(BaseModel):
@@ -35,6 +36,13 @@ class InstallRequestDto(BaseModel):
     scope: Literal["project", "global", "custom"] = "project"
     export_root: Path | None = None
     cwd: Path | None = None
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
 
 
 class SyncRequestDto(BaseModel):

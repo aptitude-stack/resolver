@@ -208,8 +208,6 @@ def test_fetch_skill_metadata_uses_live_exact_metadata_path_and_falls_back_summa
                     "description": None,
                     "tags": ["postman", "sanity", "primary"],
                     "headers": {"runtime": "python"},
-                    "inputs_schema": {"type": "object"},
-                    "outputs_schema": {"type": "object"},
                     "token_estimate": 200,
                     "maturity_score": 0.9,
                     "security_score": 0.95,

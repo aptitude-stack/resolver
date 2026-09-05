@@ -30,8 +30,6 @@ def map_metadata_response(payload: MetadataResponse) -> SkillMetadata:
             for key, value in payload.metadata.headers.items()
             if value is not None
         },
-        inputs_schema=payload.metadata.inputs_schema,
-        outputs_schema=payload.metadata.outputs_schema,
         token_estimate=payload.metadata.token_estimate,
         maturity_score=payload.metadata.maturity_score,
         security_score=payload.metadata.security_score,
@@ -108,6 +106,6 @@ def map_dependency_selector(payload: DependencySelector) -> DependencySpec:
         slug=payload.slug,
         version=payload.version,
         version_constraint=payload.version_constraint,
-        optional=payload.optional,
+        optional=bool(payload.optional),
         markers=list(payload.markers),
     )

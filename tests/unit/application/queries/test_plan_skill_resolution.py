@@ -140,8 +140,6 @@ def _metadata(
         description=description or f"{name} description",
         tags=["python", "lint"],
         headers={"runtime": runtime},
-        inputs_schema={"type": "object"},
-        outputs_schema={"type": "object"},
         token_estimate=token_estimate,
         maturity_score=0.9,
         security_score=0.95,

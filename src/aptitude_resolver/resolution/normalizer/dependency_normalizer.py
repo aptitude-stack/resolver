@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from aptitude_resolver.domain.errors import UnsupportedDependencyShapeError
 from aptitude_resolver.domain.models import DependencySpec, SkillCoordinate
+from aptitude_resolver.domain.versioning import parse_skill_version
 
 
 def normalize_dependency_selector(
@@ -18,5 +19,14 @@ def normalize_dependency_selector(
             source.version,
             "only exact dependency versions are supported in the current resolver flow",
         )
+
+    try:
+        parse_skill_version(dependency.version)
+    except ValueError as exc:
+        raise UnsupportedDependencyShapeError(
+            source.slug,
+            source.version,
+            f"dependency version must be strict SemVer: {dependency.version}",
+        ) from exc
 
     return SkillCoordinate(slug=dependency.slug, version=dependency.version)

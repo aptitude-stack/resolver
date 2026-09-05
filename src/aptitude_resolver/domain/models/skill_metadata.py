@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from aptitude_resolver.domain.models.skill_coordinate import SkillCoordinate
 
@@ -17,8 +16,6 @@ class SkillMetadata:
     description: str
     tags: list[str]
     headers: dict[str, str]
-    inputs_schema: dict[str, Any] | None
-    outputs_schema: dict[str, Any] | None
     token_estimate: int | None
     maturity_score: float | None
     security_score: float | None

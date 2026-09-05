@@ -5,12 +5,14 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Protocol
 
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
-
 from aptitude_resolver.domain.errors import (
     DependencyCycleError,
     SkillNotFoundError,
     UnsupportedDependencyShapeError,
+)
+from aptitude_resolver.domain.versioning import (
+    SemVerConstraint,
+    parse_semver_constraint,
 )
 from aptitude_resolver.domain.models import (
     DependencyEdge,
@@ -254,7 +256,7 @@ def _resolve_dependency_coordinate(
     specifier = _parse_dependency_constraint(source, dependency)
     selected = selected_versions.get(dependency.slug)
     if selected is not None:
-        if specifier.contains(selected.version, prereleases=True):
+        if specifier.contains(selected.version):
             return selected, []
         raise UnsupportedDependencyShapeError(
             source.slug,
@@ -269,7 +271,7 @@ def _resolve_dependency_coordinate(
     matching_versions = [
         version
         for version in versions
-        if specifier.contains(version.coordinate.version, prereleases=True)
+        if specifier.contains(version.coordinate.version)
     ]
     if not matching_versions:
         raise SkillNotFoundError(
@@ -305,10 +307,10 @@ def _resolve_dependency_coordinate(
 def _parse_dependency_constraint(
     source: SkillCoordinate,
     dependency: DependencySpec,
-) -> SpecifierSet:
+) -> SemVerConstraint:
     try:
-        return SpecifierSet(dependency.version_constraint or "")
-    except InvalidSpecifier as exc:
+        return parse_semver_constraint(dependency.version_constraint or "")
+    except ValueError as exc:
         raise UnsupportedDependencyShapeError(
             source.slug,
             source.version,

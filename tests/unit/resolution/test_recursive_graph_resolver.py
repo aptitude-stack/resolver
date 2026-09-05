@@ -48,8 +48,6 @@ def _metadata(slug: str, version: str, *, name: str) -> SkillMetadata:
         description=f"{name} description",
         tags=[slug.split(".")[-1]],
         headers={"runtime": "python"},
-        inputs_schema={"type": "object"},
-        outputs_schema={"type": "object"},
         token_estimate=100,
         maturity_score=0.9,
         security_score=0.95,

@@ -562,18 +562,6 @@
             ],
             "title": "Headers"
           },
-          "inputs_schema": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inputs Schema"
-          },
           "maturity_score": {
             "anyOf": [
               {
@@ -588,18 +576,6 @@
           "name": {
             "title": "Name",
             "type": "string"
-          },
-          "outputs_schema": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Outputs Schema"
           },
           "security_score": {
             "anyOf": [
@@ -725,19 +701,6 @@
             "description": "Flexible header-like attributes stored as JSON.",
             "title": "Headers"
           },
-          "inputs_schema": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured input contract stored as JSON.",
-            "title": "Inputs Schema"
-          },
           "maturity_score": {
             "anyOf": [
               {
@@ -758,19 +721,6 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
-          },
-          "outputs_schema": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured output contract stored as JSON.",
-            "title": "Outputs Schema"
           },
           "security_score": {
             "anyOf": [
@@ -1339,14 +1289,8 @@
                   "headers": {
                     "runtime": "python"
                   },
-                  "inputs_schema": {
-                    "type": "object"
-                  },
                   "maturity_score": 0.9,
                   "name": "Python Lint",
-                  "outputs_schema": {
-                    "type": "object"
-                  },
                   "security_score": 0.95,
                   "tags": [
                     "python",
@@ -1407,14 +1351,8 @@
                     "headers": {
                       "runtime": "python"
                     },
-                    "inputs_schema": {
-                      "type": "object"
-                    },
                     "maturity_score": 0.9,
                     "name": "Python Lint",
-                    "outputs_schema": {
-                      "type": "object"
-                    },
                     "security_score": 0.95,
                     "tags": [
                       "python",
@@ -1609,14 +1547,8 @@
                     "headers": {
                       "runtime": "python"
                     },
-                    "inputs_schema": {
-                      "type": "object"
-                    },
                     "maturity_score": 0.9,
                     "name": "Python Lint",
-                    "outputs_schema": {
-                      "type": "object"
-                    },
                     "security_score": 0.95,
                     "tags": [
                       "python",

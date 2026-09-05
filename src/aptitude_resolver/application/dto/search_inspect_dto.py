@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from aptitude_resolver.application.dto.resolve_result_dto import (
     DiscoveryCandidateDto,
     ResolveCoordinateDto,
     TraceEntryDto,
 )
+from aptitude_resolver.domain.versioning import parse_skill_version
 
 
 class SearchSkillsRequestDto(BaseModel):
@@ -45,6 +46,13 @@ class InspectSkillRequestDto(BaseModel):
     prompt_capable: bool = False
     selection_source: str | None = None
     preview_char_limit: int = 4000
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str | None) -> str | None:
+        if value is not None:
+            parse_skill_version(value)
+        return value
 
 
 class InspectVersionDto(BaseModel):
